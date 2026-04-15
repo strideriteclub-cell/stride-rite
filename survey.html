@@ -66,13 +66,14 @@
         const user = AuthService.getCurrentUser();
         const wrap = document.getElementById('mainWrap');
 
+        const surveyRedirect = encodeURIComponent(window.location.pathname + window.location.search);
         if (!user) {
             wrap.innerHTML = `
                 <div class="glass-panel" style="padding: 2.5rem; text-align: center;">
                     <div style="font-size: 3rem; margin-bottom: 1rem;">🔒</div>
                     <h2 style="font-family:'Outfit'; margin-bottom: 0.75rem;">Please Log In First</h2>
                     <p style="color: var(--text-muted); margin-bottom: 1.5rem;">We need to know who you are to record your feedback!</p>
-                    <a href="index.html" class="btn btn-primary">Go to Login</a>
+                    <a href="index.html?redirect=${surveyRedirect}" class="btn btn-primary">Log In / Sign Up</a>
                 </div>
             `;
         } else {
