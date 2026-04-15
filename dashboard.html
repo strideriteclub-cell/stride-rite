@@ -142,10 +142,10 @@
                     `,
                     background: '#141419',
                     color: '#fff',
-                    confirmButtonText: 'Return to Homepage',
+                    confirmButtonText: 'Done! 🎉',
                     confirmButtonColor: 'var(--peach-accent)'
                 }).then(() => {
-                    window.location.href = 'index.html?v=4';
+                    renderRuns(); // just refresh runs in place, no page reload
                 });
             } else {
                 Swal.fire({icon: 'error', title: 'Registration failed', text: 'You might already be registered.', background: '#141419', color: '#fff'});
