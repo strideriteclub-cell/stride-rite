@@ -1,6 +1,4 @@
-<!-- profile.html (REDESIGNED) -->
-<!-- Full polished code with better spacing and Shop button -->
-
+<!-- profile.html (FINAL & POLISHED) -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -8,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My Profile | Stride Rite</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=10">
+    <link rel="stylesheet" href="styles.css?v=11">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
         .profile-wrapper { max-width: 1000px; margin: 0 auto; padding: 4rem 5%; }
@@ -29,13 +27,14 @@
         <div class="nav-links">
             <a href="index.html" class="btn btn-secondary" style="padding: 0.4rem 1rem; font-size: 0.85rem; margin-right: 8px;">🏠 Home</a>
             <a href="dashboard.html" class="btn btn-secondary" style="padding: 0.4rem 1rem; font-size: 0.85rem; margin-right: 8px;">📊 Dashboard</a>
+            <a href="gallery.html" class="btn btn-secondary" style="padding: 0.4rem 1rem; font-size: 0.85rem; margin-right: 8px;">📸 Gallery</a>
             <a href="shop.html" id="shopLink" class="btn btn-secondary hidden" style="padding: 0.4rem 1rem; font-size: 0.85rem; margin-right: 8px; border-color:var(--neon-accent); color:var(--neon-accent);">🛒 Shop</a>
             <a href="#" onclick="AuthService.logout()">Log Out</a>
         </div>
     </nav>
 
     <div class="profile-wrapper">
-        <header class="profile-header animate-up">
+        <header class="profile-header">
             <div class="avatar" id="uInit">S</div>
             <div>
                 <h1 id="uName" style="font-family:'Outfit'; font-size:3rem; margin-bottom:0.5rem;">Runner</h1>
@@ -43,7 +42,7 @@
             </div>
         </header>
 
-        <div class="stats-row animate-up delay-1">
+        <div class="stats-row">
             <div class="glass-card stat-box">
                 <div class="stat-num" id="statRuns">0</div>
                 <div class="stat-lab">Total Runs</div>
@@ -54,13 +53,13 @@
             </div>
         </div>
 
-        <h2 class="section-title animate-up delay-2">👟 Your Activity History</h2>
+        <h2 class="section-title">👟 Your Activity History</h2>
         <div class="b-grid" id="histCont">
-            <!-- Runs injected here -->
+            <p>Loading your achievements...</p>
         </div>
     </div>
 
-    <script src="app.js?v=10"></script>
+    <script src="app.js?v=12"></script>
     <script>
         const user = AuthService.getCurrentUser();
         if (!user) window.location.href = 'index.html';
@@ -68,7 +67,6 @@
         document.getElementById('uEmail').innerText = user.email;
         document.getElementById('uInit').innerText = user.name.charAt(0).toUpperCase();
 
-        // RESTORED: Show shop link
         AppService.getShopStatus().then(isOpen => {
             if (isOpen || user.is_admin) document.getElementById('shopLink').classList.remove('hidden');
         });
