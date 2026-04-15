@@ -273,6 +273,8 @@ async function handleShopMenu(chatId) {
     await sendMessage(chatId, `🛍️ *VIP Shop Admin*\n\nCurrent Status: ${statusText}`, {
         inline_keyboard: [
             [{ text: toggleText, callback_data: `shop_toggle_${!isShopOpen}` }],
+            [{ text: "📦 Export All Orders (Excel)", callback_data: "cmd_shop_export" }],
+            [{ text: "👕 Manage Products", callback_data: "cmd_shop_prd_menu" }],
             [{ text: "↩️ Back to Menu", callback_data: "cmd_menu" }]
         ]
     });
@@ -296,6 +298,109 @@ async function handleShopToggle(chatId, newStateStr) {
     
     await sendMessage(chatId, newState ? "✅ Shop is now *LIVE* to the community!" : "🚫 Shop is now *HIDDEN*.");
     await handleShopMenu(chatId);
+}
+
+// Order Actions
+async function handleShopOrderApprove(chatId, orderId) {
+    // We will replace #EMAILJS_SERVICE_ID# shortly!
+    await updateOrderStatusAndEmail(chatId, orderId, 'approved', 'template_qgow76l');
+}
+
+async function handleShopOrderReject(chatId, orderId) {
+    await updateOrderStatusAndEmail(chatId, orderId, 'rejected', 'template_59dgsfw');
+}
+
+async function updateOrderStatusAndEmail(chatId, orderId, newStatus, templateId) {
+    await sendMessage(chatId, `⏳ Processing ${newStatus} for order...`);
+    
+    // Get Order
+    const orders = await dbGet('shop_orders', `id=eq.${orderId}`);
+    if(!orders || orders.length===0) return;
+    const order = orders[0];
+
+    // Get Item and User info
+    const items = await dbGet('shop_items', `id=eq.${order.item_id}`);
+    const itemName = (items && items.length>0)?items[0].name:'Item';
+    const itemPrice = (items && items.length>0)?items[0].price:'0';
+
+    const users = await dbGet('stride_users', `id=eq.${order.user_id}`);
+    const userEmail = (users && users.length>0)?users[0].email:'';
+    const userName = (users && users.length>0)?users[0].name.split(' ')[0]:'';
+
+    // Update DB
+    await fetch(`${SUPABASE_URL}/rest/v1/shop_orders?id=eq.${orderId}`, {
+        method: 'PATCH',
+        headers: dbHeaders,
+        body: JSON.stringify({ status: newStatus })
+    });
+
+    // Fire EmailJS via REST API
+    try {
+        await fetch('https://api.emailjs.com/api/v1.0/email/send', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                service_id: 'service_d2aff6e', // The new VIP Shop EmailJS Service
+                template_id: templateId,
+                user_id: 'GBTxpiwg_SF7bN2tH',
+                template_params: {
+                    to_name: userName,
+                    to_email: userEmail,
+                    price: itemPrice,
+                    item_name: itemName,
+                    item_size: order.size
+                }
+            })
+        });
+        await sendMessage(chatId, `✅ Order marked as *${newStatus}* and email sent to ${userName}!`);
+    } catch(e) {
+        await sendMessage(chatId, `❌ DB updated to ${newStatus}, but Email sending failed: ${e.message}`);
+    }
+}
+
+// Export Orders
+async function handleShopExportOrders(chatId) {
+    await sendMessage(chatId, "⏳ Compiling orders into Excel sheet...");
+    
+    const orders = await dbGet('shop_orders');
+    const items = await dbGet('shop_items');
+    const users = await dbGet('stride_users');
+
+    let csv = "Date,Customer Name,Phone,Email,Item,Size,Price,Status,Reference Number,Delivery Status\n";
+    
+    for (const o of (orders || [])) {
+        const item = (items||[]).find(i => i.id === o.item_id) || {};
+        const user = (users||[]).find(u => u.id === o.user_id) || {};
+        csv += `"${new Date(o.created_at).toLocaleDateString()}","${user.name||'Unknown'}","${o.phone_number||''}","${user.email||''}","${item.name||'Unknown'}","${o.size}","${item.price||''}","${o.status}","${o.receipt_ref}","${o.is_delivered?'Delivered':'Pending'}"\n`;
+    }
+
+    const formData = new FormData();
+    formData.append('chat_id', chatId);
+    formData.append('document', new Blob([csv], {type: 'text/csv'}), `StrideRite_Shop_Orders.csv`);
+    formData.append('caption', `📦 Here is the full list of Shop Orders!`);
+    
+    await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendDocument`, { method: 'POST', body: formData });
+}
+
+// Product Management Start
+async function handleShopProductMenu(chatId) {
+    const items = await dbGet('shop_items');
+    const buttons = [];
+    
+    (items || []).forEach(item => {
+        const icon = item.is_active ? '🟢' : '🔴';
+        buttons.push([{ text: `${icon} ${item.name} (${item.price} EGP)`, callback_data: `no_op` }]); // Placeholder for edit
+    });
+    
+    buttons.push([{ text: "➕ Add New Product", callback_data: "cmd_shop_prd_add" }]);
+    buttons.push([{ text: "↩️ Back to Shop Admin", callback_data: "cmd_shop_menu" }]);
+
+    await sendMessage(chatId, "👕 *Manage Products*\n\nHere are the items currently in your store:", { inline_keyboard: buttons });
+}
+
+async function handleShopProductAdd(chatId) {
+    await setSession('shop_add_item', { step: 'name' });
+    await sendMessage(chatId, "🛍️ *Add New Product (Step 1/4)*\n\nWhat is the name of this product? (e.g., 'Official Midnight Runner Tee')");
 }
 
 // ─── EDIT RUN ──────────────────────────────────────────────────────────────
@@ -818,6 +923,11 @@ export default async function handler(req, res) {
             else if (data.startsWith('gallery_del_')) await handleGalleryDeleteConfirm(chatId, data.replace('gallery_del_', ''));
             else if (data === 'cmd_shop_menu') await handleShopMenu(chatId);
             else if (data.startsWith('shop_toggle_')) await handleShopToggle(chatId, data.replace('shop_toggle_', ''));
+            else if (data.startsWith('shop_appr_')) await handleShopOrderApprove(chatId, data.replace('shop_appr_', ''));
+            else if (data.startsWith('shop_rej_')) await handleShopOrderReject(chatId, data.replace('shop_rej_', ''));
+            else if (data === 'cmd_shop_export') await handleShopExportOrders(chatId);
+            else if (data === 'cmd_shop_prd_menu') await handleShopProductMenu(chatId);
+            else if (data === 'cmd_shop_prd_add') await handleShopProductAdd(chatId);
             else if (data === 'cmd_edit_list') await handleEditList(chatId);
             else if (data.startsWith('edit_pick_')) await handleEditPickField(chatId, data.replace('edit_pick_', ''));
             else if (data === 'edit_field_datetime') await handleEditDateTime(chatId);
@@ -861,6 +971,36 @@ export default async function handler(req, res) {
         const text = body.message.text.trim();
         const cmd = text.split(' ')[0].toLowerCase();
         const session = await getSession();
+
+        // Handle Product Addition Flow
+        if (session.state === 'shop_add_item') {
+            const step = session.data.step;
+            if (step === 'name') {
+                await setSession('shop_add_item', { ...session.data, step: 'price', name: text });
+                await sendMessage(chatId, "🛍️ *Add New Product (Step 2/4)*\n\nWhat is the price in EGP? (e.g., 300)");
+                res.status(200).send('ok'); return;
+            }
+            if (step === 'price') {
+                await setSession('shop_add_item', { ...session.data, step: 'sizes', price: text });
+                await sendMessage(chatId, "🛍️ *Add New Product (Step 3/4)*\n\nWhat sizes are available? (e.g., 'S, M, L, XL, XXL' or 'One Size')");
+                res.status(200).send('ok'); return;
+            }
+            if (step === 'sizes') {
+                await setSession('shop_add_item', { ...session.data, step: 'photo', sizes: text });
+                await sendMessage(chatId, "🛍️ *Add New Product (Step 4/4)*\n\nReply with a *link to an image* for this product (e.g., a Supabase gallery link or Imgur).\n\n_(Photo upload directly via bot coming later, just paste a link for now!)_");
+                res.status(200).send('ok'); return;
+            }
+            if (step === 'photo') {
+                await dbInsert('shop_items', {
+                    name: session.data.name, price: session.data.price, sizes: session.data.sizes,
+                    image_url: text, is_active: true
+                });
+                await sendMessage(chatId, "✅ *Product successfully added to the VIP Shop!*");
+                await clearSession();
+                await handleShopProductMenu(chatId);
+                res.status(200).send('ok'); return;
+            }
+        }
 
         // Multi-step session handling
         if (session.state === 'waiting_maps_link') {
