@@ -118,10 +118,80 @@ async function sendMenu(chatId, msg = "👟 *Stride Rite Admin Bot*\nHey Haleem!
             [{ text: "📝 Survey Link", callback_data: "cmd_survey" }, { text: "🎂 Birthdays", callback_data: "cmd_birthdays" }],
             [{ text: "🔍 Runner Lookup", callback_data: "cmd_lookup_start" }, { text: "📣 Broadcast", callback_data: "cmd_broadcast_start" }],
             [{ text: "📈 Growth Graph", callback_data: "cmd_growth" }, { text: "✏️ Edit a Run", callback_data: "cmd_edit_list" }],
-            [{ text: "🚫 Cancel a Run", callback_data: "cmd_cancel_list" }, { text: "🗑️ Delete a Run", callback_data: "cmd_delete_list" }],
-            [{ text: "🆕 Create New Run", callback_data: "create_step1" }]
+            [{ text: "📸 Add to Gallery", callback_data: "cmd_gallery_start" }, { text: "🚫 Cancel a Run", callback_data: "cmd_cancel_list" }],
+            [{ text: "🗑️ Delete a Run", callback_data: "cmd_delete_list" }, { text: "🆕 Create New Run", callback_data: "create_step1" }]
         ]
     });
+}
+
+// ─── GALLERY UPLOAD ──────────────────────────────────────────────────────────
+async function handleGalleryStart(chatId) {
+    const runs = await dbGet('stride_runs');
+    const buttons = (runs || []).map(r => {
+        const label = r.date_label.includes('||') ? r.date_label.split('||')[0] : r.date_label;
+        return [{ text: `🏃 ${label}`, callback_data: `gallery_run_${encodeURIComponent(label)}` }];
+    });
+    buttons.unshift([{ text: "📸 General / No specific run", callback_data: "gallery_run_general" }]);
+    buttons.push([{ text: "↩️ Back", callback_data: "cmd_menu" }]);
+    await sendMessage(chatId, "📸 *Add to Gallery*\n\nWhich run are these photos from?", { inline_keyboard: buttons });
+}
+
+async function handleGalleryRunPicked(chatId, runLabel) {
+    const label = runLabel === 'general' ? '' : decodeURIComponent(runLabel);
+    await setSession('waiting_gallery_photo', { runLabel: label });
+    const msg = label
+        ? `✅ Run: *${label}*\n\n📸 Now *send the photo*! You can add a caption too (just type it in the caption field when sending).\n\nSend one photo at a time.`
+        : `📸 *Send the photo now!* You can add a caption too.\n\nSend one photo at a time.`;
+    await sendMessage(chatId, msg);
+}
+
+async function handleGalleryPhoto(chatId, message, session) {
+    const photos = message.photo;
+    const fileId = photos[photos.length - 1].file_id;
+    const caption = message.caption || '';
+    const runLabel = session.data.runLabel || '';
+
+    await sendMessage(chatId, "⏳ Uploading photo...");
+
+    // Get file path from Telegram
+    const fileRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getFile?file_id=${fileId}`);
+    const fileData = await fileRes.json();
+    const filePath = fileData.result?.file_path;
+    if (!filePath) { await sendMessage(chatId, "❌ Couldn't get the file from Telegram."); return; }
+
+    // Download the photo
+    const imgRes = await fetch(`https://api.telegram.org/file/bot${BOT_TOKEN}/${filePath}`);
+    if (!imgRes.ok) { await sendMessage(chatId, "❌ Failed to download photo."); return; }
+    const imgBuffer = await imgRes.arrayBuffer();
+
+    // Upload to Supabase Storage
+    const fileName = `${Date.now()}.jpg`;
+    const uploadRes = await fetch(`${SUPABASE_URL}/storage/v1/object/gallery/${fileName}`, {
+        method: 'POST',
+        headers: {
+            'apikey': SUPABASE_KEY,
+            'Authorization': `Bearer ${SUPABASE_KEY}`,
+            'Content-Type': 'image/jpeg',
+        },
+        body: imgBuffer
+    });
+
+    if (!uploadRes.ok) {
+        const errText = await uploadRes.text();
+        await sendMessage(chatId, `❌ Storage upload failed: ${errText}`);
+        return;
+    }
+
+    const publicUrl = `${SUPABASE_URL}/storage/v1/object/public/gallery/${fileName}`;
+
+    // Save to gallery_photos table
+    await dbInsert('gallery_photos', { run_label: runLabel || null, photo_url: publicUrl, caption });
+
+    await sendMessage(chatId,
+        `✅ *Photo added to gallery!*\n\n🎨 Caption: ${caption || '_none_'}\n🏃 Run: ${runLabel || 'General'}\n\nSend another photo or go back to menu.`,
+        { inline_keyboard: [[{ text: "📸 Add Another", callback_data: `gallery_run_${runLabel ? encodeURIComponent(runLabel) : 'general'}` }], [{ text: "↩️ Menu", callback_data: "cmd_menu" }]] }
+    );
+    // Keep session for another photo
 }
 
 // ─── EDIT RUN ──────────────────────────────────────────────────────────────
@@ -637,6 +707,8 @@ export default async function handler(req, res) {
                 await sendMessage(chatId, "✅ *Run deleted!*");
                 await sendMenu(chatId, "What else?");
             }
+            else if (data === 'cmd_gallery_start') await handleGalleryStart(chatId);
+            else if (data.startsWith('gallery_run_')) await handleGalleryRunPicked(chatId, data.replace('gallery_run_', ''));
             else if (data === 'cmd_edit_list') await handleEditList(chatId);
             else if (data.startsWith('edit_pick_')) await handleEditPickField(chatId, data.replace('edit_pick_', ''));
             else if (data === 'edit_field_datetime') await handleEditDateTime(chatId);
@@ -657,6 +729,20 @@ export default async function handler(req, res) {
             }
             else if (data === 'create_confirm_yes') await createExecute(chatId);
 
+            res.status(200).send('ok'); return;
+        }
+
+        // Handle photo messages
+        if (body.message && body.message.photo) {
+            const chatId = body.message.chat.id.toString();
+            if (chatId === ADMIN_CHAT_ID) {
+                const session = await getSession();
+                if (session.state === 'waiting_gallery_photo') {
+                    await handleGalleryPhoto(chatId, body.message, session);
+                } else {
+                    await sendMessage(chatId, "📸 Got a photo! Tap *📸 Add to Gallery* in the menu to upload it.");
+                }
+            }
             res.status(200).send('ok'); return;
         }
 
