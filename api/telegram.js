@@ -132,8 +132,9 @@ async function handleGalleryStart(chatId) {
         return [{ text: `🏃 ${label}`, callback_data: `gallery_run_${encodeURIComponent(label)}` }];
     });
     buttons.unshift([{ text: "📸 General / No specific run", callback_data: "gallery_run_general" }]);
+    buttons.push([{ text: "🗑️ Delete a Photo", callback_data: "cmd_gallery_delete" }]);
     buttons.push([{ text: "↩️ Back", callback_data: "cmd_menu" }]);
-    await sendMessage(chatId, "📸 *Add to Gallery*\n\nWhich run are these photos from?", { inline_keyboard: buttons });
+    await sendMessage(chatId, "📸 *Gallery*\n\nAdd photos — pick which run they're from:", { inline_keyboard: buttons });
 }
 
 async function handleGalleryRunPicked(chatId, runLabel) {
@@ -192,6 +193,50 @@ async function handleGalleryPhoto(chatId, message, session) {
         { inline_keyboard: [[{ text: "📸 Add Another", callback_data: `gallery_run_${runLabel ? encodeURIComponent(runLabel) : 'general'}` }], [{ text: "↩️ Menu", callback_data: "cmd_menu" }]] }
     );
     // Keep session for another photo
+}
+
+async function handleGalleryDeleteList(chatId) {
+    const photos = await dbGet('gallery_photos', 'order=uploaded_at.desc&limit=10');
+    if (!photos || photos.length === 0) { await sendMessage(chatId, "❌ No photos in the gallery yet."); return; }
+    const buttons = photos.map((p, i) => {
+        const label = p.caption || (p.run_label ? `🏃 ${p.run_label}` : `Photo ${i+1}`);
+        return [{ text: `🗑️ ${i+1}. ${label.slice(0,40)}`, callback_data: `gallery_del_${p.id}` }];
+    });
+    buttons.push([{ text: "↩️ Back", callback_data: "cmd_gallery_start" }]);
+    await sendMessage(chatId, `🗑️ *Delete a Photo*\n\nThese are the last ${photos.length} photos:`, { inline_keyboard: buttons });
+}
+
+async function handleGalleryDeleteConfirm(chatId, photoId) {
+    const photos = await dbGet('gallery_photos', `id=eq.${photoId}`);
+    if (!photos || photos.length === 0) { await sendMessage(chatId, "❌ Photo not found."); return; }
+    const p = photos[0];
+    const label = p.caption || p.run_label || 'this photo';
+    await sendMessage(chatId, `⚠️ *Delete "${label}"?*\nThis cannot be undone.`, {
+        inline_keyboard: [
+            [{ text: "✅ Yes, Delete", callback_data: `gallery_del_yes_${photoId}` }],
+            [{ text: "❌ Cancel", callback_data: "cmd_menu" }]
+        ]
+    });
+}
+
+async function handleGalleryDeleteExecute(chatId, photoId) {
+    const photos = await dbGet('gallery_photos', `id=eq.${photoId}`);
+    if (photos && photos.length > 0) {
+        const photoUrl = photos[0].photo_url;
+        // Delete from storage
+        const fileName = photoUrl.split('/public/gallery/')[1];
+        if (fileName) {
+            await fetch(`${SUPABASE_URL}/storage/v1/object/gallery/${fileName}`, {
+                method: 'DELETE', headers: dbHeaders
+            });
+        }
+        // Delete from DB
+        await fetch(`${SUPABASE_URL}/rest/v1/gallery_photos?id=eq.${photoId}`, {
+            method: 'DELETE', headers: dbHeaders
+        });
+    }
+    await sendMessage(chatId, "✅ *Photo deleted from gallery!*");
+    await sendMenu(chatId, "What else?");
 }
 
 // ─── EDIT RUN ──────────────────────────────────────────────────────────────
@@ -709,6 +754,9 @@ export default async function handler(req, res) {
             }
             else if (data === 'cmd_gallery_start') await handleGalleryStart(chatId);
             else if (data.startsWith('gallery_run_')) await handleGalleryRunPicked(chatId, data.replace('gallery_run_', ''));
+            else if (data === 'cmd_gallery_delete') await handleGalleryDeleteList(chatId);
+            else if (data.startsWith('gallery_del_yes_')) await handleGalleryDeleteExecute(chatId, data.replace('gallery_del_yes_', ''));
+            else if (data.startsWith('gallery_del_')) await handleGalleryDeleteConfirm(chatId, data.replace('gallery_del_', ''));
             else if (data === 'cmd_edit_list') await handleEditList(chatId);
             else if (data.startsWith('edit_pick_')) await handleEditPickField(chatId, data.replace('edit_pick_', ''));
             else if (data === 'edit_field_datetime') await handleEditDateTime(chatId);
