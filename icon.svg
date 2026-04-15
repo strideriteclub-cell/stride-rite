@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a1827"/>
+      <stop offset="100%" style="stop-color:#0d0c11"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#584adc"/>
+      <stop offset="100%" style="stop-color:#7c6ffa"/>
+    </linearGradient>
+  </defs>
+  <!-- Background -->
+  <rect width="512" height="512" rx="96" fill="url(#bg)"/>
+  <!-- Glow circle -->
+  <circle cx="256" cy="256" r="160" fill="url(#accent)" opacity="0.15"/>
+  <!-- Running figure (simplified) -->
+  <!-- Head -->
+  <circle cx="290" cy="148" r="32" fill="white"/>
+  <!-- Body -->
+  <path d="M265 178 L230 270 L195 340" stroke="white" stroke-width="22" stroke-linecap="round" fill="none"/>
+  <!-- Right arm forward -->
+  <path d="M255 210 L305 240 L340 220" stroke="white" stroke-width="18" stroke-linecap="round" fill="none"/>
+  <!-- Left arm back -->
+  <path d="M245 220 L198 248" stroke="white" stroke-width="18" stroke-linecap="round" fill="none"/>
+  <!-- Right leg forward -->
+  <path d="M230 270 L260 340 L230 385" stroke="white" stroke-width="20" stroke-linecap="round" fill="none"/>
+  <!-- Left leg back -->
+  <path d="M235 275 L195 340 L220 385" stroke="white" stroke-width="20" stroke-linecap="round" fill="none"/>
+  <!-- Speed lines -->
+  <line x1="140" y1="260" x2="175" y2="260" stroke="#7c6ffa" stroke-width="8" stroke-linecap="round"/>
+  <line x1="130" y1="285" x2="170" y2="285" stroke="#ff9e6d" stroke-width="6" stroke-linecap="round"/>
+  <line x1="145" y1="310" x2="175" y2="310" stroke="#7c6ffa" stroke-width="5" stroke-linecap="round"/>
+</svg>
