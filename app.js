@@ -1,5 +1,5 @@
-// --- app.js (FINAL VERSION WITH STATS) ---
-// Paste this entire block into your app.js on GitHub
+// --- app.js (FIXED & FINAL) ---
+// Paste this entire block into app.js on GitHub
 
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
@@ -32,7 +32,7 @@ async function dbGet(table, query = 'select=*') {
         const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${query}`, { headers: defaultHeaders });
         if (!res.ok) throw new Error(await res.text());
         return await res.json();
-    } catch (e) { return []; }
+    } catch (e) { console.error(`Error fetching ${table}:`, e); return []; }
 }
 
 async function dbInsert(table, data) {
@@ -44,7 +44,7 @@ async function dbInsert(table, data) {
         });
         if (!res.ok) throw new Error(await res.text());
         return await res.json();
-    } catch (e) { return null; }
+    } catch (e) { console.error(`Error inserting into ${table}:`, e); return null; }
 }
 
 async function dbUpdate(table, matchColumn, matchValue, data) {
@@ -53,6 +53,16 @@ async function dbUpdate(table, matchColumn, matchValue, data) {
             method: 'PATCH',
             headers: defaultHeaders,
             body: JSON.stringify(data)
+        });
+        return res.ok;
+    } catch (e) { return false; }
+}
+
+async function dbDelete(table, matchColumn, matchValue) {
+    try {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${matchColumn}=eq.${matchValue}`, {
+            method: 'DELETE',
+            headers: defaultHeaders
         });
         return res.ok;
     } catch (e) { return false; }
@@ -188,6 +198,24 @@ const AppService = {
     getShopStatus: async () => {
         const settings = await dbGet('shop_settings');
         return settings?.[0]?.is_open || false;
+    },
+    getShopItems: async () => {
+        const items = await dbGet('shop_items', 'is_active=eq.true');
+        return items || [];
+    },
+    submitOrder: async (itemId, size, refNumber, phone) => {
+        const user = AuthService.getCurrentUser();
+        if (!user) return false;
+        const newOrder = { id: crypto.randomUUID(), user_id: user.id, item_id: itemId, size, receipt_ref: refNumber, phone_number: phone, status: 'pending' };
+        const result = await dbInsert('shop_orders', newOrder);
+        if (result) {
+            const botToken = '8682463984:AAHA2PWT7WtQRskETmOanj0k2b45ZgGfYIs';
+            const chatId = '1538316434';
+            const text = `🛍️ *New VIP Shop Order!*\n\n*Name:* ${user.name}\n*Item ID:* ${itemId}\n*Size:* ${size}\n*Ref:* \`${refNumber}\``;
+            try { await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chat_id: chatId, text, parse_mode: 'Markdown' }) }); } catch (e) {}
+            return true;
+        }
+        return false;
     }
 };
 
