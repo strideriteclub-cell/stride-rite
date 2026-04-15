@@ -22,6 +22,7 @@
             <span id="welcomeText" style="color: var(--text-muted); margin-right: 15px;"></span>
             <a href="index.html" class="btn btn-secondary" style="padding: 0.4rem 1rem; font-size: 0.85rem; margin-right: 8px;">🏠 Home</a>
             <a href="gallery.html" class="btn btn-secondary" style="padding: 0.4rem 1rem; font-size: 0.85rem; margin-right: 8px;">📸 Gallery</a>
+            <a href="shop.html" id="shopLink" class="btn btn-secondary hidden" style="padding: 0.4rem 1rem; font-size: 0.85rem; margin-right: 8px; border-color:var(--neon-accent); color:var(--neon-accent);">🛒 Shop</a>
             <a href="#" id="adminLink" class="admin-link hidden">Admin Panel</a>
             <a href="#" onclick="AuthService.logout()">Log Out</a>
         </div>
@@ -59,6 +60,13 @@
             document.getElementById('adminLink').classList.remove('hidden');
             document.getElementById('adminLink').href = 'admin.html';
         }
+
+        // Check if VIP Shop is open
+        AppService.getShopStatus().then(isShopOpen => {
+            if (isShopOpen || user.is_admin) {
+                document.getElementById('shopLink').classList.remove('hidden');
+            }
+        });
 
         async function renderRuns() {
             const container = document.getElementById('runsContainer');
