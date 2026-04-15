@@ -389,7 +389,7 @@ async function handleShopProductMenu(chatId) {
     
     (items || []).forEach(item => {
         const icon = item.is_active ? '🟢' : '🔴';
-        buttons.push([{ text: `${icon} ${item.name} (${item.price} EGP)`, callback_data: `no_op` }]); // Placeholder for edit
+        buttons.push([{ text: `${icon} ${item.name} (${item.price} EGP)`, callback_data: `shop_prd_edit_mn_${item.id}` }]);
     });
     
     buttons.push([{ text: "➕ Add New Product", callback_data: "cmd_shop_prd_add" }]);
@@ -398,10 +398,89 @@ async function handleShopProductMenu(chatId) {
     await sendMessage(chatId, "👕 *Manage Products*\n\nHere are the items currently in your store:", { inline_keyboard: buttons });
 }
 
+async function uploadShopPhoto(chatId, message) {
+    const photos = message.photo;
+    const fileId = photos[photos.length - 1].file_id;
+    await sendMessage(chatId, "⏳ Uploading photo to VIP Shop cloud...");
+
+    const fileRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getFile?file_id=${fileId}`);
+    const fileData = await fileRes.json();
+    const filePath = fileData.result?.file_path;
+    if (!filePath) return null;
+
+    const imgRes = await fetch(`https://api.telegram.org/file/bot${BOT_TOKEN}/${filePath}`);
+    if (!imgRes.ok) return null;
+    const imgBuffer = await imgRes.arrayBuffer();
+
+    const fileName = `shop_${Date.now()}.jpg`;
+    const uploadRes = await fetch(`${SUPABASE_URL}/storage/v1/object/gallery/${fileName}`, {
+        method: 'POST',
+        headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'image/jpeg' },
+        body: imgBuffer
+    });
+
+    if (!uploadRes.ok) return null;
+    return `${SUPABASE_URL}/storage/v1/object/public/gallery/${fileName}`;
+}
+
 async function handleShopProductAdd(chatId) {
     await setSession('shop_add_item', { step: 'name' });
     await sendMessage(chatId, "🛍️ *Add New Product (Step 1/4)*\n\nWhat is the name of this product? (e.g., 'Official Midnight Runner Tee')");
 }
+
+async function handleShopProductEditMenu(chatId, productId) {
+    const items = await dbGet('shop_items', `id=eq.${productId}`);
+    if (!items || items.length === 0) return;
+    const item = items[0];
+
+    const statusObj = item.is_active ? { icon: '🔴', text: 'Hide Product', val: false } : { icon: '🟢', text: 'Show Product', val: true };
+
+    const buttons = [
+        [{ text: "✏️ Edit Name", callback_data: `shop_prd_upd_name_${item.id}` }],
+        [{ text: "✏️ Edit Price", callback_data: `shop_prd_upd_price_${item.id}` }],
+        [{ text: "✏️ Edit Sizes", callback_data: `shop_prd_upd_sizes_${item.id}` }],
+        [{ text: "📸 Edit Photo", callback_data: `shop_prd_upd_photo_${item.id}` }],
+        [{ text: `${statusObj.icon} ${statusObj.text}`, callback_data: `shop_prd_tgl_${item.id}_${statusObj.val}` }],
+        [{ text: "🗑️ Delete Product", callback_data: `shop_prd_del_${item.id}` }],
+        [{ text: "↩️ Back to Products", callback_data: "cmd_shop_prd_menu" }]
+    ];
+
+    await sendMessage(chatId, `🛠️ *Edit Product: ${item.name}*\n\nPrice: ${item.price} EGP\nSizes: ${item.sizes}\nStatus: ${item.is_active ? 'Live 🟢' : 'Hidden 🔴'}\n\nWhat would you like to change?`, { inline_keyboard: buttons });
+}
+
+async function handleShopProductUpdateField(chatId, productId, fieldStr) {
+    await setSession('shop_edit_item', { productId, field: fieldStr });
+    
+    let msg = "";
+    if (fieldStr === 'name') msg = "✏️ Send the new *Name*:";
+    if (fieldStr === 'price') msg = "✏️ Send the new *Price* (e.g. 300):";
+    if (fieldStr === 'sizes') msg = "✏️ Send the new *Sizes* (e.g. S, M, L, XL):";
+    if (fieldStr === 'photo') msg = "📸 Send the *new photo* directly in this chat:";
+
+    await sendMessage(chatId, msg);
+}
+
+async function handleShopProductToggle(chatId, dataStr) {
+    // format: `shop_prd_tgl_UUID_true`
+    const parts = dataStr.split('_');
+    const newState = parts.pop() === "true";
+    const productId = parts.join('_');
+
+    await fetch(`${SUPABASE_URL}/rest/v1/shop_items?id=eq.${productId}`, {
+        method: 'PATCH', headers: dbHeaders, body: JSON.stringify({ is_active: newState })
+    });
+    await sendMessage(chatId, `✅ Product visibility updated!`);
+    await handleShopProductEditMenu(chatId, productId);
+}
+
+async function handleShopProductDelete(chatId, productId) {
+    await fetch(`${SUPABASE_URL}/rest/v1/shop_items?id=eq.${productId}`, {
+        method: 'DELETE', headers: dbHeaders
+    });
+    await sendMessage(chatId, `🗑️ ✅ Product permanently deleted.`);
+    await handleShopProductMenu(chatId);
+}
+
 
 // ─── EDIT RUN ──────────────────────────────────────────────────────────────
 async function handleEditList(chatId) {
@@ -928,6 +1007,13 @@ export default async function handler(req, res) {
             else if (data === 'cmd_shop_export') await handleShopExportOrders(chatId);
             else if (data === 'cmd_shop_prd_menu') await handleShopProductMenu(chatId);
             else if (data === 'cmd_shop_prd_add') await handleShopProductAdd(chatId);
+            else if (data.startsWith('shop_prd_edit_mn_')) await handleShopProductEditMenu(chatId, data.replace('shop_prd_edit_mn_', ''));
+            else if (data.startsWith('shop_prd_upd_name_')) await handleShopProductUpdateField(chatId, data.replace('shop_prd_upd_name_', ''), 'name');
+            else if (data.startsWith('shop_prd_upd_price_')) await handleShopProductUpdateField(chatId, data.replace('shop_prd_upd_price_', ''), 'price');
+            else if (data.startsWith('shop_prd_upd_sizes_')) await handleShopProductUpdateField(chatId, data.replace('shop_prd_upd_sizes_', ''), 'sizes');
+            else if (data.startsWith('shop_prd_upd_photo_')) await handleShopProductUpdateField(chatId, data.replace('shop_prd_upd_photo_', ''), 'photo');
+            else if (data.startsWith('shop_prd_tgl_')) await handleShopProductToggle(chatId, data.replace('shop_prd_tgl_', ''));
+            else if (data.startsWith('shop_prd_del_')) await handleShopProductDelete(chatId, data.replace('shop_prd_del_', ''));
             else if (data === 'cmd_edit_list') await handleEditList(chatId);
             else if (data.startsWith('edit_pick_')) await handleEditPickField(chatId, data.replace('edit_pick_', ''));
             else if (data === 'edit_field_datetime') await handleEditDateTime(chatId);
@@ -958,8 +1044,29 @@ export default async function handler(req, res) {
                 const session = await getSession();
                 if (session.state === 'waiting_gallery_photo') {
                     await handleGalleryPhoto(chatId, body.message, session);
+                } else if (session.state === 'shop_add_item' && session.data.step === 'photo') {
+                    const imgUrl = await uploadShopPhoto(chatId, body.message);
+                    if (!imgUrl) { await sendMessage(chatId, "❌ Failed to upload photo."); return; }
+                    
+                    await dbInsert('shop_items', {
+                        name: session.data.name, price: session.data.price, sizes: session.data.sizes,
+                        image_url: imgUrl, is_active: true
+                    });
+                    await sendMessage(chatId, "✅ *Product successfully added to the VIP Shop!*");
+                    await clearSession();
+                    await handleShopProductMenu(chatId);
+                } else if (session.state === 'shop_edit_item' && session.data.field === 'photo') {
+                    const imgUrl = await uploadShopPhoto(chatId, body.message);
+                    if (!imgUrl) { await sendMessage(chatId, "❌ Failed to upload photo."); return; }
+
+                    await fetch(`${SUPABASE_URL}/rest/v1/shop_items?id=eq.${session.data.productId}`, {
+                        method: 'PATCH', headers: dbHeaders, body: JSON.stringify({ image_url: imgUrl })
+                    });
+                    await sendMessage(chatId, "✅ *Photo successfully updated!*");
+                    await clearSession();
+                    await handleShopProductEditMenu(chatId, session.data.productId);
                 } else {
-                    await sendMessage(chatId, "📸 Got a photo! Tap *📸 Add to Gallery* in the menu to upload it.");
+                    await sendMessage(chatId, "📸 Got a photo! Choose an option from the menus to attach it somewhere.");
                 }
             }
             res.status(200).send('ok'); return;
@@ -991,15 +1098,29 @@ export default async function handler(req, res) {
                 res.status(200).send('ok'); return;
             }
             if (step === 'photo') {
-                await dbInsert('shop_items', {
-                    name: session.data.name, price: session.data.price, sizes: session.data.sizes,
-                    image_url: text, is_active: true
-                });
-                await sendMessage(chatId, "✅ *Product successfully added to the VIP Shop!*");
-                await clearSession();
-                await handleShopProductMenu(chatId);
+                await sendMessage(chatId, "📸 Please send an *IMAGE* from your phone's gallery, not text.");
                 res.status(200).send('ok'); return;
             }
+        }
+
+        // Handle Product Edit Flow (Text Fields)
+        if (session.state === 'shop_edit_item') {
+            const { productId, field } = session.data;
+            if (field === 'photo') {
+                await sendMessage(chatId, "📸 Please send an *IMAGE* from your phone's gallery, not text.");
+                res.status(200).send('ok'); return;
+            }
+
+            const updateData = {};
+            updateData[field] = text;
+
+            await fetch(`${SUPABASE_URL}/rest/v1/shop_items?id=eq.${productId}`, {
+                method: 'PATCH', headers: dbHeaders, body: JSON.stringify(updateData)
+            });
+            await sendMessage(chatId, `✅ *Product ${field} successfully updated!*`);
+            await clearSession();
+            await handleShopProductEditMenu(chatId, productId);
+            res.status(200).send('ok'); return;
         }
 
         // Multi-step session handling
