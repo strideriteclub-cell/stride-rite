@@ -57,8 +57,12 @@
 
         document.getElementById('welcomeText').innerText = `Hello, ${user.name}`;
         if (user.is_admin) {
-            document.getElementById('adminLink').classList.remove('hidden');
-            document.getElementById('adminLink').href = 'admin.html';
+            const adminLnk = document.getElementById('adminLink');
+            adminLnk.classList.remove('hidden');
+            
+            // Redirecting directly to the Stride Rite Alerts Bot
+            adminLnk.href = 'https://t.me/striderite_alerts_bot';
+            adminLnk.target = '_blank';
         }
 
         // Check if VIP Shop is open
