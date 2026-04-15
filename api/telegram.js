@@ -188,8 +188,29 @@ async function handleGalleryPhoto(chatId, message, session) {
     // Save to gallery_photos table
     await dbInsert('gallery_photos', { run_label: runLabel || null, photo_url: publicUrl, caption });
 
+    // ── Rolling 150-photo limit: delete oldest if over cap ──────────────────
+    const allPhotos = await dbGet('gallery_photos', 'order=uploaded_at.asc&select=id,photo_url');
+    if (allPhotos && allPhotos.length > 150) {
+        const toDelete = allPhotos.slice(0, allPhotos.length - 150); // oldest ones
+        for (const old of toDelete) {
+            const oldFileName = old.photo_url.split('/public/gallery/')[1];
+            if (oldFileName) {
+                await fetch(`${SUPABASE_URL}/storage/v1/object/gallery/${oldFileName}`, {
+                    method: 'DELETE', headers: dbHeaders
+                });
+            }
+            await fetch(`${SUPABASE_URL}/rest/v1/gallery_photos?id=eq.${old.id}`, {
+                method: 'DELETE', headers: dbHeaders
+            });
+        }
+    }
+
+    const totalNow = Math.min((allPhotos?.length || 1), 150);
+    const autoDeletedMsg = allPhotos && allPhotos.length > 150
+        ? `\n♻️ _Oldest photo auto-removed to stay within 150 limit_` : '';
+
     await sendMessage(chatId,
-        `✅ *Photo added to gallery!*\n\n🎨 Caption: ${caption || '_none_'}\n🏃 Run: ${runLabel || 'General'}\n\nSend another photo or go back to menu.`,
+        `✅ *Photo added to gallery!*\n\n🎨 Caption: ${caption || '_none_'}\n🏃 Run: ${runLabel || 'General'}\n📸 Gallery: ${totalNow}/150 photos${autoDeletedMsg}\n\nSend another photo or go back to menu.`,
         { inline_keyboard: [[{ text: "📸 Add Another", callback_data: `gallery_run_${runLabel ? encodeURIComponent(runLabel) : 'general'}` }], [{ text: "↩️ Menu", callback_data: "cmd_menu" }]] }
     );
     // Keep session for another photo
