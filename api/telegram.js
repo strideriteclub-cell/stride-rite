@@ -336,13 +336,14 @@ async function updateOrderStatusAndEmail(chatId, orderId, newStatus, templateId)
 
     // Fire EmailJS via REST API
     try {
-        await fetch('https://api.emailjs.com/api/v1.0/email/send', {
+        const emailRes = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                service_id: 'service_d2aff6e', // The new VIP Shop EmailJS Service
+                service_id: 'service_d2aff6e',
                 template_id: templateId,
                 user_id: 'GBTxpiwg_SF7bN2tH',
+                accessToken: '9yAc3NjCBB5wATwThsv6U', // Private Key to bypass browser limits
                 template_params: {
                     to_name: userName,
                     to_email: userEmail,
@@ -352,9 +353,15 @@ async function updateOrderStatusAndEmail(chatId, orderId, newStatus, templateId)
                 }
             })
         });
-        await sendMessage(chatId, `✅ Order marked as *${newStatus}* and email sent to ${userName}!`);
+
+        if (!emailRes.ok) {
+            const errText = await emailRes.text();
+            await sendMessage(chatId, `⚠️ Order approved, but Email failed to send: ${errText}`);
+        } else {
+            await sendMessage(chatId, `✅ Order marked as *${newStatus}* and email sent to ${userName}!`);
+        }
     } catch(e) {
-        await sendMessage(chatId, `❌ DB updated to ${newStatus}, but Email sending failed: ${e.message}`);
+        await sendMessage(chatId, `❌ DB updated, but network error hitting EmailJS: ${e.message}`);
     }
 }
 
