@@ -346,6 +346,7 @@
                 const result = await emailjs.send('service_p70otdg', 'template_sc5tqp8', {
                     to_name: users[0].name.split(' ')[0],
                     to_email: email,
+                    email: email,
                     reset_link: resetLink
                 });
                 console.log('EmailJS success:', result);
