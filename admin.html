@@ -7,6 +7,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css?v=4">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
         .admin-layout { display: flex; gap: 2rem; margin-top: 2rem; flex-wrap: wrap; }
         .sidebar { flex: 1; min-width: 300px; }
@@ -67,6 +68,9 @@
         
         <!-- Insights Dashboard -->
         <div id="insightsContainer" style="width: 100%;"></div>
+
+        <!-- Attendance Trend -->
+        <div id="trendContainer" style="width: 100%; margin-top: 2rem;"></div>
     </div>
 
     <script src="app.js?v=2"></script>
@@ -349,7 +353,90 @@ _Every pace is welcome. See you there!_ 💪`;
             });
         };
 
+        let trendChartInstance = null;
+
+        async function renderTrendChart() {
+            const trendContainer = document.getElementById('trendContainer');
+            const allRuns = await AppService.getRuns();
+
+            if (!allRuns || allRuns.length === 0) return;
+
+            // Sort oldest to newest for the chart
+            const sorted = [...allRuns].reverse();
+
+            const labels = [];
+            const data = [];
+
+            for (const run of sorted) {
+                const participants = await AppService.getParticipantsForRun(run.id);
+                const label = run.date_label.length > 20 ? run.date_label.substring(0, 20) + '...' : run.date_label;
+                labels.push(label);
+                data.push(participants.length);
+            }
+
+            trendContainer.innerHTML = `
+                <div class="glass-panel" style="padding: 2rem; margin-top: 1rem;">
+                    <h2 style="margin-bottom: 0.5rem; color: var(--neon-accent);">📈 Attendance Trend</h2>
+                    <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem;">Runner RSVPs across all scheduled runs</p>
+                    <div style="position: relative; width: 100%; max-height: 300px;">
+                        <canvas id="trendChart"></canvas>
+                    </div>
+                </div>
+            `;
+
+            const ctx = document.getElementById('trendChart').getContext('2d');
+            if (trendChartInstance) trendChartInstance.destroy();
+            trendChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Registered Runners',
+                        data: data,
+                        fill: true,
+                        borderColor: '#584adc',
+                        backgroundColor: 'rgba(88, 74, 220, 0.15)',
+                        pointBackgroundColor: '#ff8b6a',
+                        pointBorderColor: '#ff8b6a',
+                        pointRadius: 6,
+                        pointHoverRadius: 9,
+                        tension: 0.4,
+                        borderWidth: 3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: '#141419',
+                            borderColor: '#584adc',
+                            borderWidth: 1,
+                            titleColor: '#fff',
+                            bodyColor: '#a1a1aa',
+                            callbacks: {
+                                label: ctx => `${ctx.parsed.y} runner${ctx.parsed.y !== 1 ? 's' : ''} registered`
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: { color: '#a1a1aa', font: { size: 11 } },
+                            grid: { color: 'rgba(255,255,255,0.05)' }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            ticks: { color: '#a1a1aa', stepSize: 1 },
+                            grid: { color: 'rgba(255,255,255,0.05)' }
+                        }
+                    }
+                }
+            });
+        }
+
         renderAdminRuns();
+        renderTrendChart();
     </script>
 </body>
 </html>
