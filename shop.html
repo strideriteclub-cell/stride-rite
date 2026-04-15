@@ -180,9 +180,17 @@
                         </div>
 
                         <div class="checkout-step">
-                            <h4><span>3️⃣</span> Confirm Payment</h4>
-                            <label style="color:#a1a1aa; font-size:0.85rem; display:block; margin-bottom:6px;">Enter your 12-digit transaction reference number:</label>
-                            <input type="text" id="refInput" placeholder="e.g. 192837465012" style="width:100%; padding:12px; border-radius:8px; border:1px solid #333; background:rgba(0,0,0,0.3); color:white; text-align:center; font-family:monospace; font-size:1.1rem; letter-spacing:2px;" maxlength="20">
+                            <h4><span>3️⃣</span> Contact & Confirm</h4>
+                            
+                            <label style="color:#a1a1aa; font-size:0.85rem; display:block; margin-bottom:6px;">WhatsApp / Phone Number:</label>
+                            <input type="tel" id="phoneInput" placeholder="e.g. 01012345678" style="width:100%; padding:12px; border-radius:8px; border:1px solid #333; background:rgba(0,0,0,0.3); color:white; margin-bottom:12px; font-size:1rem;" maxlength="15">
+
+                            <label style="color:#a1a1aa; font-size:0.85rem; display:block; margin-bottom:6px;">12-digit transaction reference number:</label>
+                            <input type="text" id="refInput" placeholder="e.g. 192837465012" style="width:100%; padding:12px; border-radius:8px; border:1px solid #333; background:rgba(0,0,0,0.3); color:white; text-align:center; font-family:monospace; font-size:1.1rem; letter-spacing:1px;" maxlength="20">
+                            
+                            <div style="margin-top: 15px; color:#f87171; font-size: 0.9rem; text-align: center; border: 1px dashed #f87171; padding: 10px; border-radius: 8px;">
+                                ⚠️ <strong>Important:</strong> Physical items must be collected in person from Haleem at the next Stride Rite community run! There is no delivery.
+                            </div>
                         </div>
                     </div>
                 `,
@@ -192,26 +200,31 @@
                 confirmButtonColor: 'var(--peach-accent)',
                 width: '500px',
                 preConfirm: () => {
+                    const phone = document.getElementById('phoneInput').value.trim();
                     const ref = document.getElementById('refInput').value.trim();
                     if (!selectedSize) {
                         Swal.showValidationMessage('Please select a size first!');
+                        return false;
+                    }
+                    if (!phone || phone.length < 8) {
+                        Swal.showValidationMessage('Please enter a valid phone number!');
                         return false;
                     }
                     if (!ref || ref.length < 5) {
                         Swal.showValidationMessage('Please enter a valid reference number!');
                         return false;
                     }
-                    return ref;
+                    return { phone, ref };
                 }
             }).then(async (result) => {
                 if (result.isConfirmed) {
                     Swal.fire({ title: 'Submitting...', background:'#141419', color:'#fff', didOpen: () => Swal.showLoading()});
-                    const success = await AppService.submitOrder(selectedItem.id, selectedSize, result.value);
+                    const success = await AppService.submitOrder(selectedItem.id, selectedSize, result.value.ref, result.value.phone);
                     if (success) {
                         Swal.fire({
                             icon: 'success',
                             title: 'Order Received! 🎉',
-                            html: '<p>Our admins will verify the reference number and hand you your gear at the next run!</p>',
+                            html: '<p>Our admins will verify your payment and email you a confirmation! See you at the next run!</p>',
                             background: '#141419', color: '#fff',
                             confirmButtonColor: 'var(--neon-accent)'
                         });
