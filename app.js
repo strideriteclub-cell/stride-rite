@@ -310,7 +310,7 @@ const AppService = {
         return items || [];
     },
 
-    submitOrder: async (itemId, size, refNumber) => {
+    submitOrder: async (itemId, size, refNumber, phone) => {
         const currentUser = AuthService.getCurrentUser();
         if (!currentUser) return false;
 
@@ -320,6 +320,7 @@ const AppService = {
             item_id: itemId,
             size: size,
             receipt_ref: refNumber,
+            phone_number: phone,
             status: 'pending' // pending, approved, rejected
         };
 
@@ -328,17 +329,27 @@ const AppService = {
             // Fetch item details for the alert
             const items = await dbGet('shop_items', `id=eq.${itemId}`);
             const itemName = (items && items.length > 0) ? items[0].name : 'Unknown Item';
+            const price = (items && items.length > 0) ? items[0].price : 'Unknown';
             
             // Notify Bot
             const botToken = '8682463984:AAHA2PWT7WtQRskETmOanj0k2b45ZgGfYIs';
             const chatId = '1538316434';
-            const text = `🛍️ *New Shop Order!*\n\n*User:* ${currentUser.name}\n*Item:* ${itemName}\n*Size:* ${size}\n*Ref #:* \`${refNumber}\`\n\nApprove or Reject this order from the VIP Shop menu.`;
+            const text = `🛍️ *New VIP Shop Order!*\n\n*Name:* ${currentUser.name}\n*Email:* ${currentUser.email}\n*Phone:* ${phone}\n*Gender:* ${currentUser.gender || 'Unknown'}\n\n*Item:* ${itemName}\n*Size:* ${size}\n*Price:* ${price} EGP\n*InstaPay/Ref #:* \`${refNumber}\``;
             
+            const replyMarkup = {
+                inline_keyboard: [
+                    [
+                        { text: "✅ Approve Order", callback_data: `shop_appr_${newOrder.id}` },
+                        { text: "❌ Reject Order", callback_data: `shop_rej_${newOrder.id}` }
+                    ]
+                ]
+            };
+
             try {
                 await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ chat_id: chatId, text, parse_mode: 'Markdown' })
+                    body: JSON.stringify({ chat_id: chatId, text, parse_mode: 'Markdown', reply_markup: replyMarkup })
                 });
             } catch (e) {
                 console.error("Telegram shop alert failed", e);
