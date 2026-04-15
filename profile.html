@@ -1,0 +1,91 @@
+<!-- profile.html -->
+<!-- Create a NEW file named profile.html and paste this inside -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Profile | Stride Rite</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css?v=6">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        .profile-container { max-width: 900px; margin: 0 auto; padding: 2rem; }
+        .profile-header { display: flex; align-items: center; gap: 2rem; margin-bottom: 3rem; flex-wrap: wrap; }
+        .avatar-circle { width: 100px; height: 100px; background: linear-gradient(135deg, var(--neon-accent), var(--peach-accent)); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2.5rem; font-weight: 800; color: white; }
+        .stat-card { text-align: center; padding: 2rem; border-bottom: 4px solid var(--neon-accent); }
+        .stat-card.peach { border-bottom-color: var(--peach-accent); }
+        .stat-value { font-size: 2.5rem; font-weight: 800; font-family: 'Outfit'; margin-bottom: 0.5rem; }
+        .stat-label { color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; font-size: 0.7rem; }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="logo">Stride Rite</div>
+        <div class="nav-links">
+            <a href="index.html" class="btn btn-secondary" style="padding: 0.4rem 1rem; font-size: 0.85rem; margin-right: 8px;">🏠 Home</a>
+            <a href="dashboard.html" class="btn btn-secondary" style="padding: 0.4rem 1rem; font-size: 0.85rem; margin-right: 8px;">📊 Dashboard</a>
+            <a href="#" onclick="AuthService.logout()">Log Out</a>
+        </div>
+    </nav>
+
+    <div class="profile-container">
+        <header class="profile-header">
+            <div class="avatar-circle" id="userInitial">S</div>
+            <div>
+                <h1 id="userName" style="font-family:'Outfit'; font-size:2.5rem;">Runner</h1>
+                <p id="userEmail" style="color: var(--text-muted);"></p>
+            </div>
+        </header>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-bottom: 3rem;">
+            <div class="glass-card stat-card">
+                <div class="stat-value" id="totalRuns">0</div>
+                <div class="stat-label">Total Runs</div>
+            </div>
+            <div class="glass-card stat-card peach">
+                <div class="stat-value" id="totalKms">0.0</div>
+                <div class="stat-label">Total KMs</div>
+            </div>
+        </div>
+
+        <h2 style="font-family:'Outfit'; margin-bottom: 1.5rem;">👟 Recent Activity</h2>
+        <div class="b-grid" id="historyContainer">
+            <!-- Runs injected here -->
+        </div>
+    </div>
+
+    <script src="app.js?v=7"></script>
+    <script>
+        const user = AuthService.getCurrentUser();
+        if (!user) window.location.href = 'index.html';
+        document.getElementById('userName').innerText = user.name;
+        document.getElementById('userEmail').innerText = user.email;
+        document.getElementById('userInitial').innerText = user.name.charAt(0).toUpperCase();
+
+        async function loadProfile() {
+            const stats = await AppService.getUserStats(user.id);
+            document.getElementById('totalRuns').innerText = stats.totalRuns;
+            document.getElementById('totalKms').innerText = stats.totalKms;
+            
+            const container = document.getElementById('historyContainer');
+            if (stats.pastRuns.length === 0) {
+                container.innerHTML = `<p style="color:var(--text-muted);">No runs completed yet! 🏁</p>`;
+                return;
+            }
+            container.innerHTML = stats.pastRuns.map(run => `
+                <div class="glass-card" style="padding: 1.5rem; border: 1px solid rgba(255,255,255,0.05);">
+                    <div style="font-weight: 800; font-family: 'Outfit'; color:white;">${run.date_display}</div>
+                    <div style="color: var(--peach-accent); font-size: 0.85rem; margin-bottom:1rem;">📍 ${run.location}</div>
+                    <div style="display: flex; gap: 1rem; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 1rem;">
+                        <span style="font-size: 0.75rem; color: var(--text-muted);">${run.user_distance}</span>
+                        <span style="font-size: 0.75rem; color: var(--text-muted);">${run.user_level?.split(' ')[0] || ''}</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+        loadProfile();
+    </script>
+</body>
+</html>
