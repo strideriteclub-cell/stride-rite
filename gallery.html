@@ -245,14 +245,19 @@
             loadGallery();
         };
 
-        // Show upload button for admins only
+        // Show upload button for admins, gallery is public for everyone
         async function initPage() {
             const user = JSON.parse(localStorage.getItem('stride_user') || 'null');
-            if (!user) { window.location.href = 'index.html'; return; }
-            if (user.is_admin) {
+            if (user && user.is_admin) {
                 document.getElementById('uploadBtn').style.display = 'inline-flex';
                 document.getElementById('adminLink').classList.remove('hidden');
                 document.getElementById('adminLink').href = 'admin.html';
+            }
+            // Show logout/login link appropriately
+            if (!user) {
+                document.querySelector('.nav-links a[onclick]').textContent = 'Log In';
+                document.querySelector('.nav-links a[onclick]').href = 'index.html';
+                document.querySelector('.nav-links a[onclick]').removeAttribute('onclick');
             }
             loadGallery();
         }
