@@ -302,12 +302,19 @@ async function handleShopToggle(chatId, newStateStr) {
 
 // Order Actions
 async function handleShopOrderApprove(chatId, orderId) {
-    // We will replace #EMAILJS_SERVICE_ID# shortly!
     await updateOrderStatusAndEmail(chatId, orderId, 'approved', 'template_qgow76l');
 }
 
 async function handleShopOrderReject(chatId, orderId) {
     await updateOrderStatusAndEmail(chatId, orderId, 'rejected', 'template_59dgsfw');
+}
+
+// --- WHATSAPP HELPER ---
+function formatWhatsAppPhone(phone) {
+    if (!phone) return '';
+    let p = phone.replace(/[^\d]/g, '');
+    if (p.startsWith('0')) p = '20' + p.substring(1); // Standardizes Egyptian 01... to 201...
+    return p;
 }
 
 async function updateOrderStatusAndEmail(chatId, orderId, newStatus, templateId) {
@@ -320,21 +327,23 @@ async function updateOrderStatusAndEmail(chatId, orderId, newStatus, templateId)
 
     // Get Item and User info
     const items = await dbGet('shop_items', `id=eq.${order.item_id}`);
-    const itemName = (items && items.length>0)?items[0].name:'Item';
-    const itemPrice = (items && items.length>0)?items[0].price:'0';
+    const itemName = (items && items.length>0) ? items[0].name : 'Item';
+    const itemPrice = (items && items.length>0) ? items[0].price : '0';
 
     const users = await dbGet('stride_users', `id=eq.${order.user_id}`);
-    const userEmail = (users && users.length>0)?users[0].email:'';
-    const userName = (users && users.length>0)?users[0].name.split(' ')[0]:'';
+    const userEmail = (users && users.length>0) ? users[0].email : '';
+    const userNameFull = (users && users.length>0) ? users[0].name : 'Runner';
+    const userName = userNameFull.split(' ')[0];
 
-    // Update DB
+    // Update Database Status
     await fetch(`${SUPABASE_URL}/rest/v1/shop_orders?id=eq.${orderId}`, {
         method: 'PATCH',
         headers: dbHeaders,
         body: JSON.stringify({ status: newStatus })
     });
 
-    // Fire EmailJS via REST API
+    // Fire Email notification via EmailJS
+    let emailSent = false;
     try {
         const emailRes = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
             method: 'POST',
@@ -343,7 +352,7 @@ async function updateOrderStatusAndEmail(chatId, orderId, newStatus, templateId)
                 service_id: 'service_d2aff6e',
                 template_id: templateId,
                 user_id: 'GBTxpiwg_SF7bN2tH',
-                accessToken: '9yAc3NjCBB5wATwThsv6U', // Private Key to bypass browser limits
+                accessToken: '9yAc3NjCBB5wATwThsv6U',
                 template_params: {
                     to_name: userName,
                     to_email: userEmail,
@@ -353,16 +362,32 @@ async function updateOrderStatusAndEmail(chatId, orderId, newStatus, templateId)
                 }
             })
         });
+        emailSent = emailRes.ok;
+    } catch(e) { console.error("Email notification failed", e); }
 
-        if (!emailRes.ok) {
-            const errText = await emailRes.text();
-            await sendMessage(chatId, `⚠️ Order approved, but Email failed to send: ${errText}`);
-        } else {
-            await sendMessage(chatId, `✅ Order marked as *${newStatus}* and email sent to ${userName}!`);
-        }
-    } catch(e) {
-        await sendMessage(chatId, `❌ DB updated, but network error hitting EmailJS: ${e.message}`);
+    // Prepare WhatsApp Notification Link
+    const statusEmoji = newStatus === 'approved' ? '✅' : '❌';
+    const statusText = newStatus.toUpperCase();
+    
+    const waPhone = formatWhatsAppPhone(order.phone_number);
+    const waMsgText = `Hey ${userName}! 👋 Your Stride Rite order for the ${itemName} has been ${statusText} ${statusEmoji}.\n\nSee you at the next run! 🏃‍♂️💨`;
+    const waUrl = `https://wa.me/${waPhone}?text=${encodeURIComponent(waMsgText)}`;
+
+    const replyMarkup = {
+        inline_keyboard: [
+            [{ text: `📲 Notify ${userName} via WhatsApp`, url: waUrl }],
+            [{ text: "↩️ Back to Menu", callback_data: "cmd_menu" }]
+        ]
+    };
+
+    let finalMsg = `📦 Order for *${itemName}* marked as *${statusText}* ${statusEmoji}.\n👤 *Runner:* ${userNameFull}`;
+    if (!emailSent) {
+        finalMsg += `\n\n⚠️ _Note: Email failed to send, but status is updated in database._`;
+    } else {
+        finalMsg += `\n📧 _Confirmation Email sent successfully!_`;
     }
+
+    await sendMessage(chatId, finalMsg, replyMarkup);
 }
 
 // Export Orders
