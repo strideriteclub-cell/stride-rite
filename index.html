@@ -237,7 +237,8 @@
             btn.disabled = false;
 
             if (success) {
-                window.location.href = 'dashboard.html';
+                const redirect = new URLSearchParams(window.location.search).get('redirect');
+                window.location.href = redirect ? decodeURIComponent(redirect) : 'dashboard.html';
             } else {
                 Swal.fire({icon: 'error', title: 'Invalid credentials', background: '#141419', color: '#fff'});
             }
@@ -264,14 +265,22 @@
             btn.disabled = false;
 
             if (success) {
+                const redirect = new URLSearchParams(window.location.search).get('redirect');
                 Swal.fire({
                     icon: 'success', 
                     title: 'Welcome to the Family!', 
-                    text: 'We are incredibly excited to see you on Saturday!', 
+                    html: `
+                        <p style="margin-bottom: 20px; font-size: 1.1rem;">We are incredibly excited to see you! 🏃‍♂️💨</p>
+                        <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 15px;">Make sure to join our WhatsApp group to stay updated!</p>
+                        <a href="https://chat.whatsapp.com/BLYGyEaTTrF8lwS46fhuWM?mode=gi_t" target="_blank" style="display: inline-block; background: #25D366; color: white; padding: 12px 24px; border-radius: 50px; text-decoration: none; font-weight: bold;">
+                            Join WhatsApp Group
+                        </a>
+                    `,
                     background: '#141419', 
                     color: '#fff',
+                    confirmButtonText: redirect ? 'Continue to Survey' : 'View Runs',
                     confirmButtonColor: 'var(--peach-accent)'
-                }).then(() => window.location.href = 'dashboard.html');
+                }).then(() => window.location.href = redirect ? decodeURIComponent(redirect) : 'dashboard.html');
             } else {
                 Swal.fire({icon: 'error', title: 'Email already exists or server error', background: '#141419', color: '#fff'});
             }
