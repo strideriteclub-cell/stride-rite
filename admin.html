@@ -84,7 +84,7 @@
         }
 
         // Auto-register Telegram Webhook dynamically upon admin panel open
-        const webHookUrl = window.location.origin + '/.netlify/functions/telegram';
+        const webHookUrl = window.location.origin + '/api/telegram';
         const botToken = '8682463984:AAHA2PWT7WtQRskETmOanj0k2b45ZgGfYIs';
         // Only run this when hosted online, not locally
         if (window.location.protocol === 'https:') {
