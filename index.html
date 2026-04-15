@@ -7,6 +7,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css?v=4">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
     <style>
         .custom-logo {
             font-family: 'Outfit', sans-serif;
@@ -142,7 +143,25 @@
                     <input type="password" id="loginPassword" required>
                 </div>
                 <button type="submit" class="btn btn-primary btn-block purple-bg">Log In</button>
+                <p style="text-align:center; margin-top:1rem;">
+                    <a href="#" onclick="showForgotPassword()" style="color:var(--text-muted); font-size:0.85rem; text-decoration:none;">Forgot your password?</a>
+                </p>
             </form>
+
+            <!-- Forgot Password Form -->
+            <div id="forgotForm" class="auth-form hidden" style="text-align:center;">
+                <div style="font-size:2.5rem; margin-bottom:1rem;">🔐</div>
+                <h3 style="font-family:'Outfit'; margin-bottom:0.5rem;">Reset Password</h3>
+                <p style="color:var(--text-muted); font-size:0.9rem; margin-bottom:1.5rem;">Enter your email and we'll send you a reset link.</p>
+                <div class="input-group">
+                    <label>Your Email Address</label>
+                    <input type="email" id="forgotEmail" placeholder="you@example.com">
+                </div>
+                <button class="btn btn-primary btn-block purple-bg" onclick="sendResetEmail()" id="forgotBtn">Send Reset Link</button>
+                <p style="margin-top:1rem;">
+                    <a href="#" onclick="showLogin()" style="color:var(--text-muted); font-size:0.85rem; text-decoration:none;">← Back to Login</a>
+                </p>
+            </div>
 
             <!-- Register Form -->
             <form id="registerForm" class="auth-form">
@@ -285,6 +304,65 @@
                 Swal.fire({icon: 'error', title: 'Email already exists or server error', background: '#141419', color: '#fff'});
             }
         });
+
+        // ─── FORGOT PASSWORD ─────────────────────────────────────────────────
+        emailjs.init('7K3J2f7N7nwefFXCq');
+
+        function showForgotPassword() {
+            document.getElementById('loginForm').classList.add('hidden');
+            document.getElementById('forgotForm').classList.remove('hidden');
+        }
+        function showLogin() {
+            document.getElementById('forgotForm').classList.add('hidden');
+            document.getElementById('loginForm').classList.remove('hidden');
+        }
+
+        window.sendResetEmail = async function() {
+            const email = document.getElementById('forgotEmail').value.trim();
+            if (!email) { Swal.fire({icon:'warning', title:'Enter your email', background:'#141419', color:'#fff'}); return; }
+
+            const btn = document.getElementById('forgotBtn');
+            btn.innerText = 'Sending...';
+            btn.disabled = true;
+
+            // Check if email exists
+            const users = await dbGet('stride_users', `email=eq.${encodeURIComponent(email)}`);
+            if (!users || users.length === 0) {
+                Swal.fire({icon:'error', title:'Email not found', text:'No account with that email exists.', background:'#141419', color:'#fff'});
+                btn.innerText = 'Send Reset Link';
+                btn.disabled = false;
+                return;
+            }
+
+            // Generate token and save to DB
+            const token = crypto.randomUUID();
+            const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString(); // 1 hour
+            await dbInsert('password_resets', { email, token, expires_at: expiresAt, used: false });
+
+            const resetLink = `${window.location.origin}/reset-password.html?token=${token}`;
+
+            // Send email via EmailJS
+            try {
+                await emailjs.send('service_p70otdg', 'template_sc5tqp8', {
+                    to_name: users[0].name.split(' ')[0],
+                    to_email: email,
+                    reset_link: resetLink
+                });
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Email Sent! 📬',
+                    text: 'Check your inbox for the reset link. It expires in 1 hour.',
+                    background: '#141419', color: '#fff',
+                    confirmButtonColor: 'var(--peach-accent)'
+                });
+                document.getElementById('forgotEmail').value = '';
+            } catch(e) {
+                Swal.fire({icon:'error', title:'Failed to send email', text:'Please try again later.', background:'#141419', color:'#fff'});
+            }
+
+            btn.innerText = 'Send Reset Link';
+            btn.disabled = false;
+        };
     </script>
 </body>
 </html>
