@@ -3,564 +3,189 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Panel | Stride Rite</title>
+    <title>Dashboard | Stride Rite</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css?v=4">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-    <style>
-        .admin-layout { display: flex; gap: 2rem; margin-top: 2rem; flex-wrap: wrap; }
-        .sidebar { flex: 1; min-width: 300px; }
-        .main-content { flex: 2; min-width: 300px; }
-    </style>
 </head>
 <body>
     <nav class="navbar">
-        <div class="logo">Stride Rite Admin</div>
+        <div class="logo">Stride Rite</div>
         <div class="nav-links">
-            <a href="index.html">Main Page</a>
+            <span id="welcomeText" style="color: var(--text-muted); margin-right: 15px;"></span>
+            <a href="#" id="adminLink" class="admin-link hidden">Admin Panel</a>
             <a href="#" onclick="AuthService.logout()">Log Out</a>
         </div>
     </nav>
 
-    <div class="dashboard-container" style="margin-top: 100px;">
-        <div class="admin-layout">
-            
-            <!-- Create Run Sidebar -->
-            <div class="sidebar glass-panel" style="padding: 2rem;">
-                <h3>Create Weekly Run</h3>
-                <form id="createRunForm" style="margin-top: 1.5rem;">
-                    <div class="input-group" style="display:flex; gap:10px;">
-                        <div style="flex:1;">
-                            <label>Date of the Run</label>
-                            <input type="date" id="runDate" required>
-                        </div>
-                        <div style="flex:1;">
-                            <label>Time</label>
-                            <input type="time" id="runTime" value="07:00" required>
-                        </div>
-                    </div>
-                    <div class="input-group">
-                        <label>Location Name</label>
-                        <input type="text" id="runLocName" value="Gateway Mall, Al Rehab City" required>
-                    </div>
-                    <div class="input-group">
-                        <label>Location Maps Link</label>
-                        <input type="url" id="runLocLink" value="https://maps.app.goo.gl/tareg62PBaQJVypk7" required>
-                    </div>
-                    <div class="input-group">
-                        <label>Description/Notes for Runners</label>
-                        <input type="text" id="runDesc" value="Gather at 7:00 AM, warmup starts by 7:15 AM! Every pace is welcome." required>
-                    </div>
-                    <button type="submit" class="btn btn-primary btn-block">Schedule Run</button>
-                </form>
-            </div>
-
-            <!-- Manage Runs Content -->
-            <div class="main-content">
-                <h2>Manage Scheduled Runs</h2>
-                <div id="adminRunsContainer" style="margin-top: 1.5rem;">
-                    <!-- Runs list injected here -->
-                </div>
-            </div>
-
+    <div class="admin-header" style="display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 1rem;">
+        <div>
+            <h1>Upcoming Community Runs</h1>
+            <p style="color: var(--text-muted)">Register for the next Saturday run so we know you're coming!</p>
         </div>
-        
-        <!-- Insights Dashboard -->
-        <div id="insightsContainer" style="width: 100%;"></div>
+        <button class="btn btn-secondary" onclick="promptSuggestion()" style="border-color: var(--peach-accent); color: var(--peach-accent);">💡 Send a Suggestion</button>
+    </div>
 
-        <!-- Attendance Trend -->
-        <div id="trendContainer" style="width: 100%; margin-top: 2rem;"></div>
-
-        <!-- Peak Registration Time -->
-        <div id="peakContainer" style="width: 100%; margin-top: 2rem;"></div>
+    <div class="dashboard-container">
+        <div class="b-grid" id="runsContainer">
+            <!-- Runs injected here -->
+        </div>
     </div>
 
     <script src="app.js?v=2"></script>
     <script>
         const user = AuthService.getCurrentUser();
-        if (!user || user.is_admin !== true) {
-            window.location.href = 'dashboard.html';
+        if (!user) window.location.href = 'index.html?v=2';
+
+        document.getElementById('welcomeText').innerText = `Hello, ${user.name}`;
+        if (user.is_admin) {
+            document.getElementById('adminLink').classList.remove('hidden');
+            document.getElementById('adminLink').href = 'admin.html';
         }
 
-        // Auto-register Telegram Webhook dynamically upon admin panel open
-        const webHookUrl = window.location.origin + '/api/telegram';
-        const botToken = '8682463984:AAHA2PWT7WtQRskETmOanj0k2b45ZgGfYIs';
-        // Only run this when hosted online, not locally
-        if (window.location.protocol === 'https:') {
-            fetch(`https://api.telegram.org/bot${botToken}/setWebhook?url=${encodeURIComponent(webHookUrl)}`)
-                .then(res => res.json())
-                .then(data => {
-                    if(data.ok) {
-                        console.log('Webhook securely registered.');
-                        // Also set professional command menu
-                        const commands = [
-                            { command: 'stats', description: '📊 View next run statistics' },
-                            { command: 'export', description: '📥 Download runner list (Excel)' },
-                            { command: 'create', description: '🆕 Schedule a new community run' }
-                        ];
-                        fetch(`https://api.telegram.org/bot${botToken}/setMyCommands`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ commands: commands })
-                        });
-                    }
-                }).catch(e => console.error(e));
-        }
-
-        document.getElementById('createRunForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const btn = e.target.querySelector('button');
-            const originalText = btn.innerText;
-            btn.innerText = 'Scheduling...';
-            btn.disabled = true;
-
-            // Format the date label beautifully
-            const dateVal = document.getElementById('runDate').value;
-            const timeVal = document.getElementById('runTime').value;
-            const dateObj = new Date(dateVal + 'T' + timeVal);
+        async function renderRuns() {
+            const container = document.getElementById('runsContainer');
+            container.innerHTML = '<p>Loading community runs from server...</p>';
             
-            const formattedDate = dateObj.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
-            const formattedTime = dateObj.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-            const fullDateLabel = `${formattedDate} - ${formattedTime}||${dateObj.toISOString()}`;
-
-            await AppService.createRun(
-                fullDateLabel,
-                document.getElementById('runLocName').value,
-                document.getElementById('runLocLink').value,
-                document.getElementById('runDesc').value
-            );
-
-            btn.innerText = originalText;
-            btn.disabled = false;
-
-            Swal.fire({icon: 'success', title: 'Run Created!', background: '#141419', color: '#fff', confirmButtonColor: '#00ff88'});
-            document.getElementById('createRunForm').reset();
-            // Retain the defaults since they are useful
-            document.getElementById('runLocName').value = "Gateway Mall, Al Rehab City";
-            document.getElementById('runLocLink').value = "https://maps.app.goo.gl/tareg62PBaQJVypk7";
-            document.getElementById('runTime').value = "07:00";
-            renderAdminRuns();
-        });
-
-        async function renderAdminRuns() {
-            const container = document.getElementById('adminRunsContainer');
-            container.innerHTML = '<p>Loading database...</p>';
-
-            let runs = await AppService.getRuns();
-            runs = runs.reverse(); // Newest first
+            const runs = await AppService.getRuns();
+            const myRunIds = await AppService.getUserRegistrations(user.id);
 
             if(!runs || runs.length === 0) {
-                container.innerHTML = `<p>No runs scheduled. Create one to the left.</p>`;
+                container.innerHTML = `<p>No upcoming runs scheduled right now.</p>`;
                 return;
             }
 
-            // Fetch participants for all runs
-            const htmlPromises = runs.map(async run => {
-                const participants = await AppService.getParticipantsForRun(run.id);
-                return `
-                <div class="glass-panel" style="padding: 1.5rem; margin-bottom: 1rem;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-                        <div>
-                            <h3 style="margin-bottom: 0.5rem;">${run.date_label}</h3>
-                            <p style="color: var(--text-muted); font-size: 0.9rem;">${participants.length} Registered Runners</p>
-                        </div>
-                        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                            <button class="btn btn-secondary" style="border-color: #25D366; color: #25D366;" onclick="whatsappBlast('${run.id}', '${run.date_label}', '${run.location}', '${run.location_link}')">📲 WhatsApp Blast</button>
-                            <button class="btn btn-secondary" style="border-color: var(--peach-accent); color: var(--peach-accent);" onclick="generateSurveyLink('${run.date_label}')">📋 Survey Link</button>
-                            <button class="btn btn-secondary" onclick="exportRun('${run.id}', '${run.date_label}')">Export Excel / CSV</button>
-                            <button class="btn btn-secondary" style="border-color: #ff4d4d; color: #ff4d4d;" onclick="deleteRun('${run.id}')">Delete Run</button>
-                        </div>
-                    </div>
-                </div>
-                `;
-            });
-            const htmlArray = await Promise.all(htmlPromises);
-            container.innerHTML = htmlArray.join('');
-            
-            // Render Insights for the very next run
-            await renderInsights(runs);
-        }
+            container.innerHTML = runs.map(run => {
+                const isRegistered = myRunIds.includes(run.id);
 
-        async function renderInsights(runs) {
-            const container = document.getElementById('insightsContainer');
-            if (!runs || runs.length === 0) return;
-            
-            const nextRun = runs[0];
-            const participants = await AppService.getParticipantsForRun(nextRun.id);
-            
-            if (participants.length === 0) {
-                container.innerHTML = `
-                    <div class="glass-panel" style="padding: 2rem; margin-top: 2rem;">
-                        <h2>Upcoming Run Insights: ${nextRun.date_label}</h2>
-                        <p style="color: var(--text-muted);">No runners have RSVP'd yet.</p>
-                    </div>
-                `;
-                return;
-            }
-
-            let males = 0, females = 0, totalAge = 0;
-            let levels = { "Beginner": 0, "Intermediate": 0, "Advanced": 0, "Non-Runner": 0 };
-
-            participants.forEach(p => {
-                if (p.gender === 'Male') males++;
-                if (p.gender === 'Female') females++;
-                totalAge += parseInt(p.age) || 0;
-                
-                if (p.level && p.level.includes('Beginner')) levels["Beginner"]++;
-                else if (p.level && p.level.includes('Intermediate')) levels["Intermediate"]++;
-                else if (p.level && p.level.includes('Advanced')) levels["Advanced"]++;
-                else if (p.level && p.level.includes('Non-Runner')) levels["Non-Runner"]++;
-            });
-
-            const avgAge = Math.round(totalAge / participants.length);
-            const total = participants.length;
-            
-            let maxLevel = "Beginner";
-            let maxCount = levels["Beginner"];
-            for (const [key, val] of Object.entries(levels)) {
-                if (val > maxCount) {
-                    maxCount = val;
-                    maxLevel = key;
+                let title = run.date_label.toUpperCase();
+                let subtitle = "";
+                if(run.date_label.includes(" - ")) {
+                    const parts = run.date_label.split(" - ");
+                    title = parts[0].toUpperCase();
+                    subtitle = parts.slice(1).join(" - ");
                 }
-            }
 
-            let vibeCheck = "Mixed group.";
-            if (maxLevel === "Beginner" || maxLevel === "Non-Runner") vibeCheck = "Keep the pace social and welcoming! Expect lots of walking intervals.";
-            else if (maxLevel === "Intermediate") vibeCheck = "Solid steady pace. Good mix of sustained running.";
-            else if (maxLevel === "Advanced") vibeCheck = "Fast group today! Be prepared to push the limits.";
-
-            const malePct = Math.round((males/total)*100) || 0;
-            const femalePct = Math.round((females/total)*100) || 0;
-
-            container.innerHTML = `
-                <div class="glass-panel" style="padding: 2rem; margin-top: 2rem; width: 100%;">
-                    <h2 style="margin-bottom: 1.5rem; color: var(--neon-accent);">Next Run Insights: <span style="color:white;">${nextRun.date_label}</span></h2>
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-bottom: 1.5rem;">
-                        <div style="text-align: center; padding: 1.5rem; background: rgba(0,0,0,0.3); border-radius: 12px; border-bottom: 2px solid var(--peach-accent);">
-                            <div style="font-size: 3rem; font-weight: 800; color: white; font-family:'Outfit'; line-height:1;">${total}</div>
-                            <div style="color: var(--text-muted); text-transform: uppercase; font-size: 0.8rem; margin-top: 5px;">RSVPs</div>
-                        </div>
-                        <div style="text-align: center; padding: 1.5rem; background: rgba(0,0,0,0.3); border-radius: 12px; border-bottom: 2px solid var(--neon-accent);">
-                            <div style="font-size: 3rem; font-weight: 800; color: white; font-family:'Outfit'; line-height:1;">${avgAge}</div>
-                            <div style="color: var(--text-muted); text-transform: uppercase; font-size: 0.8rem; margin-top: 5px;">Avg Age</div>
-                        </div>
-                        <div style="text-align: center; padding: 1.5rem; background: rgba(0,0,0,0.3); border-radius: 12px; border-bottom: 2px solid white;">
-                            <div style="font-size: 1.5rem; font-weight: 800; color: white; margin-top: 10px; font-family:'Outfit';">${malePct}% M / ${femalePct}% F</div>
-                            <div style="color: var(--text-muted); text-transform: uppercase; font-size: 0.8rem; margin-top: 10px;">Gender Split</div>
-                        </div>
-                    </div>
-
-                    <div style="background: rgba(255,139,106,0.1); padding: 1.5rem; border-radius: 12px; border-left: 4px solid var(--peach-accent);">
-                        <h4 style="margin-bottom: 0.5rem; font-family: 'Outfit'; font-size: 1.2rem; color: var(--peach-accent);">Vibe Check</h4>
-                        <p>Most of the group is <strong>${maxLevel}</strong>. <span style="color: var(--text-muted);">${vibeCheck}</span></p>
-                    </div>
+                return `
+                <div class="glass-card" style="background:#0d0c11; border:none; border-bottom:4px solid var(--neon-accent); border-radius:12px; padding:2rem; margin-bottom:1.5rem; text-align:left;">
+                    <div style="font-weight:800; font-size:1.5rem; color:white; letter-spacing:1px; margin-bottom:0.25rem; font-family:'Outfit';">${title}</div>
+                    <div style="font-weight:800; font-size:2.5rem; color:white; line-height:1; margin-bottom:1rem; font-family:'Outfit';">${subtitle}</div>
+                    <div style="width: 50px; height: 3px; background: var(--peach-accent); margin-bottom: 0.75rem;"></div>
+                    <div style="color:rgba(255,255,255,0.7); font-size:0.95rem; margin-bottom:0.2rem;">Community run · All welcome</div>
+                    <div style="color:var(--peach-accent); font-size:0.85rem; margin-bottom:1.5rem;"><a href="${run.location_link}" target="_blank" style="color: inherit;">📍 ${run.location}</a></div>
+                    
+                    ${isRegistered 
+                        ? `<button class="btn btn-secondary btn-block" disabled>✓ You are registered</button>`
+                        : `<button class="btn btn-primary btn-block purple-bg" onclick="promptRegistration('${run.id}')">Register for this Run</button>`
+                    }
                 </div>
-            `;
+                `;
+            }).join('');
         }
 
-        window.exportRun = async function(runId, runLabel) {
-            Swal.fire({title: 'Compiling...', background: '#141419', color: '#fff', didOpen: () => Swal.showLoading()});
-            
-            const participants = await AppService.getParticipantsForRun(runId);
-            Swal.close();
+        window.promptRegistration = function(runId) {
+            Swal.fire({
+                title: 'Complete Registration',
+                html: `
+                    <div style="text-align: left;">
+                        <label style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 5px; display:block;">Select Distance</label>
+                        <select id="swal-distance" class="swal2-input" style="width: 100%; margin: 0 0 1rem 0; font-size: 1rem; background: var(--bg-dark); color: white;">
+                            <option value="2K">2 KM</option>
+                            <option value="5K">5 KM</option>
+                            <option value="8K">8 KM</option>
+                        </select>
 
-            if (participants.length === 0) {
-                Swal.fire({icon: 'info', title: 'Empty', text: 'No one has registered for this run yet.', background: '#141419', color: '#fff'});
-                return;
-            }
-
-            let csvContent = "data:text/csv;charset=utf-8,";
-            csvContent += "Name,Email,Age,Gender,Distance,Level,Registration Timestamp\n";
-
-            participants.forEach(p => {
-                const row = `"${p.name}","${p.email}","${p.age}","${p.gender}","${p.distance}","${p.level}","${new Date(p.registeredAt).toLocaleString()}"`;
-                csvContent += row + "\n";
+                        <label style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 5px; display:block;">Current Running Level</label>
+                        <select id="swal-level" class="swal2-input" style="width: 100%; margin: 0; font-size: 1rem; background: var(--bg-dark); color: white;">
+                            <option value="Beginner (Walk/Run)">Beginner (Walk/Run)</option>
+                            <option value="Intermediate (5k-10k consistent)">Intermediate (5k-10k consistent)</option>
+                            <option value="Advanced (Fast paced/Long distance)">Advanced (Fast paced/Long distance)</option>
+                            <option value="Non-Runner (Just here for vibes)">Non-Runner (Just here for vibes)</option>
+                        </select>
+                    </div>
+                `,
+                background: '#141419',
+                color: '#fff',
+                confirmButtonText: 'Confirm RSVP',
+                confirmButtonColor: 'var(--peach-accent)',
+                preConfirm: () => {
+                    return {
+                        distance: document.getElementById('swal-distance').value,
+                        level: document.getElementById('swal-level').value
+                    }
+                }
+            }).then((result) => {
+                if(result.isConfirmed) {
+                    register(runId, result.value.distance, result.value.level);
+                }
             });
-
-            const encodedUri = encodeURI(csvContent);
-            const link = document.createElement("a");
-            link.setAttribute("href", encodedUri);
-            link.setAttribute("download", `stride_rite_${runLabel.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.csv`);
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
         };
 
-        window.deleteRun = function(runId) {
+        window.register = async function(runId, distance, level) {
             Swal.fire({
-                title: 'Are you sure?',
-                text: "You won't be able to revert this! All registrations will be lost.",
-                icon: 'warning',
+                title: 'Registering...',
+                background: '#141419', color: '#fff',
+                didOpen: () => Swal.showLoading()
+            });
+
+            if (await AppService.registerForRun(runId, distance, level)) {
+                Swal.fire({
+                    icon: 'success', 
+                    title: 'You are registered!', 
+                    html: `
+                        <p style="margin-bottom: 20px; font-size: 1.1rem;">We can't wait to see you there! 🏃‍♂️💨</p>
+                        <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 15px;">Make sure to join our WhatsApp group to stay updated on warm-up timings and run photos!</p>
+                        <a href="https://chat.whatsapp.com/BLYGyEaTTrF8lwS46fhuWM?mode=gi_t" target="_blank" style="display: inline-block; background: #25D366; color: white; padding: 12px 24px; border-radius: 50px; text-decoration: none; font-weight: bold; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/></svg>
+                            Join WhatsApp Group
+                        </a>
+                    `,
+                    background: '#141419',
+                    color: '#fff',
+                    confirmButtonText: 'Return to Homepage',
+                    confirmButtonColor: 'var(--peach-accent)'
+                }).then(() => {
+                    window.location.href = 'dashboard.html';
+                });
+            } else {
+                Swal.fire({icon: 'error', title: 'Registration failed', text: 'You might already be registered.', background: '#141419', color: '#fff'});
+            }
+        };
+
+        renderRuns();
+
+        window.promptSuggestion = function() {
+            Swal.fire({
+                title: 'Suggest a Run',
+                input: 'textarea',
+                inputLabel: 'Have an idea? (e.g. Sunrise run at 5am)',
+                inputPlaceholder: 'Type your message here...',
                 showCancelButton: true,
-                confirmButtonColor: '#ff4d4d',
-                cancelButtonColor: '#555',
-                confirmButtonText: 'Yes, delete it!',
+                confirmButtonText: 'Send Message',
+                confirmButtonColor: 'var(--peach-accent)',
                 background: '#141419',
-                color: '#fff'
+                color: '#fff',
+                preConfirm: (text) => {
+                    if (!text) {
+                        Swal.showValidationMessage('Please write something!');
+                    }
+                    return text;
+                }
             }).then(async (result) => {
                 if (result.isConfirmed) {
-                    Swal.fire({title: 'Deleting...', background: '#141419', color: '#fff', didOpen: () => Swal.showLoading()});
-                    await AppService.deleteRun(runId);
+                    Swal.fire({title: 'Sending...', background: '#141419', color: '#fff', didOpen: () => Swal.showLoading()});
+                    await AppService.sendTelegramSuggestion(user, result.value);
                     Swal.fire({
-                        title: 'Deleted!',
-                        text: 'Run has been deleted.',
-                        icon: 'success',
-                        background: '#141419',
-                        color: '#fff',
-                        confirmButtonColor: '#00ff88'
+                        icon: 'success', 
+                        title: 'Sent!', 
+                        text: 'Your brilliant suggestion was zipped straight to the organizers! 🚀', 
+                        background: '#141419', 
+                        color: '#fff', 
+                        confirmButtonColor: 'var(--peach-accent)'
                     });
-                    renderAdminRuns();
                 }
-            })
-        };
-
-        window.whatsappBlast = async function(runId, dateLabel, location, locationLink) {
-            const participants = await AppService.getParticipantsForRun(runId);
-            const count = participants.length;
-            const registered = count > 0 ? `✅ *${count} runner${count > 1 ? 's' : ''} already registered!*` : '';
-
-            const message =
-`🏃‍♂️ *Stride Rite Community Run* 🏃‍♀️
-
-📅 *${dateLabel}*
-📍 *${location}*
-🗺️ ${locationLink}
-
-${registered}
-
-Don't miss it! Register now at 👇
-https://stride-rite.vercel.app
-
-_Every pace is welcome. See you there!_ 💪`;
-
-            try {
-                await navigator.clipboard.writeText(message);
-            } catch(e) {}
-
-            Swal.fire({
-                icon: 'success',
-                title: '📋 WhatsApp Blast Ready!',
-                html: `
-                    <p style="margin-bottom: 15px; color: #a1a1aa;">Message copied! Open your WhatsApp group and paste it, or tap the button below to open directly.</p>
-                    <pre style="background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 8px; text-align: left; font-size: 0.78rem; white-space: pre-wrap; color: white; max-height: 200px; overflow-y: auto;">${message}</pre>
-                    <a href="https://wa.me/?text=${encodeURIComponent(message)}" target="_blank" style="display: inline-flex; align-items: center; gap: 8px; background: #25D366; color: white; padding: 12px 24px; border-radius: 50px; text-decoration: none; font-weight: bold; margin-top: 15px;">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/></svg>
-                        Open in WhatsApp
-                    </a>
-                `,
-                background: '#141419',
-                color: '#fff',
-                confirmButtonText: 'Done!',
-                confirmButtonColor: '#25D366',
-                width: '600px'
             });
         };
-
-        window.generateSurveyLink = function(dateLabel) {
-            const base = window.location.origin;
-            const surveyUrl = `${base}/survey.html?run=${encodeURIComponent(dateLabel)}`;
-
-            const waMessage =
-`🏃 Hey Striders!
-
-We hope you crushed today's run 💪
-
-We'd love to know how you felt! It only takes 30 seconds and helps us make every run even better for you 👇
-
-📋 ${surveyUrl}
-
-Thank you for being part of the Stride Rite community! See you next time 🙌`;
-
-            try { navigator.clipboard.writeText(waMessage); } catch(e) {}
-
-            Swal.fire({
-                icon: 'success',
-                title: '📋 Survey Link Ready!',
-                html: `
-                    <p style="color: #a1a1aa; margin-bottom: 12px;">Message copied! Paste it into your WhatsApp group, or use the button below.</p>
-                    <div style="background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 8px; text-align: left; font-size: 0.82rem; white-space: pre-wrap; color: white; max-height: 200px; overflow-y: auto; font-family: monospace;">${waMessage}</div>
-                    <a href="https://wa.me/?text=${encodeURIComponent(waMessage)}" target="_blank" style="display: inline-flex; align-items: center; gap: 8px; background: #25D366; color: white; padding: 12px 24px; border-radius: 50px; text-decoration: none; font-weight: bold; margin-top: 15px;">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/></svg>
-                        Send via WhatsApp
-                    </a>
-                `,
-                background: '#141419',
-                color: '#fff',
-                confirmButtonText: 'Done!',
-                confirmButtonColor: 'var(--peach-accent)',
-                width: '600px'
-            });
-        };
-
-        let trendChartInstance = null;
-
-        async function renderTrendChart() {
-            const trendContainer = document.getElementById('trendContainer');
-            const allRuns = await AppService.getRuns();
-
-            if (!allRuns || allRuns.length === 0) return;
-
-            // Sort oldest to newest for the chart
-            const sorted = [...allRuns].reverse();
-
-            const labels = [];
-            const data = [];
-
-            for (const run of sorted) {
-                const participants = await AppService.getParticipantsForRun(run.id);
-                const label = run.date_label.length > 20 ? run.date_label.substring(0, 20) + '...' : run.date_label;
-                labels.push(label);
-                data.push(participants.length);
-            }
-
-            trendContainer.innerHTML = `
-                <div class="glass-panel" style="padding: 2rem; margin-top: 1rem;">
-                    <h2 style="margin-bottom: 0.5rem; color: var(--neon-accent);">📈 Attendance Trend</h2>
-                    <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem;">Runner RSVPs across all scheduled runs</p>
-                    <div style="position: relative; width: 100%; max-height: 300px;">
-                        <canvas id="trendChart"></canvas>
-                    </div>
-                </div>
-            `;
-
-            const ctx = document.getElementById('trendChart').getContext('2d');
-            if (trendChartInstance) trendChartInstance.destroy();
-            trendChartInstance = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: 'Registered Runners',
-                        data: data,
-                        fill: true,
-                        borderColor: '#584adc',
-                        backgroundColor: 'rgba(88, 74, 220, 0.15)',
-                        pointBackgroundColor: '#ff8b6a',
-                        pointBorderColor: '#ff8b6a',
-                        pointRadius: 6,
-                        pointHoverRadius: 9,
-                        tension: 0.4,
-                        borderWidth: 3
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: true,
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: {
-                            backgroundColor: '#141419',
-                            borderColor: '#584adc',
-                            borderWidth: 1,
-                            titleColor: '#fff',
-                            bodyColor: '#a1a1aa',
-                            callbacks: {
-                                label: ctx => `${ctx.parsed.y} runner${ctx.parsed.y !== 1 ? 's' : ''} registered`
-                            }
-                        }
-                    },
-                    scales: {
-                        x: {
-                            ticks: { color: '#a1a1aa', font: { size: 11 } },
-                            grid: { color: 'rgba(255,255,255,0.05)' }
-                        },
-                        y: {
-                            beginAtZero: true,
-                            ticks: { color: '#a1a1aa', stepSize: 1 },
-                            grid: { color: 'rgba(255,255,255,0.05)' }
-                        }
-                    }
-                }
-            });
-        }
-
-        renderAdminRuns();
-        renderTrendChart();
-
-        async function renderPeakStats() {
-            const peakContainer = document.getElementById('peakContainer');
-            const allRegs = await fetch(`https://qcqyyfnsfyuaaaacddsm.supabase.co/rest/v1/stride_registrations?select=registered_at`, {
-                headers: {
-                    'apikey': 'sb_publishable_uXs2e5aPzrIL_M2xsYDmWg_hPOUaG1l',
-                    'Authorization': 'Bearer sb_publishable_uXs2e5aPzrIL_M2xsYDmWg_hPOUaG1l'
-                }
-            }).then(r => r.json());
-
-            if (!allRegs || allRegs.length === 0) return;
-
-            const hourCounts = new Array(24).fill(0);
-            const dayCounts = { 'Sun': 0, 'Mon': 0, 'Tue': 0, 'Wed': 0, 'Thu': 0, 'Fri': 0, 'Sat': 0 };
-            const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-
-            allRegs.forEach(r => {
-                const d = new Date(r.registered_at);
-                hourCounts[d.getHours()]++;
-                dayCounts[dayNames[d.getDay()]]++;
-            });
-
-            const peakHour = hourCounts.indexOf(Math.max(...hourCounts));
-            const peakDay = Object.entries(dayCounts).sort((a,b) => b[1]-a[1])[0][0];
-            const ampm = peakHour >= 12 ? 'PM' : 'AM';
-            const hr = peakHour % 12 || 12;
-            const hourLabels = Array.from({length: 24}, (_, i) => `${i === 0 ? 12 : i > 12 ? i-12 : i}${i < 12 ? 'am' : 'pm'}`);
-
-            peakContainer.innerHTML = `
-                <div class="glass-panel" style="padding: 2rem;">
-                    <h2 style="margin-bottom: 0.5rem; color: var(--peach-accent);">⏰ Peak Registration Time</h2>
-                    <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem;">When your community RSVPs the most — post on Instagram at this time!</p>
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1.5rem; margin-bottom: 1.5rem;">
-                        <div style="text-align: center; padding: 1.5rem; background: rgba(0,0,0,0.3); border-radius: 12px; border-bottom: 2px solid var(--peach-accent);">
-                            <div style="font-size: 2.5rem; font-weight: 800; color: white; font-family:'Outfit';">${hr}:00 ${ampm}</div>
-                            <div style="color: var(--text-muted); text-transform: uppercase; font-size: 0.8rem; margin-top: 5px;">Best Hour to Post</div>
-                        </div>
-                        <div style="text-align: center; padding: 1.5rem; background: rgba(0,0,0,0.3); border-radius: 12px; border-bottom: 2px solid var(--neon-accent);">
-                            <div style="font-size: 2.5rem; font-weight: 800; color: white; font-family:'Outfit';">${peakDay}</div>
-                            <div style="color: var(--text-muted); text-transform: uppercase; font-size: 0.8rem; margin-top: 5px;">Most Active Day</div>
-                        </div>
-                        <div style="text-align: center; padding: 1.5rem; background: rgba(0,0,0,0.3); border-radius: 12px; border-bottom: 2px solid white;">
-                            <div style="font-size: 2.5rem; font-weight: 800; color: white; font-family:'Outfit';">${allRegs.length}</div>
-                            <div style="color: var(--text-muted); text-transform: uppercase; font-size: 0.8rem; margin-top: 5px;">Total All-Time RSVPs</div>
-                        </div>
-                    </div>
-                    <div style="position: relative; width: 100%; max-height: 220px;">
-                        <canvas id="peakChart"></canvas>
-                    </div>
-                </div>
-            `;
-
-            const ctx2 = document.getElementById('peakChart').getContext('2d');
-            new Chart(ctx2, {
-                type: 'bar',
-                data: {
-                    labels: hourLabels,
-                    datasets: [{
-                        data: hourCounts,
-                        backgroundColor: hourCounts.map((v, i) => i === peakHour ? '#ff8b6a' : 'rgba(88, 74, 220, 0.5)'),
-                        borderRadius: 5,
-                        borderSkipped: false
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: true,
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: {
-                            backgroundColor: '#141419', borderColor: '#584adc', borderWidth: 1,
-                            titleColor: '#fff', bodyColor: '#a1a1aa',
-                            callbacks: { label: ctx => `${ctx.parsed.y} registration${ctx.parsed.y !== 1 ? 's' : ''}` }
-                        }
-                    },
-                    scales: {
-                        x: { ticks: { color: '#a1a1aa', font: { size: 9 } }, grid: { display: false } },
-                        y: { beginAtZero: true, ticks: { color: '#a1a1aa', stepSize: 1 }, grid: { color: 'rgba(255,255,255,0.05)' } }
-                    }
-                }
-            });
-        }
-
-        renderPeakStats();
     </script>
 </body>
 </html>
