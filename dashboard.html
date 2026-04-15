@@ -1,5 +1,5 @@
-<!-- dashboard.html -->
-<!-- Paste this entire block into your dashboard.html on GitHub -->
+<!-- dashboard.html (RE-FIXED & POLISHED) -->
+<!-- Full polished code with Shop Button restored -->
 
 <!DOCTYPE html>
 <html lang="en">
@@ -7,8 +7,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard | Stride Rite</title>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=6">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css?v=10">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 <body>
@@ -18,60 +18,65 @@
             <span id="welcomeText" style="color: var(--text-muted); margin-right: 15px;"></span>
             <a href="index.html" class="btn btn-secondary" style="padding: 0.4rem 1rem; font-size: 0.85rem; margin-right: 8px;">🏠 Home</a>
             <a href="profile.html" class="btn btn-secondary" style="padding: 0.4rem 1rem; font-size: 0.85rem; margin-right: 8px; border-color:var(--peach-accent); color:var(--peach-accent);">👤 Profile</a>
+            <a href="gallery.html" class="btn btn-secondary" style="padding: 0.4rem 1rem; font-size: 0.85rem; margin-right: 8px;">📸 Gallery</a>
+            <a href="shop.html" id="shopLink" class="btn btn-secondary hidden" style="padding: 0.4rem 1rem; font-size: 0.85rem; margin-right: 8px; border-color:var(--neon-accent); color:var(--neon-accent);">🛒 Shop</a>
             <a href="#" onclick="AuthService.logout()">Log Out</a>
         </div>
     </nav>
 
-    <div class="admin-header" style="display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 1rem; padding: 2rem;">
+    <div class="admin-header" style="display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 1rem; padding: 2rem 5% 0;">
         <div>
             <h1>Upcoming Community Runs</h1>
             <p style="color: var(--text-muted)">Register for the next run so we know you're coming!</p>
         </div>
-        <button class="btn btn-secondary" onclick="promptSuggestion()" style="border-color: var(--peach-accent); color: var(--peach-accent);">💡 Suggestion</button>
+        <button class="btn btn-secondary" onclick="promptSuggestion()" style="border-color: var(--peach-accent); color: var(--peach-accent); padding: 0.6rem 1.5rem;">💡 Suggestion</button>
     </div>
 
-    <div class="dashboard-container" style="padding: 2rem;">
+    <div class="dashboard-container" style="padding: 2rem 5%;">
+        <div id="registeredBanner" style="display:none; background: linear-gradient(135deg, rgba(88,74,220,0.2), rgba(255,180,100,0.1)); border: 1px solid var(--neon-accent); border-radius: 16px; padding: 1.5rem; margin-bottom: 2rem;">
+            <div style="font-family:'Outfit'; font-size:1.3rem; font-weight:800; color:white;">✅ You're registered!</div>
+        </div>
+
         <div class="b-grid" id="runsContainer">
-            <p>Loading runs...</p>
+            <p>Loading community runs...</p>
         </div>
     </div>
 
-    <script src="app.js?v=7"></script>
+    <script src="app.js?v=10"></script>
     <script>
         const user = AuthService.getCurrentUser();
         if (!user) window.location.href = 'index.html';
         document.getElementById('welcomeText').innerText = `Hello, ${user.name}`;
 
+        // RESTORED: Show shop link if open or admin
+        AppService.getShopStatus().then(isOpen => {
+            if (isOpen || user.is_admin) document.getElementById('shopLink').classList.remove('hidden');
+        });
+
         async function renderRuns() {
             const container = document.getElementById('runsContainer');
             const runs = await AppService.getRuns();
             const myRunIds = await AppService.getUserRegistrations(user.id);
-
             if(!runs || runs.length === 0) {
-                container.innerHTML = `<div style="grid-column: 1/-1; padding: 2rem; border: 1px dashed rgba(255,255,255,0.1); border-radius: 12px;">No upcoming runs. 👟</div>`;
-            } else {
-                container.innerHTML = runs.map(run => {
-                    const isReg = myRunIds.includes(run.id);
-                    let title = run.date_label.toUpperCase();
-                    let subtitle = "";
-                    if(run.date_label.includes(" - ")) {
-                        const parts = run.date_label.split(" - ");
-                        title = parts[0];
-                        subtitle = parts.slice(1).join(" - ");
-                    }
-                    return `
-                    <div class="glass-card" style="background:#0d0c11; border-bottom:4px solid var(--neon-accent); border-radius:12px; padding:2rem;">
-                        <div style="font-weight:800; font-size:1.5rem; color:white; font-family:'Outfit';">${title}</div>
-                        <div style="font-weight:800; font-size:2.2rem; color:white; line-height:1; margin-bottom:1rem; font-family:'Outfit';">${subtitle}</div>
-                        <div style="color:var(--text-muted); font-size:0.9rem; margin-bottom:1.5rem;">📍 ${run.location}</div>
-                        ${isReg 
-                            ? `<button class="btn btn-secondary btn-block" disabled>✓ Registered</button>`
-                            : `<button class="btn btn-primary btn-block" onclick="promptRegistration('${run.id}')">Register for this Run</button>`
-                        }
-                    </div>
-                    `;
-                }).join('');
+                container.innerHTML = `<p style="color:var(--text-muted);">No upcoming runs scheduled.</p>`;
+                return;
             }
+            container.innerHTML = runs.map(run => {
+                const isReg = myRunIds.includes(run.id);
+                let title = run.date_label.toUpperCase(), subtitle = "";
+                if(run.date_label.includes(" - ")) {
+                    const parts = run.date_label.split(" - ");
+                    title = parts[0]; subtitle = parts.slice(1).join(" - ");
+                }
+                return `
+                <div class="glass-card" style="background:#0d0c11; border:none; border-bottom:4px solid var(--neon-accent); border-radius:12px; padding:2rem;">
+                    <div style="font-weight:800; font-size:1.5rem; color:white; font-family:'Outfit';">${title}</div>
+                    <div style="font-weight:800; font-size:2.5rem; color:white; line-height:1; margin-bottom:1rem; font-family:'Outfit';">${subtitle}</div>
+                    <div style="width: 40px; height: 3px; background: var(--peach-accent); margin-bottom: 1rem;"></div>
+                    <div style="color:var(--peach-accent); font-size:0.85rem; margin-bottom:1.5rem;">📍 ${run.location}</div>
+                    ${isReg ? `<button class="btn btn-secondary btn-block" disabled>✓ Registered</button>` : `<button class="btn btn-primary btn-block" onclick="promptRegistration('${run.id}')">Register</button>`}
+                </div>`;
+            }).join('');
         }
 
         window.promptRegistration = function(runId) {
@@ -79,22 +84,23 @@
                 title: 'Register',
                 html: `<select id="sw-dist" class="swal2-input" style="background:#141419;color:white;"><option value="2K">2 KM</option><option value="5K">5 KM</option><option value="8K">8 KM</option></select>
                        <select id="sw-lv" class="swal2-input" style="background:#141419;color:white;"><option value="Beginner">Beginner</option><option value="Intermediate">Intermediate</option><option value="Advanced">Advanced</option></select>`,
-                background: '#141419', color: '#fff', confirmButtonText: 'RSVP', confirmButtonColor: 'var(--peach-accent)',
+                background: '#141419', color: '#fff', confirmButtonText: 'Confirm RSVP', confirmButtonColor: 'var(--peach-accent)',
                 preConfirm: () => ({ dist: document.getElementById('sw-dist').value, lv: document.getElementById('sw-lv').value })
             }).then((res) => { if(res.isConfirmed) doReg(runId, res.value.dist, res.value.lv); });
         };
 
         async function doReg(runId, dist, lv) {
+            Swal.fire({ title: 'Registering...', background: '#141419', color: '#fff', didOpen: () => Swal.showLoading() });
             if (await AppService.registerForRun(runId, dist, lv)) {
-                Swal.fire({ icon: 'success', title: 'Done!', background: '#141419', color: '#fff' }).then(() => renderRuns());
+                document.getElementById('registeredBanner').style.display = 'block';
+                Swal.fire({ icon: 'success', title: 'You are registered!', background: '#141419', color: '#fff' }).then(() => renderRuns());
             }
         }
 
         function promptSuggestion() {
-            Swal.fire({ title: 'Suggest', input: 'textarea', confirmButtonText: 'Send', background: '#141419', color: '#fff' })
+            Swal.fire({ title: 'Suggest a Run', input: 'textarea', confirmButtonText: 'Send', background: '#141419', color: '#fff' })
             .then(async (res) => { if(res.isConfirmed) { await AppService.sendTelegramSuggestion(user, res.value); Swal.fire({title:'Sent!',background:'#141419',color:'#fff'}); } });
         }
-
         renderRuns();
     </script>
 </body>
