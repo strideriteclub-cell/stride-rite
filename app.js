@@ -1,3 +1,6 @@
+// --- app.js (Full Code) ---
+// Paste this entire block into your app.js file on GitHub
+
 // --- PWA SERVICE WORKER ---
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
@@ -54,6 +57,21 @@ async function dbInsert(table, data) {
     }
 }
 
+async function dbUpdate(table, matchColumn, matchValue, data) {
+    try {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${matchColumn}=eq.${matchValue}`, {
+            method: 'PATCH',
+            headers: defaultHeaders,
+            body: JSON.stringify(data)
+        });
+        if (!res.ok) throw new Error(await res.text());
+        return true;
+    } catch (e) {
+        console.error(`Error updating ${table}:`, e);
+        return false;
+    }
+}
+
 async function dbDelete(table, matchColumn, matchValue) {
     try {
         const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${matchColumn}=eq.${matchValue}`, {
@@ -68,13 +86,12 @@ async function dbDelete(table, matchColumn, matchValue) {
     }
 }
 
-// Session stays local so users don't get logged out instantly when they refresh
+// Session stays local
 const KEYS = { SESSION: "stride_current_user" };
 
 // --- AUTH LOGIC ---
 const AuthService = {
     login: async (email, password) => {
-        // Hardcoded admin override to ensure access to the admin panel
         if (email === 'tsmhaleem@gmail.com' && password === 'haleem@147') {
             const adminUser = {
                 id: 'admin-1',
@@ -86,9 +103,7 @@ const AuthService = {
             return true;
         }
 
-        // Fetch from Supabase
         const users = await dbGet('stride_users', `email=eq.${encodeURIComponent(email)}&password=eq.${encodeURIComponent(password)}`);
-        
         if (users && users.length > 0) {
             localStorage.setItem(KEYS.SESSION, JSON.stringify(users[0]));
             return true;
@@ -111,8 +126,6 @@ const AuthService = {
         const inserted = await dbInsert('stride_users', newUser);
         if (inserted) {
             localStorage.setItem(KEYS.SESSION, JSON.stringify(newUser));
-            // 🏅 Check for community milestone (fire & forget)
-            fetch('/api/milestone').catch(() => {});
             return true;
         }
         return false;
@@ -128,7 +141,6 @@ const AuthService = {
     }
 };
 
-
 // --- RUNS & REGISTRATIONS LOGIC ---
 const AppService = {
     getRuns: async () => {
@@ -139,16 +151,17 @@ const AppService = {
         const validRuns = [];
         
         for(const run of rawRuns) {
+            if (run.date_label.includes('[EXPORTED]')) continue;
+
             if(run.date_label && run.date_label.includes('||')) {
                 const parts = run.date_label.split('||');
-                run.date_label = parts[0]; 
                 const runDate = new Date(parts[1]);
                 
                 if(runDate < now) {
-                    // Trigger automagic background export
-                    AppService.handleExpiredRun(run.id, run.date_label);
+                    AppService.handleExpiredRun(run.id, parts[0]);
                     continue; 
                 }
+                run.date_label = parts[0]; 
             }
             validRuns.push(run);
         }
@@ -173,17 +186,22 @@ const AppService = {
     },
 
     deleteRun: async (runId) => {
-        // Delete all registrations for this run first (foreign key conceptual safety)
         await dbDelete('stride_registrations', 'run_id', runId);
-        // Delete the run
         return await dbDelete('stride_runs', 'id', runId);
     },
 
     handleExpiredRun: async (runId, displayLabel) => {
+        if (displayLabel.includes('[EXPORTED]')) return;
+
         const verify = await dbGet('stride_runs', `id=eq.${runId}`);
         if(!verify || verify.length === 0) return;
 
         const participants = await AppService.getParticipantsForRun(runId);
+        if (participants.length === 0) {
+            await dbUpdate('stride_runs', 'id', runId, { date_label: `[EXPORTED] ${displayLabel}` });
+            return;
+        }
+
         let csvContent = "Name,Email,Age,Gender,Distance,Level,Registration Timestamp\n";
         participants.forEach(p => {
             csvContent += `"${p.name}","${p.email}","${p.age}","${p.gender}","${p.distance}","${p.level}","${new Date(p.registeredAt).toLocaleString()}"\n`;
@@ -197,14 +215,14 @@ const AppService = {
         formData.append('caption', `🏁 Auto-Export: ${displayLabel}`);
         
         try {
-            await fetch(`https://api.telegram.org/bot${botToken}/sendDocument`, {
+            const res = await fetch(`https://api.telegram.org/bot${botToken}/sendDocument`, {
                 method: 'POST',
                 body: formData
             });
-            await AppService.deleteRun(runId);
-        } catch(e) {
-            console.error("AutoExport failed", e);
-        }
+            if (res.ok) {
+                await dbUpdate('stride_runs', 'id', runId, { date_label: `[EXPORTED] ${displayLabel}` });
+            }
+        } catch(e) { console.error("AutoExport failed", e); }
     },
 
     registerForRun: async (runId, distance, level) => {
@@ -213,10 +231,6 @@ const AppService = {
 
         const existing = await dbGet('stride_registrations', `run_id=eq.${runId}&user_id=eq.${currentUser.id}`);
         if(existing && existing.length > 0) return false;
-
-        // Check if this is their first run ever
-        const allRegs = await dbGet('stride_registrations', `user_id=eq.${currentUser.id}`);
-        const isFirstTimer = !allRegs || allRegs.length === 0;
 
         const newRegistration = {
             id: crypto.randomUUID(),
@@ -231,20 +245,19 @@ const AppService = {
         if (result !== null) {
             const runDetails = await dbGet('stride_runs', `id=eq.${runId}`);
             if(runDetails && runDetails.length > 0) {
-                AppService.sendTelegramAlert(currentUser, distance, level, runDetails[0], isFirstTimer);
+                AppService.sendTelegramAlert(currentUser, distance, level, runDetails[0]);
             }
             return true;
         }
         return false;
     },
 
-    sendTelegramAlert: async (user, distance, level, run, isFirstTimer = false) => {
+    sendTelegramAlert: async (user, distance, level, run) => {
         const botToken = '8682463984:AAHA2PWT7WtQRskETmOanj0k2b45ZgGfYIs';
         const chatId = '1538316434';
         const cleanTimestamp = run.date_label.split('||')[0];
-        const age = user.birthdate ? calculateAge(user.birthdate) : (user.age || '?');
-        const firstTimerBadge = isFirstTimer ? '\n\n🎉 *FIRST TIMER! Welcome them warmly!*' : '';
-        const text = `${isFirstTimer ? '🌟' : '🚨'} *${isFirstTimer ? 'First-Time' : 'New'} Runner Alert!*\n\n*${user.name}* (${age}${user.gender === 'Male'?'M':'F'}) just registered for the *${distance}*!\n📧 *Email:* ${user.email}\n🏃 *Level:* ${level || user.level}\n📅 *Run:* ${cleanTimestamp}${firstTimerBadge}`;
+        const age = user.age || calculateAge(user.birthdate);
+        const text = `🚨 *New Runner Alert!*\n\n*${user.name}* (${age}${user.gender === 'Male'?'M':'F'}) just registered for the *${distance}*!\n📧 *Email:* ${user.email}\n🏃 *Level:* ${level || user.level}\n📅 *Run:* ${cleanTimestamp}`;
         
         try {
             await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
@@ -258,21 +271,14 @@ const AppService = {
     sendTelegramSuggestion: async (user, text) => {
         const botToken = '8682463984:AAHA2PWT7WtQRskETmOanj0k2b45ZgGfYIs';
         const chatId = '1538316434';
-        const msg = `💡 *New Suggestion!*\n\n*From:* ${user.name} (${user.age}${user.gender === 'Male'?'M':user.gender === 'Female'?'F':''})\n📧 *Email:* ${user.email}\n🏃 *Level:* ${user.level}\n\n*Message:*\n"${text}"`;
-        
+        const msg = `💡 *New Suggestion!*\n\n*From:* ${user.name}\n📧 *Email:* ${user.email}\n\n*Message:*\n"${text}"`;
         try {
             await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    chat_id: chatId,
-                    text: msg,
-                    parse_mode: 'Markdown'
-                })
+                body: JSON.stringify({ chat_id: chatId, text: msg, parse_mode: 'Markdown' })
             });
-        } catch (e) {
-            console.error("Telegram suggestion failed", e);
-        }
+        } catch (e) { console.error("Telegram suggestion failed", e); }
     },
 
     getUserRegistrations: async (userId) => {
@@ -282,8 +288,7 @@ const AppService = {
 
     getParticipantsForRun: async (runId) => {
         const regs = await dbGet('stride_registrations', `run_id=eq.${runId}`);
-        const users = await dbGet('stride_users'); // Get all users
-        
+        const users = await dbGet('stride_users'); 
         return regs.map(r => {
             const user = users.find(u => u.id === r.user_id);
             return {
@@ -296,6 +301,24 @@ const AppService = {
                 registeredAt: r.registered_at
             };
         });
+    },
+
+    getPastUserRuns: async (userId) => {
+        const regs = await dbGet('stride_registrations', `user_id=eq.${userId}`);
+        if (!regs || regs.length === 0) return [];
+        const allRuns = await dbGet('stride_runs');
+        return regs.map(reg => {
+            const run = allRuns.find(r => r.id === reg.run_id);
+            if (!run) return null;
+            const isExported = run.date_label.includes('[EXPORTED]');
+            return {
+                ...run,
+                date_display: run.date_label.replace('[EXPORTED] ', '').split('||')[0],
+                user_distance: reg.distance,
+                user_level: reg.level,
+                is_completed: isExported
+            };
+        }).filter(r => r !== null && r.is_completed);
     },
 
     // --- SHOP LOGIC ---
@@ -313,53 +336,24 @@ const AppService = {
     submitOrder: async (itemId, size, refNumber, phone) => {
         const currentUser = AuthService.getCurrentUser();
         if (!currentUser) return false;
-
-        const newOrder = {
-            id: crypto.randomUUID(),
-            user_id: currentUser.id,
-            item_id: itemId,
-            size: size,
-            receipt_ref: refNumber,
-            phone_number: phone,
-            status: 'pending' // pending, approved, rejected
-        };
-
+        const newOrder = { id: crypto.randomUUID(), user_id: currentUser.id, item_id: itemId, size, receipt_ref: refNumber, phone_number: phone, status: 'pending' };
         const result = await dbInsert('shop_orders', newOrder);
         if (result !== null) {
-            // Fetch item details for the alert
             const items = await dbGet('shop_items', `id=eq.${itemId}`);
             const itemName = (items && items.length > 0) ? items[0].name : 'Unknown Item';
             const price = (items && items.length > 0) ? items[0].price : 'Unknown';
-            
-            // Notify Bot
             const botToken = '8682463984:AAHA2PWT7WtQRskETmOanj0k2b45ZgGfYIs';
             const chatId = '1538316434';
-            const text = `🛍️ *New VIP Shop Order!*\n\n*Name:* ${currentUser.name}\n*Email:* ${currentUser.email}\n*Phone:* ${phone}\n*Gender:* ${currentUser.gender || 'Unknown'}\n\n*Item:* ${itemName}\n*Size:* ${size}\n*Price:* ${price} EGP\n*InstaPay/Ref #:* \`${refNumber}\``;
-            
-            const replyMarkup = {
-                inline_keyboard: [
-                    [
-                        { text: "✅ Approve Order", callback_data: `shop_appr_${newOrder.id}` },
-                        { text: "❌ Reject Order", callback_data: `shop_rej_${newOrder.id}` }
-                    ]
-                ]
-            };
-
+            const text = `🛍️ *New VIP Shop Order!*\n\n*Name:* ${currentUser.name}\n*Item:* ${itemName}\n*Size:* ${size}\n*Ref:* \`${refNumber}\``;
+            const replyMarkup = { inline_keyboard: [[{ text: "✅ Approve", callback_data: `shop_appr_${newOrder.id}` }, { text: "❌ Reject", callback_data: `shop_rej_${newOrder.id}` }]] };
             try {
-                await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ chat_id: chatId, text, parse_mode: 'Markdown', reply_markup: replyMarkup })
-                });
-            } catch (e) {
-                console.error("Telegram shop alert failed", e);
-            }
+                await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chat_id: chatId, text, parse_mode: 'Markdown', reply_markup: replyMarkup }) });
+            } catch (e) { console.error("Telegram shop alert failed", e); }
             return true;
         }
         return false;
     }
 };
 
-// Global Exposure for HTML scripts
 window.AuthService = AuthService;
 window.AppService = AppService;
