@@ -117,9 +117,81 @@ async function sendMenu(chatId, msg = "👟 *Stride Rite Admin Bot*\nHey Haleem!
             [{ text: "📥 Export Excel", callback_data: "cmd_export" }, { text: "📲 WhatsApp Blast", callback_data: "cmd_blast" }],
             [{ text: "📝 Survey Link", callback_data: "cmd_survey" }, { text: "🎂 Birthdays", callback_data: "cmd_birthdays" }],
             [{ text: "🔍 Runner Lookup", callback_data: "cmd_lookup_start" }, { text: "📣 Broadcast", callback_data: "cmd_broadcast_start" }],
-            [{ text: "🚫 Cancel a Run", callback_data: "cmd_cancel_list" }, { text: "🗑️ Delete a Run", callback_data: "cmd_delete_list" }],
-            [{ text: "🆕 Create New Run", callback_data: "create_step1" }]
+            [{ text: "📈 Growth Graph", callback_data: "cmd_growth" }, { text: "🚫 Cancel a Run", callback_data: "cmd_cancel_list" }],
+            [{ text: "🗑️ Delete a Run", callback_data: "cmd_delete_list" }, { text: "🆕 Create New Run", callback_data: "create_step1" }]
         ]
+    });
+}
+
+// ─── GROWTH GRAPH ─────────────────────────────────────────────────────────────
+async function handleGrowthGraph(chatId) {
+    await sendMessage(chatId, "📈 Generating growth graph...");
+    const users = await dbGet('stride_users');
+    if (!users || users.length === 0) { await sendMessage(chatId, "❌ No members yet."); return; }
+
+    // Group by month using created_at
+    const monthCounts = {};
+    const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    users.forEach(u => {
+        const date = u.created_at || u.registered_at;
+        if (!date) return;
+        const d = new Date(date);
+        const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+        monthCounts[key] = (monthCounts[key] || 0) + 1;
+    });
+
+    const keys = Object.keys(monthCounts).sort();
+    if (keys.length === 0) { await sendMessage(chatId, "❌ No registration dates found."); return; }
+
+    const labels = keys.map(k => {
+        const [y, m] = k.split('-');
+        return `${monthNames[parseInt(m)-1]} '${y.slice(2)}`;
+    });
+    let cumulative = 0;
+    const data = keys.map(k => { cumulative += monthCounts[k]; return cumulative; });
+    const newThisMonth = monthCounts[keys[keys.length-1]] || 0;
+    const totalMembers = data[data.length-1];
+
+    const chartConfig = {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [{
+                label: 'Total Members',
+                data,
+                borderColor: '#7c6ffa',
+                backgroundColor: 'rgba(88,74,220,0.15)',
+                fill: true,
+                tension: 0.4,
+                pointBackgroundColor: '#ff9e6d',
+                pointBorderColor: '#ff9e6d',
+                pointRadius: 6,
+                borderWidth: 3
+            }]
+        },
+        options: {
+            plugins: {
+                legend: { display: false },
+                title: { display: true, text: '🏃 Stride Rite — Community Growth', color: '#ffffff', font: { size: 16, weight: 'bold' } }
+            },
+            scales: {
+                y: { beginAtZero: true, ticks: { color: '#a1a1aa', stepSize: 1 }, grid: { color: 'rgba(255,255,255,0.08)' } },
+                x: { ticks: { color: '#a1a1aa' }, grid: { display: false } }
+            }
+        }
+    };
+
+    const chartUrl = `https://quickchart.io/chart?c=${encodeURIComponent(JSON.stringify(chartConfig))}&backgroundColor=%23141419&width=700&height=380`;
+
+    await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            chat_id: chatId,
+            photo: chartUrl,
+            caption: `📈 *Community Growth Chart*\n\n👥 *Total Members:* ${totalMembers}\n🆕 *New This Month:* ${newThisMonth}\n📅 *Tracking since:* ${labels[0]}`,
+            parse_mode: 'Markdown'
+        })
     });
 }
 
@@ -438,6 +510,7 @@ export default async function handler(req, res) {
             else if (data === 'cmd_blast') await handleBlast(chatId);
             else if (data === 'cmd_survey') await handleSurvey(chatId);
             else if (data === 'cmd_birthdays') await checkBirthdays(chatId);
+            else if (data === 'cmd_growth') await handleGrowthGraph(chatId);
             else if (data === 'cmd_lookup_start') await handleLookupStart(chatId);
             else if (data === 'cmd_broadcast_start') await handleBroadcastStart(chatId);
             else if (data === 'cmd_cancel_list') await handleCancelList(chatId);
@@ -492,6 +565,7 @@ export default async function handler(req, res) {
             else if (cmd === '/blast') await handleBlast(chatId);
             else if (cmd === '/survey') await handleSurvey(chatId);
             else if (cmd === '/birthdays') await checkBirthdays(chatId);
+            else if (cmd === '/growth') await handleGrowthGraph(chatId);
             else if (cmd === '/lookup') await handleLookupStart(chatId);
             else if (cmd === '/broadcast') await handleBroadcastStart(chatId);
             else if (cmd === '/cancel') await handleCancelList(chatId);
