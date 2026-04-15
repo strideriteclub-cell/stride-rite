@@ -111,6 +111,8 @@ const AuthService = {
         const inserted = await dbInsert('stride_users', newUser);
         if (inserted) {
             localStorage.setItem(KEYS.SESSION, JSON.stringify(newUser));
+            // 🏅 Check for community milestone (fire & forget)
+            fetch('/api/milestone').catch(() => {});
             return true;
         }
         return false;
