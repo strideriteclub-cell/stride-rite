@@ -71,6 +71,9 @@
 
         <!-- Attendance Trend -->
         <div id="trendContainer" style="width: 100%; margin-top: 2rem;"></div>
+
+        <!-- Peak Registration Time -->
+        <div id="peakContainer" style="width: 100%; margin-top: 2rem;"></div>
     </div>
 
     <script src="app.js?v=2"></script>
@@ -437,6 +440,90 @@ _Every pace is welcome. See you there!_ 💪`;
 
         renderAdminRuns();
         renderTrendChart();
+
+        async function renderPeakStats() {
+            const peakContainer = document.getElementById('peakContainer');
+            const allRegs = await fetch(`https://qcqyyfnsfyuaaaacddsm.supabase.co/rest/v1/stride_registrations?select=registered_at`, {
+                headers: {
+                    'apikey': 'sb_publishable_uXs2e5aPzrIL_M2xsYDmWg_hPOUaG1l',
+                    'Authorization': 'Bearer sb_publishable_uXs2e5aPzrIL_M2xsYDmWg_hPOUaG1l'
+                }
+            }).then(r => r.json());
+
+            if (!allRegs || allRegs.length === 0) return;
+
+            const hourCounts = new Array(24).fill(0);
+            const dayCounts = { 'Sun': 0, 'Mon': 0, 'Tue': 0, 'Wed': 0, 'Thu': 0, 'Fri': 0, 'Sat': 0 };
+            const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+            allRegs.forEach(r => {
+                const d = new Date(r.registered_at);
+                hourCounts[d.getHours()]++;
+                dayCounts[dayNames[d.getDay()]]++;
+            });
+
+            const peakHour = hourCounts.indexOf(Math.max(...hourCounts));
+            const peakDay = Object.entries(dayCounts).sort((a,b) => b[1]-a[1])[0][0];
+            const ampm = peakHour >= 12 ? 'PM' : 'AM';
+            const hr = peakHour % 12 || 12;
+            const hourLabels = Array.from({length: 24}, (_, i) => `${i === 0 ? 12 : i > 12 ? i-12 : i}${i < 12 ? 'am' : 'pm'}`);
+
+            peakContainer.innerHTML = `
+                <div class="glass-panel" style="padding: 2rem;">
+                    <h2 style="margin-bottom: 0.5rem; color: var(--peach-accent);">⏰ Peak Registration Time</h2>
+                    <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem;">When your community RSVPs the most — post on Instagram at this time!</p>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1.5rem; margin-bottom: 1.5rem;">
+                        <div style="text-align: center; padding: 1.5rem; background: rgba(0,0,0,0.3); border-radius: 12px; border-bottom: 2px solid var(--peach-accent);">
+                            <div style="font-size: 2.5rem; font-weight: 800; color: white; font-family:'Outfit';">${hr}:00 ${ampm}</div>
+                            <div style="color: var(--text-muted); text-transform: uppercase; font-size: 0.8rem; margin-top: 5px;">Best Hour to Post</div>
+                        </div>
+                        <div style="text-align: center; padding: 1.5rem; background: rgba(0,0,0,0.3); border-radius: 12px; border-bottom: 2px solid var(--neon-accent);">
+                            <div style="font-size: 2.5rem; font-weight: 800; color: white; font-family:'Outfit';">${peakDay}</div>
+                            <div style="color: var(--text-muted); text-transform: uppercase; font-size: 0.8rem; margin-top: 5px;">Most Active Day</div>
+                        </div>
+                        <div style="text-align: center; padding: 1.5rem; background: rgba(0,0,0,0.3); border-radius: 12px; border-bottom: 2px solid white;">
+                            <div style="font-size: 2.5rem; font-weight: 800; color: white; font-family:'Outfit';">${allRegs.length}</div>
+                            <div style="color: var(--text-muted); text-transform: uppercase; font-size: 0.8rem; margin-top: 5px;">Total All-Time RSVPs</div>
+                        </div>
+                    </div>
+                    <div style="position: relative; width: 100%; max-height: 220px;">
+                        <canvas id="peakChart"></canvas>
+                    </div>
+                </div>
+            `;
+
+            const ctx2 = document.getElementById('peakChart').getContext('2d');
+            new Chart(ctx2, {
+                type: 'bar',
+                data: {
+                    labels: hourLabels,
+                    datasets: [{
+                        data: hourCounts,
+                        backgroundColor: hourCounts.map((v, i) => i === peakHour ? '#ff8b6a' : 'rgba(88, 74, 220, 0.5)'),
+                        borderRadius: 5,
+                        borderSkipped: false
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: '#141419', borderColor: '#584adc', borderWidth: 1,
+                            titleColor: '#fff', bodyColor: '#a1a1aa',
+                            callbacks: { label: ctx => `${ctx.parsed.y} registration${ctx.parsed.y !== 1 ? 's' : ''}` }
+                        }
+                    },
+                    scales: {
+                        x: { ticks: { color: '#a1a1aa', font: { size: 9 } }, grid: { display: false } },
+                        y: { beginAtZero: true, ticks: { color: '#a1a1aa', stepSize: 1 }, grid: { color: 'rgba(255,255,255,0.05)' } }
+                    }
+                }
+            });
+        }
+
+        renderPeakStats();
     </script>
 </body>
 </html>
