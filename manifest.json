@@ -1,0 +1,20 @@
+{
+  "name": "Stride Rite",
+  "short_name": "Stride Rite",
+  "description": "Al Rehab Running Community — Register for runs, track your journey.",
+  "start_url": "/dashboard.html",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0d0c11",
+  "theme_color": "#584adc",
+  "orientation": "portrait-primary",
+  "categories": ["sports", "health", "fitness"],
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
