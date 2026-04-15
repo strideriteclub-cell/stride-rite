@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel | Stride Rite</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css?v=4">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        .admin-layout { display: flex; gap: 2rem; margin-top: 2rem; flex-wrap: wrap; }
+        .sidebar { flex: 1; min-width: 300px; }
+        .main-content { flex: 2; min-width: 300px; }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="logo">Stride Rite Admin</div>
+        <div class="nav-links">
+            <a href="index.html">Main Page</a>
+            <a href="#" onclick="AuthService.logout()">Log Out</a>
+        </div>
+    </nav>
+
+    <div class="dashboard-container" style="margin-top: 100px;">
+        <div class="admin-layout">
+            
+            <!-- Create Run Sidebar -->
+            <div class="sidebar glass-panel" style="padding: 2rem;">
+                <h3>Create Weekly Run</h3>
+                <form id="createRunForm" style="margin-top: 1.5rem;">
+                    <div class="input-group" style="display:flex; gap:10px;">
+                        <div style="flex:1;">
+                            <label>Date of the Run</label>
+                            <input type="date" id="runDate" required>
+                        </div>
+                        <div style="flex:1;">
+                            <label>Time</label>
+                            <input type="time" id="runTime" value="07:00" required>
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <label>Location Name</label>
+                        <input type="text" id="runLocName" value="Gateway Mall, Al Rehab City" required>
+                    </div>
+                    <div class="input-group">
+                        <label>Location Maps Link</label>
+                        <input type="url" id="runLocLink" value="https://maps.app.goo.gl/tareg62PBaQJVypk7" required>
+                    </div>
+                    <div class="input-group">
+                        <label>Description/Notes for Runners</label>
+                        <input type="text" id="runDesc" value="Gather at 7:00 AM, warmup starts by 7:15 AM! Every pace is welcome." required>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-block">Schedule Run</button>
+                </form>
+            </div>
+
+            <!-- Manage Runs Content -->
+            <div class="main-content">
+                <h2>Manage Scheduled Runs</h2>
+                <div id="adminRunsContainer" style="margin-top: 1.5rem;">
+                    <!-- Runs list injected here -->
+                </div>
+            </div>
+
+        </div>
+        
+        <!-- Insights Dashboard -->
+        <div id="insightsContainer" style="width: 100%;"></div>
+    </div>
+
+    <script src="app.js?v=2"></script>
+    <script>
+        const user = AuthService.getCurrentUser();
+        if (!user || user.is_admin !== true) {
+            window.location.href = 'dashboard.html';
+        }
+
+        // Auto-register Telegram Webhook dynamically upon admin panel open
+        const webHookUrl = window.location.origin + '/.netlify/functions/telegram';
+        const botToken = '8682463984:AAHA2PWT7WtQRskETmOanj0k2b45ZgGfYIs';
+        // Only run this when hosted online, not locally
+        if (window.location.protocol === 'https:') {
+            fetch(`https://api.telegram.org/bot${botToken}/setWebhook?url=${encodeURIComponent(webHookUrl)}`)
+                .then(res => res.json())
+                .then(data => {
+                    if(data.ok) {
+                        console.log('Webhook securely registered.');
+                        // Also set professional command menu
+                        const commands = [
+                            { command: 'stats', description: '📊 View next run statistics' },
+                            { command: 'export', description: '📥 Download runner list (Excel)' },
+                            { command: 'create', description: '🆕 Schedule a new community run' }
+                        ];
+                        fetch(`https://api.telegram.org/bot${botToken}/setMyCommands`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ commands: commands })
+                        });
+                    }
+                }).catch(e => console.error(e));
+        }
+
+        document.getElementById('createRunForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = e.target.querySelector('button');
+            const originalText = btn.innerText;
+            btn.innerText = 'Scheduling...';
+            btn.disabled = true;
+
+            // Format the date label beautifully
+            const dateVal = document.getElementById('runDate').value;
+            const timeVal = document.getElementById('runTime').value;
+            const dateObj = new Date(dateVal + 'T' + timeVal);
+            
+            const formattedDate = dateObj.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+            const formattedTime = dateObj.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+            const fullDateLabel = `${formattedDate} - ${formattedTime}||${dateObj.toISOString()}`;
+
+            await AppService.createRun(
+                fullDateLabel,
+                document.getElementById('runLocName').value,
+                document.getElementById('runLocLink').value,
+                document.getElementById('runDesc').value
+            );
+
+            btn.innerText = originalText;
+            btn.disabled = false;
+
+            Swal.fire({icon: 'success', title: 'Run Created!', background: '#141419', color: '#fff', confirmButtonColor: '#00ff88'});
+            document.getElementById('createRunForm').reset();
+            // Retain the defaults since they are useful
+            document.getElementById('runLocName').value = "Gateway Mall, Al Rehab City";
+            document.getElementById('runLocLink').value = "https://maps.app.goo.gl/tareg62PBaQJVypk7";
+            document.getElementById('runTime').value = "07:00";
+            renderAdminRuns();
+        });
+
+        async function renderAdminRuns() {
+            const container = document.getElementById('adminRunsContainer');
+            container.innerHTML = '<p>Loading database...</p>';
+
+            let runs = await AppService.getRuns();
+            runs = runs.reverse(); // Newest first
+
+            if(!runs || runs.length === 0) {
+                container.innerHTML = `<p>No runs scheduled. Create one to the left.</p>`;
+                return;
+            }
+
+            // Fetch participants for all runs
+            const htmlPromises = runs.map(async run => {
+                const participants = await AppService.getParticipantsForRun(run.id);
+                return `
+                <div class="glass-panel" style="padding: 1.5rem; margin-bottom: 1rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <h3 style="margin-bottom: 0.5rem;">${run.date_label}</h3>
+                            <p style="color: var(--text-muted); font-size: 0.9rem;">${participants.length} Registered Runners</p>
+                        </div>
+                        <div style="display: flex; gap: 10px;">
+                            <button class="btn btn-secondary" onclick="exportRun('${run.id}', '${run.date_label}')">Export Excel / CSV</button>
+                            <button class="btn btn-secondary" style="border-color: #ff4d4d; color: #ff4d4d;" onclick="deleteRun('${run.id}')">Delete Run</button>
+                        </div>
+                    </div>
+                </div>
+                `;
+            });
+            const htmlArray = await Promise.all(htmlPromises);
+            container.innerHTML = htmlArray.join('');
+            
+            // Render Insights for the very next run
+            await renderInsights(runs);
+        }
+
+        async function renderInsights(runs) {
+            const container = document.getElementById('insightsContainer');
+            if (!runs || runs.length === 0) return;
+            
+            const nextRun = runs[0];
+            const participants = await AppService.getParticipantsForRun(nextRun.id);
+            
+            if (participants.length === 0) {
+                container.innerHTML = `
+                    <div class="glass-panel" style="padding: 2rem; margin-top: 2rem;">
+                        <h2>Upcoming Run Insights: ${nextRun.date_label}</h2>
+                        <p style="color: var(--text-muted);">No runners have RSVP'd yet.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            let males = 0, females = 0, totalAge = 0;
+            let levels = { "Beginner": 0, "Intermediate": 0, "Advanced": 0, "Non-Runner": 0 };
+
+            participants.forEach(p => {
+                if (p.gender === 'Male') males++;
+                if (p.gender === 'Female') females++;
+                totalAge += parseInt(p.age) || 0;
+                
+                if (p.level && p.level.includes('Beginner')) levels["Beginner"]++;
+                else if (p.level && p.level.includes('Intermediate')) levels["Intermediate"]++;
+                else if (p.level && p.level.includes('Advanced')) levels["Advanced"]++;
+                else if (p.level && p.level.includes('Non-Runner')) levels["Non-Runner"]++;
+            });
+
+            const avgAge = Math.round(totalAge / participants.length);
+            const total = participants.length;
+            
+            let maxLevel = "Beginner";
+            let maxCount = levels["Beginner"];
+            for (const [key, val] of Object.entries(levels)) {
+                if (val > maxCount) {
+                    maxCount = val;
+                    maxLevel = key;
+                }
+            }
+
+            let vibeCheck = "Mixed group.";
+            if (maxLevel === "Beginner" || maxLevel === "Non-Runner") vibeCheck = "Keep the pace social and welcoming! Expect lots of walking intervals.";
+            else if (maxLevel === "Intermediate") vibeCheck = "Solid steady pace. Good mix of sustained running.";
+            else if (maxLevel === "Advanced") vibeCheck = "Fast group today! Be prepared to push the limits.";
+
+            const malePct = Math.round((males/total)*100) || 0;
+            const femalePct = Math.round((females/total)*100) || 0;
+
+            container.innerHTML = `
+                <div class="glass-panel" style="padding: 2rem; margin-top: 2rem; width: 100%;">
+                    <h2 style="margin-bottom: 1.5rem; color: var(--neon-accent);">Next Run Insights: <span style="color:white;">${nextRun.date_label}</span></h2>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-bottom: 1.5rem;">
+                        <div style="text-align: center; padding: 1.5rem; background: rgba(0,0,0,0.3); border-radius: 12px; border-bottom: 2px solid var(--peach-accent);">
+                            <div style="font-size: 3rem; font-weight: 800; color: white; font-family:'Outfit'; line-height:1;">${total}</div>
+                            <div style="color: var(--text-muted); text-transform: uppercase; font-size: 0.8rem; margin-top: 5px;">RSVPs</div>
+                        </div>
+                        <div style="text-align: center; padding: 1.5rem; background: rgba(0,0,0,0.3); border-radius: 12px; border-bottom: 2px solid var(--neon-accent);">
+                            <div style="font-size: 3rem; font-weight: 800; color: white; font-family:'Outfit'; line-height:1;">${avgAge}</div>
+                            <div style="color: var(--text-muted); text-transform: uppercase; font-size: 0.8rem; margin-top: 5px;">Avg Age</div>
+                        </div>
+                        <div style="text-align: center; padding: 1.5rem; background: rgba(0,0,0,0.3); border-radius: 12px; border-bottom: 2px solid white;">
+                            <div style="font-size: 1.5rem; font-weight: 800; color: white; margin-top: 10px; font-family:'Outfit';">${malePct}% M / ${femalePct}% F</div>
+                            <div style="color: var(--text-muted); text-transform: uppercase; font-size: 0.8rem; margin-top: 10px;">Gender Split</div>
+                        </div>
+                    </div>
+
+                    <div style="background: rgba(255,139,106,0.1); padding: 1.5rem; border-radius: 12px; border-left: 4px solid var(--peach-accent);">
+                        <h4 style="margin-bottom: 0.5rem; font-family: 'Outfit'; font-size: 1.2rem; color: var(--peach-accent);">Vibe Check</h4>
+                        <p>Most of the group is <strong>${maxLevel}</strong>. <span style="color: var(--text-muted);">${vibeCheck}</span></p>
+                    </div>
+                </div>
+            `;
+        }
+
+        window.exportRun = async function(runId, runLabel) {
+            Swal.fire({title: 'Compiling...', background: '#141419', color: '#fff', didOpen: () => Swal.showLoading()});
+            
+            const participants = await AppService.getParticipantsForRun(runId);
+            Swal.close();
+
+            if (participants.length === 0) {
+                Swal.fire({icon: 'info', title: 'Empty', text: 'No one has registered for this run yet.', background: '#141419', color: '#fff'});
+                return;
+            }
+
+            let csvContent = "data:text/csv;charset=utf-8,";
+            csvContent += "Name,Email,Age,Gender,Distance,Level,Registration Timestamp\n";
+
+            participants.forEach(p => {
+                const row = `"${p.name}","${p.email}","${p.age}","${p.gender}","${p.distance}","${p.level}","${new Date(p.registeredAt).toLocaleString()}"`;
+                csvContent += row + "\n";
+            });
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `stride_rite_${runLabel.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        };
+
+        window.deleteRun = function(runId) {
+            Swal.fire({
+                title: 'Are you sure?',
+                text: "You won't be able to revert this! All registrations will be lost.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#ff4d4d',
+                cancelButtonColor: '#555',
+                confirmButtonText: 'Yes, delete it!',
+                background: '#141419',
+                color: '#fff'
+            }).then(async (result) => {
+                if (result.isConfirmed) {
+                    Swal.fire({title: 'Deleting...', background: '#141419', color: '#fff', didOpen: () => Swal.showLoading()});
+                    await AppService.deleteRun(runId);
+                    Swal.fire({
+                        title: 'Deleted!',
+                        text: 'Run has been deleted.',
+                        icon: 'success',
+                        background: '#141419',
+                        color: '#fff',
+                        confirmButtonColor: '#00ff88'
+                    });
+                    renderAdminRuns();
+                }
+            })
+        };
+
+        renderAdminRuns();
+    </script>
+</body>
+</html>
