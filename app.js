@@ -1,6 +1,4 @@
-// --- app.js (FIXED & FINAL) ---
-// Paste this entire block into app.js on GitHub
-
+// --- app.js (RESTORED BOT BUTTONS) ---
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
         navigator.serviceWorker.register('/sw.js').catch(e => console.log('SW error:', e));
@@ -32,7 +30,7 @@ async function dbGet(table, query = 'select=*') {
         const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${query}`, { headers: defaultHeaders });
         if (!res.ok) throw new Error(await res.text());
         return await res.json();
-    } catch (e) { console.error(`Error fetching ${table}:`, e); return []; }
+    } catch (e) { return []; }
 }
 
 async function dbInsert(table, data) {
@@ -44,7 +42,7 @@ async function dbInsert(table, data) {
         });
         if (!res.ok) throw new Error(await res.text());
         return await res.json();
-    } catch (e) { console.error(`Error inserting into ${table}:`, e); return null; }
+    } catch (e) { return null; }
 }
 
 async function dbUpdate(table, matchColumn, matchValue, data) {
@@ -206,13 +204,49 @@ const AppService = {
     submitOrder: async (itemId, size, refNumber, phone) => {
         const user = AuthService.getCurrentUser();
         if (!user) return false;
-        const newOrder = { id: crypto.randomUUID(), user_id: user.id, item_id: itemId, size, receipt_ref: refNumber, phone_number: phone, status: 'pending' };
+        
+        const newOrder = { 
+            id: crypto.randomUUID(), 
+            user_id: user.id, 
+            item_id: itemId, 
+            size: size, 
+            receipt_ref: refNumber, 
+            phone_number: phone, 
+            status: 'pending' 
+        };
+        
         const result = await dbInsert('shop_orders', newOrder);
         if (result) {
             const botToken = '8682463984:AAHA2PWT7WtQRskETmOanj0k2b45ZgGfYIs';
             const chatId = '1538316434';
-            const text = `🛍️ *New VIP Shop Order!*\n\n*Name:* ${user.name}\n*Item ID:* ${itemId}\n*Size:* ${size}\n*Ref:* \`${refNumber}\``;
-            try { await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chat_id: chatId, text, parse_mode: 'Markdown' }) }); } catch (e) {}
+            
+            // Fetch name for alert
+            const items = await dbGet('shop_items', `id=eq.${itemId}`);
+            const itemName = items?.[0]?.name || 'Gear Item';
+            
+            const text = `🛍️ *New VIP Shop Order!*\n\n*Name:* ${user.name}\n*Item:* ${itemName}\n*Size:* ${size}\n*Phone:* ${phone}\n*Ref:* \`${refNumber}\``;
+            
+            const replyMarkup = {
+                inline_keyboard: [
+                    [
+                        { text: "✅ Approve", callback_data: `shop_appr_${newOrder.id}` },
+                        { text: "❌ Reject", callback_data: `shop_rej_${newOrder.id}` }
+                    ]
+                ]
+            };
+
+            try { 
+                await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, { 
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'application/json' }, 
+                    body: JSON.stringify({ 
+                        chat_id: chatId, 
+                        text, 
+                        parse_mode: 'Markdown',
+                        reply_markup: replyMarkup
+                    }) 
+                }); 
+            } catch (e) {}
             return true;
         }
         return false;
