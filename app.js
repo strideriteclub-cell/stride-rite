@@ -1,5 +1,5 @@
-// --- app.js (RE-FIXED VERSION) ---
-// Paste this entire block into your app.js file on GitHub
+// --- app.js (FINAL VERSION WITH STATS) ---
+// Paste this entire block into your app.js on GitHub
 
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
@@ -32,7 +32,7 @@ async function dbGet(table, query = 'select=*') {
         const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${query}`, { headers: defaultHeaders });
         if (!res.ok) throw new Error(await res.text());
         return await res.json();
-    } catch (e) { console.error(`Error fetching ${table}:`, e); return []; }
+    } catch (e) { return []; }
 }
 
 async function dbInsert(table, data) {
@@ -44,7 +44,7 @@ async function dbInsert(table, data) {
         });
         if (!res.ok) throw new Error(await res.text());
         return await res.json();
-    } catch (e) { console.error(`Error inserting into ${table}:`, e); return null; }
+    } catch (e) { return null; }
 }
 
 async function dbUpdate(table, matchColumn, matchValue, data) {
@@ -54,8 +54,7 @@ async function dbUpdate(table, matchColumn, matchValue, data) {
             headers: defaultHeaders,
             body: JSON.stringify(data)
         });
-        if (!res.ok) throw new Error(await res.text());
-        return true;
+        return res.ok;
     } catch (e) { return false; }
 }
 
@@ -144,7 +143,7 @@ const AppService = {
         const botToken = '8682463984:AAHA2PWT7WtQRskETmOanj0k2b45ZgGfYIs';
         const chatId = '1538316434';
         const age = user.age || calculateAge(user.birthdate);
-        const text = `🚨 *New Runner Alert!*\n\n*${user.name}* (${age}) - *${distance}*\n🏃 *Level:* ${level}\n📅 *Run:* ${run.date_label.split('||')[0]}`;
+        const text = `🚨 *New Runner Alert!*\n\n*${user.name}* (${age}) - *${distance}*\n📅 *Run:* ${run.date_label.split('||')[0]}`;
         try { await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chat_id: chatId, text, parse_mode: 'Markdown' }) }); } catch (e) {}
     },
     sendTelegramSuggestion: async (user, text) => {
@@ -175,6 +174,16 @@ const AppService = {
             if (!run) return null;
             return { ...run, date_display: run.date_label.replace('[EXPORTED] ', '').split('||')[0], user_distance: reg.distance, user_level: reg.level, is_completed: run.date_label.includes('[EXPORTED]') };
         }).filter(r => r !== null && r.is_completed);
+    },
+    getUserStats: async (userId) => {
+        const pastRuns = await AppService.getPastUserRuns(userId);
+        let totalKms = 0;
+        pastRuns.forEach(run => {
+            const distStr = run.user_distance || '0K';
+            const num = parseFloat(distStr.replace(/[^\d.]/g, ''));
+            if (!isNaN(num)) totalKms += num;
+        });
+        return { totalRuns: pastRuns.length, totalKms: totalKms.toFixed(1), pastRuns };
     },
     getShopStatus: async () => {
         const settings = await dbGet('shop_settings');
