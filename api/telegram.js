@@ -117,10 +117,123 @@ async function sendMenu(chatId, msg = "👟 *Stride Rite Admin Bot*\nHey Haleem!
             [{ text: "📥 Export Excel", callback_data: "cmd_export" }, { text: "📲 WhatsApp Blast", callback_data: "cmd_blast" }],
             [{ text: "📝 Survey Link", callback_data: "cmd_survey" }, { text: "🎂 Birthdays", callback_data: "cmd_birthdays" }],
             [{ text: "🔍 Runner Lookup", callback_data: "cmd_lookup_start" }, { text: "📣 Broadcast", callback_data: "cmd_broadcast_start" }],
-            [{ text: "📈 Growth Graph", callback_data: "cmd_growth" }, { text: "🚫 Cancel a Run", callback_data: "cmd_cancel_list" }],
-            [{ text: "🗑️ Delete a Run", callback_data: "cmd_delete_list" }, { text: "🆕 Create New Run", callback_data: "create_step1" }]
+            [{ text: "📈 Growth Graph", callback_data: "cmd_growth" }, { text: "✏️ Edit a Run", callback_data: "cmd_edit_list" }],
+            [{ text: "🚫 Cancel a Run", callback_data: "cmd_cancel_list" }, { text: "🗑️ Delete a Run", callback_data: "cmd_delete_list" }],
+            [{ text: "🆕 Create New Run", callback_data: "create_step1" }]
         ]
     });
+}
+
+// ─── EDIT RUN ──────────────────────────────────────────────────────────────
+async function handleEditList(chatId) {
+    const runs = await dbGet('stride_runs');
+    if (!runs || runs.length === 0) { await sendMessage(chatId, "❌ No runs to edit."); return; }
+    const buttons = runs.map((r, i) => {
+        const dt = r.date_label.includes('||') ? r.date_label.split('||')[0] : r.date_label;
+        return [{ text: `✏️ ${i + 1}. ${dt}`, callback_data: `edit_pick_${r.id}` }];
+    });
+    buttons.push([{ text: "↩️ Back", callback_data: "cmd_menu" }]);
+    await sendMessage(chatId, "✏️ *Which run do you want to edit?*", { inline_keyboard: buttons });
+}
+
+async function handleEditPickField(chatId, runId) {
+    const runs = await dbGet('stride_runs', `id=eq.${runId}`);
+    if (!runs || runs.length === 0) { await sendMessage(chatId, "❌ Run not found."); return; }
+    const r = runs[0];
+    const dt = r.date_label.includes('||') ? r.date_label.split('||')[0] : r.date_label;
+    await setSession('edit_choosing_field', { runId, runLabel: dt });
+    await sendMessage(chatId, `✏️ *Editing:* ${dt}\n\nWhat do you want to change?`, {
+        inline_keyboard: [
+            [{ text: "⏰ Date & Time", callback_data: "edit_field_datetime" }],
+            [{ text: "📍 Location Name", callback_data: "edit_field_location" }],
+            [{ text: "🗺️ Maps Link", callback_data: "edit_field_maps" }],
+            [{ text: "↩️ Back", callback_data: "cmd_edit_list" }]
+        ]
+    });
+}
+
+async function handleEditDateTime(chatId) {
+    const session = await getSession();
+    const amHours = [4,5,6,7,8,9,10,11].map(h => ({ text: `${h} AM`, callback_data: `edit_hour_${String(h).padStart(2,'0')}` }));
+    const pmHours = [1,2,3,4,5,6,7,8,9,10,11].map(h => ({ text: `${h} PM`, callback_data: `edit_hour_${String(h+12).padStart(2,'0')}` }));
+    const special = [{ text: "12 PM", callback_data: "edit_hour_12" }, { text: "12 AM", callback_data: "edit_hour_00" }];
+    const rows = [];
+    for (let i = 0; i < amHours.length; i += 4) rows.push(amHours.slice(i, i+4));
+    rows.push(special);
+    for (let i = 0; i < pmHours.length; i += 4) rows.push(pmHours.slice(i, i+4));
+    rows.push([{ text: "↩️ Back", callback_data: `edit_pick_${session.data.runId}` }]);
+    await setSession('edit_picking_hour', session.data);
+    await sendMessage(chatId, "⏰ *New time — pick the hour:*", { inline_keyboard: rows });
+}
+
+async function handleEditHour(chatId, hour) {
+    const session = await getSession();
+    await setSession('edit_picking_minutes', { ...session.data, hour });
+    const h = parseInt(hour);
+    const label = h === 0 ? '12 AM' : h === 12 ? '12 PM' : h < 12 ? `${h} AM` : `${h-12} PM`;
+    await sendMessage(chatId, `✅ Hour: *${label}*\n\n⏱️ *Minutes?*`, {
+        inline_keyboard: [
+            [{ text: ":00 (Sharp)", callback_data: "edit_min_00" }, { text: ":30", callback_data: "edit_min_30" }],
+            [{ text: "↩️ Back", callback_data: "edit_field_datetime" }]
+        ]
+    });
+}
+
+async function handleEditMinutes(chatId, min) {
+    const session = await getSession();
+    await setSession('edit_picking_date', { ...session.data, min });
+    const dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const days = [];
+    for (let i = 1; i <= 21; i++) {
+        const d = new Date(); d.setDate(d.getDate() + i);
+        days.push({ text: `${dayNames[d.getDay()]} ${monthNames[d.getMonth()]} ${d.getDate()}`, callback_data: `edit_date_${d.toISOString().split('T')[0]}` });
+    }
+    const rows = [];
+    for (let i = 0; i < days.length; i += 2) rows.push(days.slice(i, i+2));
+    rows.push([{ text: "↩️ Back", callback_data: "edit_field_datetime" }]);
+    await sendMessage(chatId, `✅ Time: *${formatTime(`${session.data.hour}:${min}`)}*\n\n📅 *New date?*`, { inline_keyboard: rows });
+}
+
+async function handleEditDate(chatId, date) {
+    const session = await getSession();
+    const time = `${session.data.hour}:${session.data.min}`;
+    const dateObj = new Date(`${date}T${time}`);
+    const fd = dateObj.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+    const ft = formatTime(time);
+    const newLabel = `${fd} - ${ft}||${dateObj.toISOString()}`;
+    await dbPatch('stride_runs', 'id', session.data.runId, { date_label: newLabel });
+    await clearSession();
+    await sendMessage(chatId, `✅ *Run Updated!*\n\n📅 New date: *${fd}*\n⏰ New time: *${ft}*`);
+    await sendMenu(chatId, "What else?");
+}
+
+async function handleEditLocation(chatId) {
+    const session = await getSession();
+    await setSession('edit_waiting_location', session.data);
+    await sendMessage(chatId, `📍 *New location name for:*\n${session.data.runLabel}\n\nType the new location name:`);
+}
+
+async function handleEditMaps(chatId) {
+    const session = await getSession();
+    await setSession('edit_waiting_maps', session.data);
+    await sendMessage(chatId, `🗺️ *New Maps link for:*\n${session.data.runLabel}\n\nPaste the new Google Maps link:`);
+}
+
+async function handleEditSaveLocation(chatId, text) {
+    const session = await getSession();
+    await dbPatch('stride_runs', 'id', session.data.runId, { location: text });
+    await clearSession();
+    await sendMessage(chatId, `✅ *Location updated to:*\n📍 ${text}`);
+    await sendMenu(chatId, "What else?");
+}
+
+async function handleEditSaveMaps(chatId, text) {
+    const session = await getSession();
+    await dbPatch('stride_runs', 'id', session.data.runId, { location_link: text });
+    await clearSession();
+    await sendMessage(chatId, `✅ *Maps link updated!*\n🗺️ ${text}`);
+    await sendMenu(chatId, "What else?");
 }
 
 // ─── GROWTH GRAPH ─────────────────────────────────────────────────────────────
@@ -524,6 +637,14 @@ export default async function handler(req, res) {
                 await sendMessage(chatId, "✅ *Run deleted!*");
                 await sendMenu(chatId, "What else?");
             }
+            else if (data === 'cmd_edit_list') await handleEditList(chatId);
+            else if (data.startsWith('edit_pick_')) await handleEditPickField(chatId, data.replace('edit_pick_', ''));
+            else if (data === 'edit_field_datetime') await handleEditDateTime(chatId);
+            else if (data === 'edit_field_location') await handleEditLocation(chatId);
+            else if (data === 'edit_field_maps') await handleEditMaps(chatId);
+            else if (data.startsWith('edit_hour_')) await handleEditHour(chatId, data.replace('edit_hour_', ''));
+            else if (data.startsWith('edit_min_')) await handleEditMinutes(chatId, data.replace('edit_min_', ''));
+            else if (data.startsWith('edit_date_')) await handleEditDate(chatId, data.replace('edit_date_', ''));
             else if (data === 'create_step1') await createStep1(chatId);
             else if (data.startsWith('create_hour_')) await createStep1b(chatId, data.replace('create_hour_', ''));
             else if (data.startsWith('create_min_')) {
@@ -557,6 +678,10 @@ export default async function handler(req, res) {
             await handleBroadcast(chatId, text);
         } else if (session.state === 'waiting_cancel_reason') {
             await handleCancelExecute(chatId, session.data.runId, text);
+        } else if (session.state === 'edit_waiting_location') {
+            await handleEditSaveLocation(chatId, text);
+        } else if (session.state === 'edit_waiting_maps') {
+            await handleEditSaveMaps(chatId, text);
         } else {
             if (cmd === '/start' || cmd === '/help' || cmd === '/menu') await sendMenu(chatId);
             else if (cmd === '/stats') await handleStats(chatId);
