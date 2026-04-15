@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How Was Your Run? | Stride Rite</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css?v=4">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        .survey-wrap { max-width: 600px; margin: 120px auto 4rem; padding: 0 1.5rem; }
+        .emoji-btn-group { display: flex; gap: 0.75rem; flex-wrap: wrap; margin-top: 0.75rem; }
+        .emoji-btn {
+            flex: 1; min-width: 60px;
+            padding: 1rem 0.5rem;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+        }
+        .emoji-btn:hover, .emoji-btn.selected {
+            background: rgba(88, 74, 220, 0.2);
+            border-color: var(--neon-accent);
+            transform: translateY(-2px);
+        }
+        .emoji-btn small { display: block; font-size: 0.65rem; color: var(--text-muted); margin-top: 4px; }
+        .survey-q { margin-bottom: 2rem; }
+        .survey-q label { display: block; font-size: 1.1rem; font-weight: 600; margin-bottom: 0.25rem; font-family: 'Outfit'; }
+        .survey-q p { color: var(--text-muted); font-size: 0.9rem; margin-bottom: 0.5rem; }
+        .survey-textarea {
+            width: 100%;
+            background: rgba(0,0,0,0.2);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: white;
+            padding: 1rem;
+            font-size: 1rem;
+            font-family: 'Inter';
+            resize: vertical;
+            min-height: 80px;
+            transition: border-color 0.3s;
+        }
+        .survey-textarea:focus { outline: none; border-color: var(--neon-accent); }
+        .header-logo { font-family: 'Outfit'; font-weight: 800; font-size: 1.4rem; }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="logo header-logo">Stride Rite 🏃</div>
+    </nav>
+
+    <div class="survey-wrap" id="mainWrap">
+        <div id="loadingMsg" style="text-align:center; padding: 3rem 0;">
+            <p style="color: var(--text-muted);">Loading survey...</p>
+        </div>
+    </div>
+
+    <script src="app.js?v=2"></script>
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        const runLabel = params.get('run') || 'Recent Run';
+        const user = AuthService.getCurrentUser();
+        const wrap = document.getElementById('mainWrap');
+
+        if (!user) {
+            wrap.innerHTML = `
+                <div class="glass-panel" style="padding: 2.5rem; text-align: center;">
+                    <div style="font-size: 3rem; margin-bottom: 1rem;">🔒</div>
+                    <h2 style="font-family:'Outfit'; margin-bottom: 0.75rem;">Please Log In First</h2>
+                    <p style="color: var(--text-muted); margin-bottom: 1.5rem;">We need to know who you are to record your feedback!</p>
+                    <a href="index.html" class="btn btn-primary">Go to Login</a>
+                </div>
+            `;
+        } else {
+            let feelingValue = '';
+            wrap.innerHTML = `
+                <div style="text-align:center; margin-bottom: 2.5rem;">
+                    <div style="font-size: 3rem; margin-bottom: 0.75rem;">🏁</div>
+                    <h1 style="font-family:'Outfit'; font-size: 2rem; margin-bottom: 0.5rem;">How Was Your Run?</h1>
+                    <p style="color: var(--text-muted);">Hey ${user.name.split(' ')[0]}! We want to hear from you. This takes less than 30 seconds.</p>
+                    <p style="color: var(--peach-accent); font-size: 0.85rem; margin-top: 0.5rem;">${decodeURIComponent(runLabel)}</p>
+                </div>
+
+                <div class="glass-panel" style="padding: 2rem;">
+
+                    <div class="survey-q">
+                        <label>1. How did you feel after the run?</label>
+                        <p>Be honest — this helps us plan future runs better!</p>
+                        <div class="emoji-btn-group" id="feelingGroup">
+                            <button class="emoji-btn" data-val="Terrible" onclick="selectFeeling(this)">😩<small>Terrible</small></button>
+                            <button class="emoji-btn" data-val="Hard" onclick="selectFeeling(this)">😮‍💨<small>Hard</small></button>
+                            <button class="emoji-btn" data-val="Good" onclick="selectFeeling(this)">😊<small>Good</small></button>
+                            <button class="emoji-btn" data-val="Great" onclick="selectFeeling(this)">💪<small>Great</small></button>
+                            <button class="emoji-btn" data-val="Amazing" onclick="selectFeeling(this)">🔥<small>Amazing</small></button>
+                        </div>
+                    </div>
+
+                    <div class="survey-q">
+                        <label>2. What did you enjoy most?</label>
+                        <p>The route? The group energy? The pace? Tell us!</p>
+                        <textarea class="survey-textarea" id="enjoyAnswer" placeholder="e.g. Loved the route, the group was very motivating..."></textarea>
+                    </div>
+
+                    <div class="survey-q">
+                        <label>3. What could we improve?</label>
+                        <p>Any suggestion is welcome, big or small.</p>
+                        <textarea class="survey-textarea" id="improveAnswer" placeholder="e.g. Start time, warmup, distance options..."></textarea>
+                    </div>
+
+                    <button class="btn btn-primary btn-block" id="submitBtn" onclick="submitSurvey()">Submit My Feedback 🚀</button>
+                </div>
+            `;
+        }
+
+        window.selectFeeling = function(btn) {
+            document.querySelectorAll('.emoji-btn').forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
+        };
+
+        window.submitSurvey = async function() {
+            const feeling = document.querySelector('.emoji-btn.selected')?.dataset.val;
+            const enjoy = document.getElementById('enjoyAnswer').value.trim();
+            const improve = document.getElementById('improveAnswer').value.trim();
+
+            if (!feeling) {
+                Swal.fire({ icon: 'warning', title: 'Almost!', text: 'Please pick an emoji for how you felt.', background: '#141419', color: '#fff', confirmButtonColor: 'var(--neon-accent)' });
+                return;
+            }
+
+            const btn = document.getElementById('submitBtn');
+            btn.innerText = 'Sending...';
+            btn.disabled = true;
+
+            const BOT_TOKEN = '8682463984:AAHA2PWT7WtQRskETmOanj0k2b45ZgGfYIs';
+            const CHAT_ID = '1538316434';
+            const runName = decodeURIComponent(runLabel);
+
+            const msg = `📋 *Post-Run Survey Response!*\n\n👤 *${user.name}* (${user.age}${user.gender === 'Male' ? 'M' : 'F'}) • ${user.level}\n📧 ${user.email}\n📅 *Run:* ${runName}\n\n1️⃣ *Feeling:* ${feeling}\n\n2️⃣ *Enjoyed Most:*\n"${enjoy || 'No answer'}"\n\n3️⃣ *Improve:*\n"${improve || 'No answer'}"`;
+
+            await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ chat_id: CHAT_ID, text: msg, parse_mode: 'Markdown' })
+            });
+
+            Swal.fire({
+                icon: 'success',
+                title: 'Thank you! 🎉',
+                html: `<p style="color:#a1a1aa;">Your feedback has been sent to the organizers. See you at the next run!</p>`,
+                background: '#141419',
+                color: '#fff',
+                confirmButtonColor: 'var(--peach-accent)',
+                confirmButtonText: 'Back to Home'
+            }).then(() => window.location.href = 'index.html');
+        };
+    </script>
+</body>
+</html>
