@@ -296,6 +296,56 @@ const AppService = {
                 registeredAt: r.registered_at
             };
         });
+    },
+
+    // --- SHOP LOGIC ---
+    getShopStatus: async () => {
+        const settings = await dbGet('shop_settings');
+        if (settings && settings.length > 0) return settings[0].is_open;
+        return false;
+    },
+
+    getShopItems: async () => {
+        const items = await dbGet('shop_items', 'is_active=eq.true');
+        return items || [];
+    },
+
+    submitOrder: async (itemId, size, refNumber) => {
+        const currentUser = AuthService.getCurrentUser();
+        if (!currentUser) return false;
+
+        const newOrder = {
+            id: crypto.randomUUID(),
+            user_id: currentUser.id,
+            item_id: itemId,
+            size: size,
+            receipt_ref: refNumber,
+            status: 'pending' // pending, approved, rejected
+        };
+
+        const result = await dbInsert('shop_orders', newOrder);
+        if (result !== null) {
+            // Fetch item details for the alert
+            const items = await dbGet('shop_items', `id=eq.${itemId}`);
+            const itemName = (items && items.length > 0) ? items[0].name : 'Unknown Item';
+            
+            // Notify Bot
+            const botToken = '8682463984:AAHA2PWT7WtQRskETmOanj0k2b45ZgGfYIs';
+            const chatId = '1538316434';
+            const text = `🛍️ *New Shop Order!*\n\n*User:* ${currentUser.name}\n*Item:* ${itemName}\n*Size:* ${size}\n*Ref #:* \`${refNumber}\`\n\nApprove or Reject this order from the VIP Shop menu.`;
+            
+            try {
+                await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ chat_id: chatId, text, parse_mode: 'Markdown' })
+                });
+            } catch (e) {
+                console.error("Telegram shop alert failed", e);
+            }
+            return true;
+        }
+        return false;
     }
 };
 
