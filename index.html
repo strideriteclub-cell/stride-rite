@@ -343,11 +343,12 @@
 
             // Send email via EmailJS
             try {
-                await emailjs.send('service_p70otdg', 'template_sc5tqp8', {
+                const result = await emailjs.send('service_p70otdg', 'template_sc5tqp8', {
                     to_name: users[0].name.split(' ')[0],
                     to_email: email,
                     reset_link: resetLink
                 });
+                console.log('EmailJS success:', result);
                 Swal.fire({
                     icon: 'success',
                     title: 'Email Sent! 📬',
@@ -357,7 +358,8 @@
                 });
                 document.getElementById('forgotEmail').value = '';
             } catch(e) {
-                Swal.fire({icon:'error', title:'Failed to send email', text:'Please try again later.', background:'#141419', color:'#fff'});
+                console.error('EmailJS error:', e);
+                Swal.fire({icon:'error', title:'Failed to send email', text: `Error: ${e?.text || e?.status || JSON.stringify(e)}`, background:'#141419', color:'#fff'});
             }
 
             btn.innerText = 'Send Reset Link';
