@@ -291,6 +291,16 @@
             btn.disabled = false;
 
             if (success) {
+                const newUserName = document.getElementById('regName').value.split(' ')[0];
+                const newUserEmail = document.getElementById('regEmail').value;
+
+                // Send branded welcome email (fire & forget)
+                emailjs.send('service_p70otdg', 'template_pcpxjmp', {
+                    to_name: newUserName,
+                    to_email: newUserEmail,
+                    email: newUserEmail
+                }).catch(e => console.log('Welcome email error:', e));
+
                 const redirect = new URLSearchParams(window.location.search).get('redirect');
                 Swal.fire({
                     icon: 'success', 
