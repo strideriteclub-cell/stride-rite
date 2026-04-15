@@ -9,6 +9,17 @@ const defaultHeaders = {
     'Prefer': 'return=representation'
 };
 
+// Calculate age from a birthdate string
+function calculateAge(birthdate) {
+    if (!birthdate) return '?';
+    const birth = new Date(birthdate);
+    const now = new Date();
+    let age = now.getFullYear() - birth.getFullYear();
+    const m = now.getMonth() - birth.getMonth();
+    if (m < 0 || (m === 0 && now.getDate() < birth.getDate())) age--;
+    return age;
+}
+
 // --- API HELPERS ---
 async function dbGet(table, query = 'select=*') {
     try {
@@ -78,27 +89,21 @@ const AuthService = {
         return false;
     },
 
-    register: async (name, email, password, age, gender, level) => {
-        // Check if email exists
+    register: async (name, email, password, birthdate, gender, level) => {
         const existing = await dbGet('stride_users', `email=eq.${encodeURIComponent(email)}`);
-        if (existing && existing.length > 0) {
-            return false; // Email exists
-        }
+        if (existing && existing.length > 0) return false;
 
         const newUser = { 
             id: crypto.randomUUID(), 
-            name, 
-            email, 
-            password, 
-            age, 
-            gender, 
-            level, 
-            is_admin: false 
+            name, email, password, 
+            birthdate,
+            age: calculateAge(birthdate),
+            gender, level, is_admin: false 
         };
         
         const inserted = await dbInsert('stride_users', newUser);
         if (inserted) {
-            localStorage.setItem(KEYS.SESSION, JSON.stringify(newUser)); // Auto login
+            localStorage.setItem(KEYS.SESSION, JSON.stringify(newUser));
             return true;
         }
         return false;
@@ -197,11 +202,12 @@ const AppService = {
         const currentUser = AuthService.getCurrentUser();
         if(!currentUser) return false;
 
-        // Prevent double booking
         const existing = await dbGet('stride_registrations', `run_id=eq.${runId}&user_id=eq.${currentUser.id}`);
-        if(existing && existing.length > 0) {
-            return false;
-        }
+        if(existing && existing.length > 0) return false;
+
+        // Check if this is their first run ever
+        const allRegs = await dbGet('stride_registrations', `user_id=eq.${currentUser.id}`);
+        const isFirstTimer = !allRegs || allRegs.length === 0;
 
         const newRegistration = {
             id: crypto.randomUUID(),
@@ -216,32 +222,28 @@ const AppService = {
         if (result !== null) {
             const runDetails = await dbGet('stride_runs', `id=eq.${runId}`);
             if(runDetails && runDetails.length > 0) {
-                AppService.sendTelegramAlert(currentUser, distance, level, runDetails[0]);
+                AppService.sendTelegramAlert(currentUser, distance, level, runDetails[0], isFirstTimer);
             }
             return true;
         }
         return false;
     },
 
-    sendTelegramAlert: async (user, distance, level, run) => {
+    sendTelegramAlert: async (user, distance, level, run, isFirstTimer = false) => {
         const botToken = '8682463984:AAHA2PWT7WtQRskETmOanj0k2b45ZgGfYIs';
         const chatId = '1538316434';
         const cleanTimestamp = run.date_label.split('||')[0];
-        const text = `🚨 *New Runner Alert!*\n\n*${user.name}* (${user.age}${user.gender === 'Male'?'M':user.gender === 'Female'?'F':''}) just registered for the *${distance}*!\n📧 *Email:* ${user.email}\n🏃 *Level:* ${level || user.level}\n📅 *Run:* ${cleanTimestamp}`;
+        const age = user.birthdate ? calculateAge(user.birthdate) : (user.age || '?');
+        const firstTimerBadge = isFirstTimer ? '\n\n🎉 *FIRST TIMER! Welcome them warmly!*' : '';
+        const text = `${isFirstTimer ? '🌟' : '🚨'} *${isFirstTimer ? 'First-Time' : 'New'} Runner Alert!*\n\n*${user.name}* (${age}${user.gender === 'Male'?'M':'F'}) just registered for the *${distance}*!\n📧 *Email:* ${user.email}\n🏃 *Level:* ${level || user.level}\n📅 *Run:* ${cleanTimestamp}${firstTimerBadge}`;
         
         try {
             await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    chat_id: chatId,
-                    text: text,
-                    parse_mode: 'Markdown'
-                })
+                body: JSON.stringify({ chat_id: chatId, text, parse_mode: 'Markdown' })
             });
-        } catch (e) {
-            console.error("Telegram alert failed", e);
-        }
+        } catch (e) { console.error('Telegram alert failed', e); }
     },
 
     sendTelegramSuggestion: async (user, text) => {
