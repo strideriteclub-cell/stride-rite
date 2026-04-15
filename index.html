@@ -162,8 +162,8 @@
                 <!-- NEW FIELDS -->
                 <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem;">
                     <div class="input-group" style="flex: 1; margin-bottom: 0;">
-                        <label>Age</label>
-                        <input type="number" id="regAge" min="5" max="100" required>
+                        <label>Date of Birth</label>
+                        <input type="date" id="regBirthdate" required style="color-scheme: dark;">
                     </div>
                     <div class="input-group" style="flex: 1; margin-bottom: 0;">
                         <label>Gender</label>
@@ -256,7 +256,7 @@
                 document.getElementById('regName').value,
                 document.getElementById('regEmail').value,
                 document.getElementById('regPassword').value,
-                document.getElementById('regAge').value,
+                document.getElementById('regBirthdate').value,
                 document.getElementById('regGender').value,
                 document.getElementById('regLevel').value
             );
