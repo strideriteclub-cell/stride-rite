@@ -23,7 +23,7 @@
             <a href="index.html" class="btn btn-secondary" style="padding: 0.4rem 1rem; font-size: 0.85rem; margin-right: 8px;">🏠 Home</a>
             <a href="gallery.html" class="btn btn-secondary" style="padding: 0.4rem 1rem; font-size: 0.85rem; margin-right: 8px;">📸 Gallery</a>
             <a href="shop.html" id="shopLink" class="btn btn-secondary hidden" style="padding: 0.4rem 1rem; font-size: 0.85rem; margin-right: 8px; border-color:var(--neon-accent); color:var(--neon-accent);">🛒 Shop</a>
-            <a href="#" id="adminLink" class="admin-link hidden">Admin Panel</a>
+            <a href="https://t.me/striderite_alerts_bot" target="_blank" id="adminLink" class="btn btn-secondary hidden" style="padding: 0.4rem 1rem; font-size: 0.85rem; border-color:var(--neon-accent); color:var(--neon-accent);">🤖 Bot Admin</a>
             <a href="#" onclick="AuthService.logout()">Log Out</a>
         </div>
     </nav>
@@ -57,12 +57,7 @@
 
         document.getElementById('welcomeText').innerText = `Hello, ${user.name}`;
         if (user.is_admin) {
-            const adminLnk = document.getElementById('adminLink');
-            adminLnk.classList.remove('hidden');
-            
-            // Redirecting directly to the Stride Rite Alerts Bot
-            adminLnk.href = 'https://t.me/striderite_alerts_bot';
-            adminLnk.target = '_blank';
+            document.getElementById('adminLink').classList.remove('hidden');
         }
 
         // Check if VIP Shop is open
