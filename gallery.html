@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard | Stride Rite</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#584adc">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Stride Rite">
+    <link rel="apple-touch-icon" href="/icon.svg">
+    <link rel="stylesheet" href="styles.css?v=4">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="logo">Stride Rite</div>
+        <div class="nav-links">
+            <span id="welcomeText" style="color: var(--text-muted); margin-right: 15px;"></span>
+            <a href="index.html" class="btn btn-secondary" style="padding: 0.4rem 1rem; font-size: 0.85rem; margin-right: 8px;">🏠 Home</a>
+            <a href="gallery.html" class="btn btn-secondary" style="padding: 0.4rem 1rem; font-size: 0.85rem; margin-right: 8px;">📸 Gallery</a>
+            <a href="#" id="adminLink" class="admin-link hidden">Admin Panel</a>
+            <a href="#" onclick="AuthService.logout()">Log Out</a>
+        </div>
+    </nav>
+
+    <div class="admin-header" style="display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 1rem;">
+        <div>
+            <h1>Upcoming Community Runs</h1>
+            <p style="color: var(--text-muted)">Register for the next Saturday run so we know you're coming!</p>
+        </div>
+        <button class="btn btn-secondary" onclick="promptSuggestion()" style="border-color: var(--peach-accent); color: var(--peach-accent);">💡 Send a Suggestion</button>
+    </div>
+
+    <div class="dashboard-container">
+        <!-- Registration Success Banner (hidden by default) -->
+        <div id="registeredBanner" style="display:none; background: linear-gradient(135deg, rgba(88,74,220,0.2), rgba(255,180,100,0.1)); border: 1px solid var(--neon-accent); border-radius: 16px; padding: 1.5rem 2rem; margin-bottom: 2rem; display: none; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+            <div>
+                <div style="font-family:'Outfit'; font-size:1.3rem; font-weight:800; color:white;">✅ You're registered!</div>
+                <div style="color:var(--text-muted); font-size:0.9rem; margin-top:0.25rem;">We can't wait to see you at the run 🏃‍♂️💨</div>
+            </div>
+            <a href="index.html" class="btn btn-primary purple-bg" style="padding: 0.75rem 2rem;">🏠 Back to Home</a>
+        </div>
+        <div class="b-grid" id="runsContainer">
+            <!-- Runs injected here -->
+        </div>
+    </div>
+
+    <script src="app.js?v=2"></script>
+    <script>
+        const user = AuthService.getCurrentUser();
+        if (!user) window.location.href = 'index.html?v=2';
+
+        document.getElementById('welcomeText').innerText = `Hello, ${user.name}`;
+        if (user.is_admin) {
+            document.getElementById('adminLink').classList.remove('hidden');
+            document.getElementById('adminLink').href = 'admin.html';
+        }
+
+        async function renderRuns() {
+            const container = document.getElementById('runsContainer');
+            container.innerHTML = '<p>Loading community runs from server...</p>';
+            
+            const runs = await AppService.getRuns();
+            const myRunIds = await AppService.getUserRegistrations(user.id);
+
+            if(!runs || runs.length === 0) {
+                container.innerHTML = `<p>No upcoming runs scheduled right now.</p>`;
+                return;
+            }
+
+            container.innerHTML = runs.map(run => {
+                const isRegistered = myRunIds.includes(run.id);
+
+                let title = run.date_label.toUpperCase();
+                let subtitle = "";
+                if(run.date_label.includes(" - ")) {
+                    const parts = run.date_label.split(" - ");
+                    title = parts[0].toUpperCase();
+                    subtitle = parts.slice(1).join(" - ");
+                }
+
+                return `
+                <div class="glass-card" style="background:#0d0c11; border:none; border-bottom:4px solid var(--neon-accent); border-radius:12px; padding:2rem; margin-bottom:1.5rem; text-align:left;">
+                    <div style="font-weight:800; font-size:1.5rem; color:white; letter-spacing:1px; margin-bottom:0.25rem; font-family:'Outfit';">${title}</div>
+                    <div style="font-weight:800; font-size:2.5rem; color:white; line-height:1; margin-bottom:1rem; font-family:'Outfit';">${subtitle}</div>
+                    <div style="width: 50px; height: 3px; background: var(--peach-accent); margin-bottom: 0.75rem;"></div>
+                    <div style="color:rgba(255,255,255,0.7); font-size:0.95rem; margin-bottom:0.2rem;">Community run · All welcome</div>
+                    <div style="color:var(--peach-accent); font-size:0.85rem; margin-bottom:1.5rem;"><a href="${run.location_link}" target="_blank" style="color: inherit;">📍 ${run.location}</a></div>
+                    
+                    ${isRegistered 
+                        ? `<button class="btn btn-secondary btn-block" disabled>✓ You are registered</button>`
+                        : `<button class="btn btn-primary btn-block purple-bg" onclick="promptRegistration('${run.id}')">Register for this Run</button>`
+                    }
+                </div>
+                `;
+            }).join('');
+        }
+
+        window.promptRegistration = function(runId) {
+            Swal.fire({
+                title: 'Complete Registration',
+                html: `
+                    <div style="text-align: left;">
+                        <label style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 5px; display:block;">Select Distance</label>
+                        <select id="swal-distance" class="swal2-input" style="width: 100%; margin: 0 0 1rem 0; font-size: 1rem; background: var(--bg-dark); color: white;">
+                            <option value="2K">2 KM</option>
+                            <option value="5K">5 KM</option>
+                            <option value="8K">8 KM</option>
+                        </select>
+
+                        <label style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 5px; display:block;">Current Running Level</label>
+                        <select id="swal-level" class="swal2-input" style="width: 100%; margin: 0; font-size: 1rem; background: var(--bg-dark); color: white;">
+                            <option value="Beginner (Walk/Run)">Beginner (Walk/Run)</option>
+                            <option value="Intermediate (5k-10k consistent)">Intermediate (5k-10k consistent)</option>
+                            <option value="Advanced (Fast paced/Long distance)">Advanced (Fast paced/Long distance)</option>
+                            <option value="Non-Runner (Just here for vibes)">Non-Runner (Just here for vibes)</option>
+                        </select>
+                    </div>
+                `,
+                background: '#141419',
+                color: '#fff',
+                confirmButtonText: 'Confirm RSVP',
+                confirmButtonColor: 'var(--peach-accent)',
+                preConfirm: () => {
+                    return {
+                        distance: document.getElementById('swal-distance').value,
+                        level: document.getElementById('swal-level').value
+                    }
+                }
+            }).then((result) => {
+                if(result.isConfirmed) {
+                    register(runId, result.value.distance, result.value.level);
+                }
+            });
+        };
+
+        window.register = async function(runId, distance, level) {
+            Swal.fire({
+                title: 'Registering...',
+                background: '#141419', color: '#fff',
+                didOpen: () => Swal.showLoading()
+            });
+
+            if (await AppService.registerForRun(runId, distance, level)) {
+                // Show success banner at top of page
+                const banner = document.getElementById('registeredBanner');
+                banner.style.display = 'flex';
+                banner.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                Swal.fire({
+                    icon: 'success', 
+                    title: 'You are registered!', 
+                    html: `
+                        <p style="margin-bottom: 20px; font-size: 1.1rem;">We can't wait to see you there! 🏃‍♂️💨</p>
+                        <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 15px;">Make sure to join our WhatsApp group to stay updated!</p>
+                        <a href="https://chat.whatsapp.com/BLYGyEaTTrF8lwS46fhuWM?mode=gi_t" target="_blank" style="display: inline-flex; align-items: center; gap: 8px; background: #25D366; color: white; padding: 12px 24px; border-radius: 50px; text-decoration: none; font-weight: bold;">
+                            Join WhatsApp Group
+                        </a>
+                    `,
+                    background: '#141419',
+                    color: '#fff',
+                    confirmButtonText: 'Done! 🎉',
+                    confirmButtonColor: 'var(--peach-accent)'
+                }).then(() => {
+                    renderRuns();
+                });
+            } else {
+                Swal.fire({icon: 'error', title: 'Registration failed', text: 'You might already be registered.', background: '#141419', color: '#fff'});
+            }
+        };
+
+        renderRuns();
+
+        window.promptSuggestion = function() {
+            Swal.fire({
+                title: 'Suggest a Run',
+                input: 'textarea',
+                inputLabel: 'Have an idea? (e.g. Sunrise run at 5am)',
+                inputPlaceholder: 'Type your message here...',
+                showCancelButton: true,
+                confirmButtonText: 'Send Message',
+                confirmButtonColor: 'var(--peach-accent)',
+                background: '#141419',
+                color: '#fff',
+                preConfirm: (text) => {
+                    if (!text) {
+                        Swal.showValidationMessage('Please write something!');
+                    }
+                    return text;
+                }
+            }).then(async (result) => {
+                if (result.isConfirmed) {
+                    Swal.fire({title: 'Sending...', background: '#141419', color: '#fff', didOpen: () => Swal.showLoading()});
+                    await AppService.sendTelegramSuggestion(user, result.value);
+                    Swal.fire({
+                        icon: 'success', 
+                        title: 'Sent!', 
+                        text: 'Your brilliant suggestion was zipped straight to the organizers! 🚀', 
+                        background: '#141419', 
+                        color: '#fff', 
+                        confirmButtonColor: 'var(--peach-accent)'
+                    });
+                }
+            });
+        };
+    </script>
+</body>
+</html>
