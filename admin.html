@@ -84,10 +84,8 @@
                 <div class="glass-panel" style="padding:1.5rem;">
                     <h3 style="margin-bottom:0.5rem;">🔍 Runner Lookup</h3>
                     <p style="color:var(--text-muted); font-size:0.85rem; margin-bottom:1rem;">Search a runner by name to see their profile + run history.</p>
-                    <div style="display:flex; gap:8px;">
-                        <input type="text" id="lookupInput" placeholder="Enter runner name..." style="flex:1; background:rgba(0,0,0,0.2); border:1px solid var(--border-color); border-radius:8px; padding:0.75rem; color:white; font-size:0.9rem;">
-                        <button class="btn btn-secondary" onclick="runnerLookup()">Search</button>
-                    </div>
+                    <input type="text" id="lookupInput" placeholder="Enter runner name..." style="width:100%; background:rgba(0,0,0,0.2); border:1px solid var(--border-color); border-radius:8px; padding:0.75rem; color:white; font-size:0.9rem; margin-bottom:0.5rem;">
+                    <button class="btn btn-secondary" style="width:100%;" onclick="runnerLookup()">Search</button>
                     <div id="lookupResults" style="margin-top:1rem;"></div>
                 </div>
 
@@ -104,17 +102,6 @@
                     <h3 style="margin-bottom:0.5rem;">🎂 Upcoming Birthdays</h3>
                     <p style="color:var(--text-muted); font-size:0.85rem; margin-bottom:1rem;">Runners with birthdays in the next 14 days.</p>
                     <div id="birthdayList"><p style="color:var(--text-muted);">Loading...</p></div>
-                </div>
-
-                <!-- Cancel a Run -->
-                <div class="glass-panel" style="padding:1.5rem;">
-                    <h3 style="margin-bottom:0.5rem;">🚫 Cancel a Run</h3>
-                    <p style="color:var(--text-muted); font-size:0.85rem; margin-bottom:1rem;">Mark a run as cancelled and get the email list to notify runners.</p>
-                    <select id="cancelRunSelect" style="width:100%; background:rgba(0,0,0,0.2); border:1px solid var(--border-color); border-radius:8px; padding:0.75rem; color:white; font-size:0.9rem; margin-bottom:0.75rem;">
-                        <option value="">Select a run...</option>
-                    </select>
-                    <input type="text" id="cancelReason" placeholder="Reason (e.g. Bad weather)" style="width:100%; background:rgba(0,0,0,0.2); border:1px solid var(--border-color); border-radius:8px; padding:0.75rem; color:white; font-size:0.9rem; margin-bottom:0.75rem;">
-                    <button class="btn btn-secondary" style="width:100%; border-color:#ff4d4d; color:#ff4d4d;" onclick="cancelRun()">🚫 Cancel Run</button>
                 </div>
 
             </div>
