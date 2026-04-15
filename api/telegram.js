@@ -118,8 +118,9 @@ async function sendMenu(chatId, msg = "👟 *Stride Rite Admin Bot*\nHey Haleem!
             [{ text: "📝 Survey Link", callback_data: "cmd_survey" }, { text: "🎂 Birthdays", callback_data: "cmd_birthdays" }],
             [{ text: "🔍 Runner Lookup", callback_data: "cmd_lookup_start" }, { text: "📣 Broadcast", callback_data: "cmd_broadcast_start" }],
             [{ text: "📈 Growth Graph", callback_data: "cmd_growth" }, { text: "✏️ Edit a Run", callback_data: "cmd_edit_list" }],
-            [{ text: "📸 Add to Gallery", callback_data: "cmd_gallery_start" }, { text: "🚫 Cancel a Run", callback_data: "cmd_cancel_list" }],
-            [{ text: "🗑️ Delete a Run", callback_data: "cmd_delete_list" }, { text: "🆕 Create New Run", callback_data: "create_step1" }]
+            [{ text: "📸 Add to Gallery", callback_data: "cmd_gallery_start" }, { text: "🛍️ VIP Shop Admin", callback_data: "cmd_shop_menu" }],
+            [{ text: "🚫 Cancel a Run", callback_data: "cmd_cancel_list" }, { text: "🗑️ Delete a Run", callback_data: "cmd_delete_list" }],
+            [{ text: "🆕 Create New Run", callback_data: "create_step1" }]
         ]
     });
 }
@@ -258,6 +259,43 @@ async function handleGalleryDeleteExecute(chatId, photoId) {
     }
     await sendMessage(chatId, "✅ *Photo deleted from gallery!*");
     await sendMenu(chatId, "What else?");
+}
+
+// ─── SHOP ADMIN ──────────────────────────────────────────────────────────────
+async function handleShopMenu(chatId) {
+    const settings = await dbGet('shop_settings');
+    const isShopOpen = (settings && settings.length > 0) ? settings[0].is_open : false;
+    
+    // Status text
+    const statusText = isShopOpen ? "🟢 *OPEN* (Visible to everyone)" : "🔴 *CLOSED* (Hidden, Merch Dropping Soon text)";
+    const toggleText = isShopOpen ? "🔴 Hide Shop / Turn Off" : "🟢 Open Shop / Turn On";
+
+    await sendMessage(chatId, `🛍️ *VIP Shop Admin*\n\nCurrent Status: ${statusText}`, {
+        inline_keyboard: [
+            [{ text: toggleText, callback_data: `shop_toggle_${!isShopOpen}` }],
+            [{ text: "↩️ Back to Menu", callback_data: "cmd_menu" }]
+        ]
+    });
+}
+
+async function handleShopToggle(chatId, newStateStr) {
+    const newState = newStateStr === "true";
+    const settings = await dbGet('shop_settings');
+    
+    if (settings && settings.length > 0) {
+        // Update
+        await fetch(`${SUPABASE_URL}/rest/v1/shop_settings?id=eq.${settings[0].id}`, {
+            method: 'PATCH',
+            headers: dbHeaders,
+            body: JSON.stringify({ is_open: newState })
+        });
+    } else {
+        // Insert
+        await dbInsert('shop_settings', { id: crypto.randomUUID(), is_open: newState });
+    }
+    
+    await sendMessage(chatId, newState ? "✅ Shop is now *LIVE* to the community!" : "🚫 Shop is now *HIDDEN*.");
+    await handleShopMenu(chatId);
 }
 
 // ─── EDIT RUN ──────────────────────────────────────────────────────────────
@@ -778,6 +816,8 @@ export default async function handler(req, res) {
             else if (data === 'cmd_gallery_delete') await handleGalleryDeleteList(chatId);
             else if (data.startsWith('gallery_del_yes_')) await handleGalleryDeleteExecute(chatId, data.replace('gallery_del_yes_', ''));
             else if (data.startsWith('gallery_del_')) await handleGalleryDeleteConfirm(chatId, data.replace('gallery_del_', ''));
+            else if (data === 'cmd_shop_menu') await handleShopMenu(chatId);
+            else if (data.startsWith('shop_toggle_')) await handleShopToggle(chatId, data.replace('shop_toggle_', ''));
             else if (data === 'cmd_edit_list') await handleEditList(chatId);
             else if (data.startsWith('edit_pick_')) await handleEditPickField(chatId, data.replace('edit_pick_', ''));
             else if (data === 'edit_field_datetime') await handleEditDateTime(chatId);
