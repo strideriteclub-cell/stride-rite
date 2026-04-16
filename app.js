@@ -304,7 +304,7 @@ const AppService = {
         const items = await dbGet('shop_items', 'is_active=eq.true');
         return items || [];
     },
-    submitOrder: async (itemId, size, refNumber, phone) => {
+    submitOrder: async (itemId, size, refNumber, phone, paymentMethod, screenshotFile) => {
         const currentUser = AuthService.getCurrentUser();
         if (!currentUser) return false;
 
@@ -313,55 +313,60 @@ const AppService = {
             user_id: currentUser.id,
             item_id: itemId,
             size: size,
-            payment_method: 'InstaPay/Telda',
-            payment_detail: refNumber, // Map the Ref # to payment_detail
-            receipt_ref: refNumber,    // Keep for safety/legacy
+            payment_method: paymentMethod || 'InstaPay/Telda',
+            payment_detail: refNumber,
             phone_number: phone, 
             status: 'pending'
         };
 
-        console.log("Submitting order with payment details...", newOrder);
+        console.log("Saving order to database...", newOrder);
         let result = await dbInsert('shop_orders', newOrder);
         
-        // If it fails due to column name mismatch, try common fallbacks
-        if (result === null && window.lastDbError) {
-            const err = window.lastDbError;
-            if (err.includes('receipt_ref') || err.includes('payment_method')) {
-                console.log("Retrying with fallback logic...");
-                const fallbackOrder = { ...newOrder };
-                // Handle various potential missing/renamed columns
-                if (err.includes('receipt_ref')) {
-                    delete fallbackOrder.receipt_ref;
-                    fallbackOrder.reference = refNumber;
-                }
-                result = await dbInsert('shop_orders', fallbackOrder);
-            }
+        // Handle common schema fallback
+        if (result === null && window.lastDbError && window.lastDbError.includes('receipt_ref')) {
+            const fallbackOrder = { ...newOrder, receipt_ref: refNumber };
+            result = await dbInsert('shop_orders', fallbackOrder);
         }
+
         if (result !== null) {
             const items = await dbGet('shop_items', `id=eq.${itemId}`);
-            const itemName = (items && items.length > 0) ? items[0].name : 'Unknown Item';
-            const price = (items && items.length > 0) ? items[0].price : 'Unknown';
+            const item = (items && items.length > 0) ? items[0] : { name: 'Unknown Item', price: '?' };
 
             const botToken = '8682463984:AAHA2PWT7WtQRskETmOanj0k2b45ZgGfYIs';
             const chatId = '1538316434';
-            const text = `🛍️ *New VIP Shop Order!*\n\n*Name:* ${currentUser.name}\n*Email:* ${currentUser.email}\n*Phone:* ${phone}\n*Gender:* ${currentUser.gender || 'N/A'}\n\n*Item:* ${itemName}\n*Size:* ${size}\n*Price:* ${price} EGP\n*Ref #:* \`${refNumber}\``;
+            
+            const caption = `🛍️ *NEW ORDER: ${item.name}*\n\n👤 *Customer:* ${currentUser.name}\n📧 *Email:* ${currentUser.email}\n📞 *Phone:* ${phone}\n📏 *Size:* ${size}\n💰 *Price:* ${item.price} EGP\n\n💳 *Method:* ${paymentMethod}\n🔢 *${paymentMethod} Ref:* \`${refNumber}\`\n\n👇 *Review and Approve:*`;
 
-            const replyMarkup = {
-                inline_keyboard: [
-                    [
-                        { text: "✅ Approve Order", callback_data: `shop_appr_${newOrder.id}` },
-                        { text: "❌ Reject Order", callback_data: `shop_rej_${newOrder.id}` }
-                    ]
-                ]
-            };
+            const replyMarkup = JSON.stringify({
+                inline_keyboard: [[
+                    { text: "✅ Approve", callback_data: `shop_appr_${newOrder.id}` },
+                    { text: "❌ Reject", callback_data: `shop_rej_${newOrder.id}` }
+                ]]
+            });
 
             try {
-                await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ chat_id: chatId, text, parse_mode: 'Markdown', reply_markup: replyMarkup })
-                });
-            } catch (e) { console.error("Telegram shop alert failed", e); }
+                if (screenshotFile) {
+                    const formData = new FormData();
+                    formData.append('chat_id', chatId);
+                    formData.append('photo', screenshotFile);
+                    formData.append('caption', caption);
+                    formData.append('parse_mode', 'Markdown');
+                    formData.append('reply_markup', replyMarkup);
+
+                    await fetch(`https://api.telegram.org/bot${botToken}/sendPhoto`, {
+                        method: 'POST',
+                        body: formData
+                    });
+                } else {
+                    await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ chat_id: chatId, text: caption, parse_mode: 'Markdown', reply_markup: JSON.parse(replyMarkup) })
+                    });
+                }
+            } catch (e) {
+                console.error("Telegram alert failed", e);
+            }
             return true;
         }
         return false;
