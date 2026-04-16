@@ -5,292 +5,63 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Run Gallery | Stride Rite</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-    <link rel="manifest" href="/manifest.json">
-    <meta name="theme-color" content="#584adc">
-    <link rel="stylesheet" href="styles.css?v=4">
+    <link rel="stylesheet" href="styles.css?v=15">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
-        .gallery-grid {
-            columns: 3 280px;
-            column-gap: 1.25rem;
-            width: 100%;
-        }
-        .gallery-item {
-            break-inside: avoid;
-            margin-bottom: 1.25rem;
-            border-radius: 16px;
-            overflow: hidden;
-            position: relative;
-            cursor: pointer;
-            transition: transform 0.25s ease, box-shadow 0.25s ease;
-            border: 1px solid rgba(255,255,255,0.06);
-        }
-        .gallery-item:hover { transform: scale(1.02); box-shadow: 0 8px 32px rgba(88,74,220,0.3); }
-        .gallery-item img { width: 100%; display: block; object-fit: cover; }
-        .gallery-item .overlay {
-            position: absolute; bottom: 0; left: 0; right: 0;
-            background: linear-gradient(transparent, rgba(0,0,0,0.85));
-            padding: 1.5rem 1rem 0.75rem;
-            opacity: 0; transition: opacity 0.2s;
-        }
-        .gallery-item:hover .overlay { opacity: 1; }
-        .overlay .run-label { font-size: 0.75rem; color: var(--peach-accent); font-weight: 600; }
-        .overlay .caption { font-size: 0.85rem; color: white; margin-top: 2px; }
-
-        /* Lightbox */
-        #lightbox {
-            display: none; position: fixed; inset: 0; z-index: 9999;
-            background: rgba(0,0,0,0.95);
-            align-items: center; justify-content: center; flex-direction: column;
-        }
-        #lightbox.active { display: flex; }
-        #lightbox img { max-width: 90vw; max-height: 80vh; border-radius: 12px; object-fit: contain; }
-        #lightbox .lb-caption { color: white; margin-top: 1rem; font-size: 0.9rem; color: #a1a1aa; }
-        #lightbox .lb-label { color: var(--peach-accent); font-size: 0.8rem; margin-top: 4px; }
-        #lightbox .lb-close {
-            position: absolute; top: 1.5rem; right: 1.5rem;
-            color: white; font-size: 2rem; cursor: pointer; background: none; border: none;
-            line-height: 1;
-        }
-        #lightbox .lb-nav {
-            position: absolute; top: 50%; transform: translateY(-50%);
-            color: white; font-size: 2.5rem; cursor: pointer; background: rgba(255,255,255,0.1);
-            border: none; border-radius: 50%; width: 52px; height: 52px; display: flex; align-items: center; justify-content: center;
-            transition: background 0.2s;
-        }
-        #lightbox .lb-nav:hover { background: rgba(88,74,220,0.5); }
-        #lightbox .lb-prev { left: 1.5rem; }
-        #lightbox .lb-next { right: 1.5rem; }
-
-        .filter-bar { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 2rem; }
-        .filter-btn {
-            padding: 0.4rem 1rem; border-radius: 50px; border: 1px solid var(--border-color);
-            background: transparent; color: var(--text-muted); font-size: 0.85rem; cursor: pointer;
-            transition: all 0.2s; font-family: 'Inter', sans-serif;
-        }
-        .filter-btn.active, .filter-btn:hover { background: var(--neon-accent); border-color: var(--neon-accent); color: white; }
-
-        .empty-state { text-align: center; padding: 4rem 2rem; color: var(--text-muted); }
-        .empty-state .icon { font-size: 4rem; margin-bottom: 1rem; }
-
-        /* Upload modal */
-        .upload-area {
-            border: 2px dashed var(--border-color); border-radius: 16px;
-            padding: 2rem; text-align: center; cursor: pointer;
-            transition: border-color 0.2s, background 0.2s;
-        }
-        .upload-area:hover { border-color: var(--neon-accent); background: rgba(88,74,220,0.05); }
-        .upload-area input[type=file] { display: none; }
+        .custom-logo-container { display: flex; align-items: center; gap: 12px; }
+        .custom-logo { font-family: 'Outfit', sans-serif; font-size: 1.5rem; font-weight: 800; color: #fff; position: relative; }
+        .custom-logo .dot { position: absolute; top: 3px; right: -6px; width: 6px; height: 6px; background-color: var(--peach-accent); border-radius: 50%; }
+        .gallery-grid { columns: 3 280px; column-gap: 1.25rem; width: 100%; margin-top: 2rem; }
+        .gallery-item { break-inside: avoid; margin-bottom: 1.25rem; border-radius: 16px; overflow: hidden; position: relative; cursor: pointer; border: 1px solid var(--border-color); }
+        .gallery-item img { width: 100%; display: block; }
+        .filter-bar { display:flex; gap:0.5rem; flex-wrap:wrap; margin-bottom:2rem; }
+        .filter-btn { padding:0.5rem 1.2rem; border-radius:50px; background:transparent; border:1px solid var(--border-color); color:var(--text-muted); cursor:pointer; }
+        .filter-btn.active { background:var(--neon-accent); border-color:var(--neon-accent); color:white; }
     </style>
 </head>
 <body>
     <nav class="navbar">
-        <div class="logo">Stride Rite</div>
+        <div class="custom-logo-container">
+            <div class="custom-logo">S<span class="dot"></span></div>
+            <div style="font-family:'Outfit'; font-weight:800; font-size:1.1rem; margin-left:12px;">STRIDE RITE</div>
+        </div>
         <div class="nav-links">
-            <a href="index.html" class="btn btn-secondary" style="padding:0.4rem 1rem; font-size:0.85rem; margin-right:8px;">🏠 Home</a>
-            <a href="dashboard.html" class="btn btn-secondary" style="padding:0.4rem 1rem; font-size:0.85rem; margin-right:8px;">🏃 Runs</a>
-            <a href="#" id="adminLink" class="admin-link hidden">Admin</a>
-            <a href="#" onclick="AuthService.logout()">Log Out</a>
+            <a href="dashboard.html">📊 Board</a>
+            <a href="index.html">🏠 Home</a>
+            <a href="#" onclick="AuthService.logout()">Logout</a>
         </div>
     </nav>
 
-    <div class="admin-container" style="max-width: 1200px; margin: 0 auto; padding: 2rem 1.5rem;">
-        <div style="display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:1rem; margin-bottom:2rem;">
-            <div>
-                <h1 style="font-family:'Outfit'; font-size:2.2rem; margin-bottom:0.25rem;">📸 Run Memories</h1>
-                <p style="color:var(--text-muted);">Photos from our community runs</p>
-            </div>
-            <button class="btn btn-primary purple-bg" id="uploadBtn" style="display:none;" onclick="showUploadModal()">
-                + Add Photos
-            </button>
-        </div>
+    <div class="main-container animate-up">
+        <h1 style="font-size:2.2rem; margin-bottom:0.5rem;">📸 Run Memories</h1>
+        <p style="color:var(--text-muted); margin-bottom:2rem;">Photos from our community runs</p>
 
-        <!-- Filter bar -->
         <div class="filter-bar" id="filterBar">
             <button class="filter-btn active" onclick="filterGallery('all', this)">All Runs</button>
         </div>
 
-        <!-- Gallery grid -->
         <div class="gallery-grid" id="galleryGrid">
-            <div class="empty-state" style="grid-column:1/-1;">
-                <div class="icon">⏳</div>
-                <p>Loading photos...</p>
-            </div>
+            <div style="text-align:center; padding:4rem; color:var(--text-muted);">Loading photos...</div>
         </div>
     </div>
 
-    <!-- Lightbox -->
-    <div id="lightbox">
-        <button class="lb-close" onclick="closeLightbox()">✕</button>
-        <button class="lb-nav lb-prev" onclick="lightboxNav(-1)">‹</button>
-        <img id="lbImg" src="" alt="">
-        <div class="lb-caption" id="lbCaption"></div>
-        <div class="lb-label" id="lbLabel"></div>
-        <button class="lb-nav lb-next" onclick="lightboxNav(1)">›</button>
-    </div>
-
-    <script src="app.js?v=2"></script>
+    <script src="app.js?v=21"></script>
     <script>
         const SUPABASE_URL_G = 'https://qcqyyfnsfyuaaaacddsm.supabase.co';
         const SUPABASE_KEY_G = 'sb_publishable_uXs2e5aPzrIL_M2xsYDmWg_hPOUaG1l';
-        const headers = { 'apikey': SUPABASE_KEY_G, 'Authorization': `Bearer ${SUPABASE_KEY_G}`, 'Content-Type': 'application/json', 'Prefer': 'return=representation' };
-
-        let allPhotos = [];
-        let lbIndex = 0;
-        let filteredPhotos = [];
+        const headers = { 'apikey': SUPABASE_KEY_G, 'Authorization': `Bearer ${SUPABASE_KEY_G}`, 'Content-Type': 'application/json' };
 
         async function loadGallery() {
-            const res = await fetch(`${SUPABASE_URL_G}/rest/v1/gallery_photos?order=uploaded_at.desc&select=*`, { headers });
-            allPhotos = await res.json();
-            filteredPhotos = [...allPhotos];
-
-            // Build filter buttons
-            const runs = [...new Set(allPhotos.map(p => p.run_label).filter(Boolean))];
-            const bar = document.getElementById('filterBar');
-            runs.forEach(run => {
-                const btn = document.createElement('button');
-                btn.className = 'filter-btn';
-                btn.textContent = run;
-                btn.onclick = () => filterGallery(run, btn);
-                bar.appendChild(btn);
-            });
-
-            renderGrid(allPhotos);
-        }
-
-        function filterGallery(label, btn) {
-            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            filteredPhotos = label === 'all' ? [...allPhotos] : allPhotos.filter(p => p.run_label === label);
-            renderGrid(filteredPhotos);
-        }
-
-        function renderGrid(photos) {
+            const res = await fetch(`${SUPABASE_URL_G}/rest/v1/gallery_photos?select=*`, { headers });
+            const photos = await res.json();
             const grid = document.getElementById('galleryGrid');
-            const user = JSON.parse(localStorage.getItem('stride_user') || 'null');
-            const isAdmin = user && user.is_admin;
-            if (!photos || photos.length === 0) {
-                grid.innerHTML = `<div class="empty-state" style="column-span:all;">
-                    <div class="icon">📷</div>
-                    <p>No photos yet. Be the first to add memories!</p>
-                </div>`;
+            if(!photos || photos.length === 0) {
+                grid.innerHTML = `<p style="padding:4rem; text-align:center; color:var(--text-muted);">No memories uploaded yet.</p>`;
                 return;
             }
-            grid.innerHTML = photos.map((p, i) => `
-                <div class="gallery-item" onclick="openLightbox(${i})">
-                    <img src="${p.photo_url}" alt="${p.caption || 'Run photo'}" loading="lazy" onerror="this.parentElement.style.display='none'">
-                    <div class="overlay">
-                        ${p.run_label ? `<div class="run-label">🏃 ${p.run_label}</div>` : ''}
-                        ${p.caption ? `<div class="caption">${p.caption}</div>` : ''}
-                        ${isAdmin ? `<button onclick="event.stopPropagation(); deletePhoto('${p.id}', '${p.photo_url}')" style="position:absolute; top:10px; right:10px; background:rgba(255,0,0,0.7); border:none; border-radius:50%; width:32px; height:32px; color:white; font-size:1rem; cursor:pointer; display:flex; align-items:center; justify-content:center;" title="Delete photo">🗑️</button>` : ''}
-                    </div>
-                </div>
-            `).join('');
+            grid.innerHTML = photos.map(p => `<div class="gallery-item"><img src="${p.photo_url}" loading="lazy"></div>`).join('');
         }
-
-        window.deletePhoto = async function(id, photoUrl) {
-            const confirm = await Swal.fire({
-                icon: 'warning', title: 'Delete this photo?',
-                text: 'This cannot be undone.',
-                showCancelButton: true, confirmButtonText: 'Yes, Delete',
-                confirmButtonColor: '#ff4d4d', background: '#141419', color: '#fff'
-            });
-            if (!confirm.isConfirmed) return;
-
-            // Delete from DB
-            await fetch(`${SUPABASE_URL_G}/rest/v1/gallery_photos?id=eq.${id}`, {
-                method: 'DELETE', headers
-            });
-
-            // Delete from Supabase Storage
-            const fileName = photoUrl.split('/public/gallery/')[1];
-            if (fileName) {
-                await fetch(`${SUPABASE_URL_G}/storage/v1/object/gallery/${fileName}`, {
-                    method: 'DELETE', headers
-                });
-            }
-
-            Swal.fire({ icon: 'success', title: 'Deleted!', background: '#141419', color: '#fff', timer: 1200, showConfirmButton: false });
-            loadGallery();
-        };
-
-        function openLightbox(index) {
-            lbIndex = index;
-            const p = filteredPhotos[index];
-            document.getElementById('lbImg').src = p.photo_url;
-            document.getElementById('lbCaption').textContent = p.caption || '';
-            document.getElementById('lbLabel').textContent = p.run_label ? `🏃 ${p.run_label}` : '';
-            document.getElementById('lightbox').classList.add('active');
-        }
-        function closeLightbox() { document.getElementById('lightbox').classList.remove('active'); }
-        function lightboxNav(dir) {
-            lbIndex = (lbIndex + dir + filteredPhotos.length) % filteredPhotos.length;
-            openLightbox(lbIndex);
-        }
-        document.getElementById('lightbox').addEventListener('click', e => { if (e.target.id === 'lightbox') closeLightbox(); });
-        document.addEventListener('keydown', e => {
-            if (e.key === 'Escape') closeLightbox();
-            if (e.key === 'ArrowLeft') lightboxNav(-1);
-            if (e.key === 'ArrowRight') lightboxNav(1);
-        });
-
-        // Upload modal (admin only)
-        window.showUploadModal = async function() {
-            const runs = await fetch(`${SUPABASE_URL_G}/rest/v1/stride_runs?select=id,date_label&order=date_label.asc`, { headers }).then(r => r.json());
-            const runOptions = (runs || []).map(r => {
-                const label = r.date_label.includes('||') ? r.date_label.split('||')[0] : r.date_label;
-                return `<option value="${label}">${label}</option>`;
-            }).join('');
-
-            const { value: formData } = await Swal.fire({
-                title: '📸 Add Photo',
-                html: `
-                    <div style="text-align:left;">
-                        <label style="display:block; margin-bottom:6px; color:#a1a1aa; font-size:0.85rem;">Photo URL *</label>
-                        <input id="swal-url" placeholder="https://... paste an image link" style="width:100%; background:rgba(0,0,0,0.3); border:1px solid #333; border-radius:8px; padding:10px; color:white; margin-bottom:12px; font-size:0.9rem;">
-                        <label style="display:block; margin-bottom:6px; color:#a1a1aa; font-size:0.85rem;">Caption (optional)</label>
-                        <input id="swal-caption" placeholder="e.g. Morning vibes at Gateway Mall" style="width:100%; background:rgba(0,0,0,0.3); border:1px solid #333; border-radius:8px; padding:10px; color:white; margin-bottom:12px; font-size:0.9rem;">
-                        <label style="display:block; margin-bottom:6px; color:#a1a1aa; font-size:0.85rem;">Link to Run</label>
-                        <select id="swal-run" style="width:100%; background:rgba(0,0,0,0.3); border:1px solid #333; border-radius:8px; padding:10px; color:white; font-size:0.9rem;">
-                            <option value="">— No specific run —</option>
-                            ${runOptions}
-                        </select>
-                    </div>
-                `,
-                background: '#141419', color: '#fff',
-                confirmButtonText: '✅ Add Photo',
-                confirmButtonColor: 'var(--peach-accent)',
-                showCancelButton: true,
-                preConfirm: () => ({
-                    photo_url: document.getElementById('swal-url').value.trim(),
-                    caption: document.getElementById('swal-caption').value.trim(),
-                    run_label: document.getElementById('swal-run').value
-                })
-            });
-
-            if (!formData || !formData.photo_url) return;
-            await fetch(`${SUPABASE_URL_G}/rest/v1/gallery_photos`, { method: 'POST', headers, body: JSON.stringify(formData) });
-            Swal.fire({ icon: 'success', title: 'Photo added!', background: '#141419', color: '#fff', timer: 1500, showConfirmButton: false });
-            loadGallery();
-        };
-
-        // Show upload button for admins, gallery is public for everyone
-        async function initPage() {
-            const user = JSON.parse(localStorage.getItem('stride_user') || 'null');
-            if (user && user.is_admin) {
-                document.getElementById('uploadBtn').style.display = 'inline-flex';
-                document.getElementById('adminLink').classList.remove('hidden');
-                document.getElementById('adminLink').href = 'admin.html';
-            }
-            // Show logout/login link appropriately
-            if (!user) {
-                document.querySelector('.nav-links a[onclick]').textContent = 'Log In';
-                document.querySelector('.nav-links a[onclick]').href = 'index.html';
-                document.querySelector('.nav-links a[onclick]').removeAttribute('onclick');
-            }
-            loadGallery();
-        }
-        initPage();
+        loadGallery();
     </script>
 </body>
 </html>
