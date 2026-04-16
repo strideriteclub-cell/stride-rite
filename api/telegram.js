@@ -1,4 +1,4 @@
-import crypto from 'crypto';
+const crypto = require('crypto');
 
 const SUPABASE_URL = 'https://qcqyyfnsfyuaaaacddsm.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_uXs2e5aPzrIL_M2xsYDmWg_hPOUaG1l';
@@ -111,7 +111,7 @@ async function checkBirthdays(chatId) {
 }
 
 // ─── MENU ─────────────────────────────────────────────────────────────────────
-async function sendMenu(chatId, msg = "🏠 *Stride Rite Admin Menu*\nWhat would you like to manage today?") {
+async function sendMenu(chatId, msg = "🏠 *Stride Rite Admin V3*\nWhat would you like to manage today?") {
     let isActive = false;
     try {
         const tracks = await dbGet('live_tracks', 'id=eq.admin');
@@ -918,7 +918,7 @@ async function createExecute(chatId) {
 }
 
 // ─── MAIN HANDLER ─────────────────────────────────────────────────────────────
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
     if (req.method !== 'POST') { res.status(200).send('Alive'); return; }
     try {
         const body = req.body;
