@@ -1,10 +1,9 @@
-<!-- [FILE]: dashboard.html (RESTORING ALL INTERACTIVE FEATURES) -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard | Stride Rite</title>
+    <title>Community Dashboard | Stride Rite</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css?v=15">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -14,75 +13,167 @@
         .custom-logo .dot { position: absolute; top: 3px; right: -6px; width: 6px; height: 6px; background-color: var(--peach-accent); border-radius: 50%; }
         .logo-text-stack { display: flex; flex-direction: column; line-height: 1; }
         .logo-title { font-family: 'Outfit'; font-weight: 800; font-size: 1rem; }
-        #liveMap { height: 350px; width: 100%; border-radius: 20px; overflow: hidden; margin-top: 1rem; display: none; border: 1px solid var(--neon-accent); box-shadow: 0 0 20px rgba(88, 74, 220, 0.2); }
-        #liveBadge { display: none; align-items: center; gap: 8px; background: rgba(239, 68, 68, 0.1); border: 1px solid #ef4444; color: #ef4444; padding: 6px 14px; border-radius: 50px; font-size: 0.75rem; font-weight: 800; animation: pulse-red 2s infinite; }
-        @keyframes pulse-red { 0% { opacity: 0.6; } 50% { opacity: 1; } 100% { opacity: 0.6; } }
+        
+        .dashboard-header { margin-bottom: 3rem; display: flex; justify-content: space-between; align-items: flex-end; }
+        .advisor-card { 
+            background: linear-gradient(135deg, rgba(88, 74, 220, 0.1), rgba(255, 139, 106, 0.05));
+            border: 1px solid rgba(88, 74, 220, 0.2);
+            border-radius: 24px;
+            padding: 1.5rem 2rem;
+            margin-bottom: 3rem;
+            display: flex;
+            gap: 1.5rem;
+            align-items: center;
+            backdrop-filter: blur(10px);
+        }
+        
+        .dist-selector { display: flex; gap: 8px; background: rgba(0,0,0,0.2); padding: 4px; border-radius: 12px; margin: 1.5rem 0; border: 1px solid rgba(255,255,255,0.05); }
+        .dist-btn { flex: 1; padding: 10px; border-radius: 8px; border: none; background: transparent; color: var(--text-muted); font-weight: 700; cursor: pointer; transition: 0.3s; font-size: 0.8rem; }
+        .dist-btn.active { background: var(--neon-accent); color: white; box-shadow: 0 4px 12px rgba(88, 74, 220, 0.3); }
+        .dist-btn.active.easy { background: #22c55e; box-shadow: 0 4px 12px rgba(34,197,94,0.3); }
+        .dist-btn.active.med { background: #f59e0b; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3); }
+        .dist-btn.active.hard { background: #ef4444; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3); }
+        
+        @media (max-width: 768px) {
+            .dashboard-header { flex-direction: column; align-items: flex-start; gap: 1rem; }
+        }
     </style>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </head>
 <body>
+    <!-- Navigation -->
     <nav class="navbar">
-        <div class="custom-logo-container"><div class="custom-logo">S<span class="dot"></span></div><div class="logo-text-stack"><span class="logo-title">STRIDE RITE</span></div></div>
-        <div class="nav-links"><a href="index.html">🏠 Home</a><a href="shop.html">🛍 Shop</a><a href="profile.html">👤 Profile</a><a href="#" onclick="AuthService.logout()">Logout</a></div>
+        <div class="custom-logo-container">
+            <div class="custom-logo">S<span class="dot"></span></div>
+            <div class="logo-text-stack">
+                <span class="logo-title">STRIDE RITE</span>
+            </div>
+        </div>
+        <div class="nav-links">
+            <a href="index.html">🏠 Home</a>
+            <a href="shop.html">🛍 Shop</a>
+            <a href="profile.html">👤 Profile</a>
+            <a href="#" onclick="AuthService.logout()">Logout</a>
+        </div>
     </nav>
+
     <div class="main-container">
-        <header class="animate-up" style="margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: flex-end;">
-            <div><h1 style="font-size: 2rem;">Community Dashboard</h1><p id="welcomeUser" style="color: var(--text-muted);"></p></div>
-            <div id="liveBadge"><span style="width: 8px; height: 8px; background: #ef4444; border-radius: 50%;"></span>LIVE RUN IN PROGRESS</div>
+        <!-- Header -->
+        <header class="dashboard-header animate-up">
+            <div>
+                <h1 style="font-size: 2.5rem; margin-bottom: 0.5rem;">Community Dashboard</h1>
+                <p id="welcomeUser" style="color: var(--text-muted); font-size: 1.1rem;"></p>
+            </div>
         </header>
-        <div id="liveMap"></div><div id="advisorContainer"></div>
-        <section><h2 style="margin-bottom: 1.5rem;">🗓 Upcoming Runs</h2><div class="b-grid" id="runsContainer"></div></section>
+
+        <!-- AI Advisor Section -->
+        <div id="advisorContainer"></div>
+
+        <!-- Run RSVP Section -->
+        <section>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                <h2 style="font-size: 1.8rem;">🗓 Upcoming Community Runs</h2>
+            </div>
+            <div class="b-grid" id="runsContainer">
+                <!-- Runs will be loaded here -->
+            </div>
+        </section>
     </div>
+
     <script src="app.js?v=21"></script>
     <script>
+        // --- Initialization ---
         const user = AuthService.getCurrentUser();
         if (!user) window.location.href = 'index.html';
-        document.getElementById('welcomeUser').innerText = `Welcome back, ${user.name}!`;
-        let runSelections = {};
+        document.getElementById('welcomeUser').innerText = `Welcome back, ${user.name}! Ready for your next Saturday run?`;
+
+        let runSelections = {}; // Tracks distance choices (2K/5K/8K)
+
+        // --- Core Functions ---
         async function renderRuns() {
             const container = document.getElementById('runsContainer');
             const runs = await AppService.getRuns();
             const myRegs = await AppService.getUserRegistrations(user.id);
-            if(!runs || runs.length === 0) { container.innerHTML = `<p style="grid-column:1/-1; text-align:center; padding:3rem; color:var(--text-muted);">No runs scheduled yet.</p>`; return; }
+            
+            if(!runs || runs.length === 0) {
+                container.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 4rem; opacity: 0.5;">No runs scheduled yet. Stay tuned!</div>`;
+                return;
+            }
+
             container.innerHTML = runs.map(run => {
                 const isReg = myRegs.includes(run.id);
-                if (!runSelections[run.id]) runSelections[run.id] = '5K';
+                if (!runSelections[run.id]) runSelections[run.id] = '5K'; // Default
                 const dist = runSelections[run.id];
-                return `<div class="glass-card animate-up" style="padding:2rem; border-bottom:4px solid ${isReg ? '#22c55e' : 'var(--neon-accent)'};"><div style="font-weight:800; font-size:1.5rem; color:white;">${run.date_label}</div><div style="color:var(--text-muted); margin-bottom:1rem;">📍 ${run.location}</div>${!isReg ? `<span class="diff-label ${dist === '2K' ? 'easy' : dist === '5K' ? 'med' : 'hard'}">Goal: ${dist}</span><div class="dist-selector"><button class="dist-btn easy ${dist === '2K' ? 'active' : ''}" onclick="selectDist('${run.id}', '2K')">2K</button><button class="dist-btn med ${dist === '5K' ? 'active' : ''}" onclick="selectDist('${run.id}', '5K')">5K</button><button class="dist-btn hard ${dist === '8K' ? 'active' : ''}" onclick="selectDist('${run.id}', '8K')">8K</button></div>` : ''}${isReg ? `<button class="btn btn-secondary btn-block" disabled>✓ Registered</button>` : `<button class="btn btn-primary btn-block" onclick="joinRun('${run.id}')">Join Run</button>`}</div>`;
+
+                return `
+                <div class="glass-card animate-up" style="padding: 2.5rem; border-bottom: 4px solid ${isReg ? '#22c55e' : 'var(--neon-accent)'};">
+                    <div style="font-weight: 800; font-size: 1.6rem; color: white; margin-bottom: 0.5rem;">${run.date_label}</div>
+                    <div style="color: var(--text-muted); display: flex; align-items: center; gap: 6px;">📍 ${run.location}</div>
+                    
+                    ${!isReg ? `
+                        <div class="dist-selector">
+                            <button class="dist-btn ${dist === '2K' ? 'active easy' : ''}" onclick="selectDist('${run.id}', '2K')">2K (Easy)</button>
+                            <button class="dist-btn ${dist === '5K' ? 'active med' : ''}" onclick="selectDist('${run.id}', '5K')">5K (Med)</button>
+                            <button class="dist-btn ${dist === '8K' ? 'active hard' : ''}" onclick="selectDist('${run.id}', '8K')">8K (Hard)</button>
+                        </div>
+                        <button class="btn btn-primary btn-block" onclick="joinRun('${run.id}')">Join This Run</button>
+                    ` : `
+                        <div style="margin-top: 1.5rem; padding: 1rem; border-radius: 12px; background: rgba(34, 197, 94, 0.05); border: 1px solid rgba(34, 197, 94, 0.1); color: #22c55e; text-align: center; font-weight: 700;">
+                            ✓ Successfully Registered
+                        </div>
+                        <button class="btn btn-secondary btn-block" disabled style="margin-top: 0.8rem; opacity: 0.5;">Already Joined</button>
+                    `}
+                </div>`;
             }).join('');
+            
             if(runs.length > 0) loadAIAdvisor(runs[0]);
         }
-        window.selectDist = (rId, d) => { runSelections[rId] = d; renderRuns(); };
-        window.joinRun = async (rId) => { const dist = runSelections[rId] || '5K'; const s = await AppService.registerForRun(rId, dist); if(s) { Swal.fire({ icon:'success', title:'See you there!', background:'#141419', color:'#fff', timer:1500 }); renderRuns(); } };
+
+        window.selectDist = (runId, dist) => {
+            runSelections[runId] = dist;
+            renderRuns(); 
+        };
+
+        window.joinRun = async (rId) => {
+            const success = await AppService.registerForRun(rId, runSelections[rId]);
+            if(success) {
+                Swal.fire({ 
+                    icon: 'success', 
+                    title: 'Registration Confirmed!', 
+                    text: 'We added you to the Saturday run list. See you there!',
+                    background: '#141419', 
+                    color: '#fff', 
+                    confirmButtonColor: '#584adc'
+                });
+                renderRuns();
+            }
+        };
+
         async function loadAIAdvisor(run) {
-            const apiKey = '686edc30f7764d08ada12150261604';
+            const apiKey = '686edc30f7764d08ada12150261604'; // Your Weather API Key
             try {
                 const res = await fetch(`https://api.weatherapi.com/v1/current.json?key=${apiKey}&q=${encodeURIComponent(run.location)}`);
                 const data = await res.json();
+                if(data.error) return;
+                
                 const cur = data.current;
-                document.getElementById('advisorContainer').innerHTML = `<div class="advisor-card animate-up"><img src="${cur.condition.icon}" style="width:50px;"><div><div style="font-size:0.7rem; color:var(--neon-accent); font-weight:800;">🌤 AI ADVISOR</div><div style="font-weight:700; color:white;">PR-breaking conditions: ${cur.temp_c}°C</div></div></div>`;
-            } catch (e) {}
+                document.getElementById('advisorContainer').innerHTML = `
+                <div class="advisor-card animate-up">
+                    <img src="${cur.condition.icon}" style="width: 55px; filter: drop-shadow(0 0 10px rgba(255,255,255,0.2));">
+                    <div>
+                        <div style="font-size: 0.75rem; color: var(--peach-accent); font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 2px;">🌤 AI Weather Advisor</div>
+                        <div style="font-weight: 700; color: white; font-size: 1.1rem;">Conditions are prime for a Personal Best today!</div>
+                        <div style="color: var(--text-muted); font-size: 0.9rem; margin-top: 4px;">
+                            🌡 ${cur.temp_c}°C · 💨 ${cur.wind_kph}kph Winds · 💧 ${cur.humidity}% Humidity
+                        </div>
+                    </div>
+                </div>`;
+            } catch (e) {
+                console.error("Advisor error:", e);
+            }
         }
-        let map = null, marker = null;
-        async function checkLiveStatus() {
-            try {
-                const res = await fetch(`${SUPABASE_URL}/rest/v1/stride_live_status?id=eq.1`, { headers: defaultHeaders });
-                const data = await res.json(); const status = data[0];
-                const isRecentlyActive = status.is_live && (new Date() - new Date(status.updated_at)) < 600000;
-                document.getElementById('liveMap').style.display = isRecentlyActive ? 'block' : 'none';
-                document.getElementById('liveBadge').style.display = isRecentlyActive ? 'flex' : 'none';
-                if (isRecentlyActive) {
-                    if (!map) {
-                        map = L.map('liveMap', { zoomControl: false }).setView([status.lat, status.lng], 16);
-                        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
-                        marker = L.marker([status.lat, status.lng], { icon: L.divIcon({ className:'dot', html:'<div style="width:20px;height:20px;background:#ff8b6a;border:4px solid white;border-radius:50%;box-shadow:0 0 15px #ff8b6a;"></div>', iconSize:[20,20], iconAnchor:[10,10]}) }).addTo(map);
-                    } else { marker.setLatLng([status.lat, status.lng]); map.panTo([status.lat, status.lng]); }
-                    map.invalidateSize();
-                }
-            } catch (e) {}
-        }
-        renderRuns(); setInterval(checkLiveStatus, 5000); checkLiveStatus();
+
+        // --- Start ---
+        renderRuns();
     </script>
 </body>
 </html>
