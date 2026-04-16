@@ -6,6 +6,9 @@
     <title>Member Dashboard | Stride Rite</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css?v=23">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
         .dashboard-header { margin-bottom: 3rem; }
@@ -40,6 +43,40 @@
         .weather-stat { display: flex; flex-direction: column; }
         .weather-label { font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
         .weather-val { font-weight: 700; color: white; }
+
+        /* LIVE TRACKER STYLES */
+        #liveRunContainer { display: none; margin-bottom: 3rem; animation: fadeIn 0.5s ease-out; }
+        .live-banner {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            border-radius: 16px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            align-items: center;
+            gap: 1.5rem;
+            animation: pulse-border 2s infinite;
+        }
+        @keyframes pulse-border {
+            0% { border-color: #ef4444; box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+            70% { border-color: #f87171; box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+            100% { border-color: #ef4444; box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+        .live-dot {
+            width: 12px; height: 12px;
+            background: #ef4444;
+            border-radius: 50%;
+            display: inline-block;
+            animation: blink 1s infinite;
+        }
+        @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
+        #liveMap {
+            height: 350px;
+            width: 100%;
+            border-radius: 12px;
+            margin-top: 1rem;
+            background: #111;
+            border: 1px solid #333;
+        }
     </style>
 </head>
 <body>
@@ -61,6 +98,30 @@
 
         <div id="advisorContainer"></div>
 
+        <!-- NEW LIVE TRACKER SECTION -->
+        <div id="liveRunContainer">
+            <div class="live-banner">
+                <div class="live-dot"></div>
+                <div class="live-label">Stride Rite Live Run Active</div>
+                <div style="flex-grow: 1;"></div>
+                <div style="font-size: 0.9rem; color: var(--text-muted);">Admin is currently running in Al Rehab!</div>
+            </div>
+            <div id="liveMap"></div>
+        </div>
+
+        <!-- LIVE RUN TRACKER -->
+        <div id="liveRunSection" class="live-run-banner animate-up">
+            <div style="flex: 1;">
+                <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+                    <span class="live-dot"></span>
+                    <span style="color:#ef4444; font-family:'Outfit'; font-weight:800; letter-spacing:1px; font-size:0.9rem;">STRIDE RITE LIVE</span>
+                </div>
+                <h2 style="font-family:'Outfit'; font-size:1.4rem; margin:0; color:white;">Run in Progress! 🏃‍♂️</h2>
+                <p style="color:var(--text-muted); font-size:0.9rem; margin:4px 0 0 0;">Check the live map below to see exactly where we are right now!</p>
+                <div id="liveMap"></div>
+            </div>
+        </div>
+
         <section class="animate-up" style="animation-delay: 0.2s;">
             <h2 class="section-title">🗓 Upcoming Community Runs</h2>
             <div class="runs-grid" id="runsContainer">
@@ -80,6 +141,56 @@
 
         async function initDashboard() {
             await renderRuns();
+            initLiveTracker();
+        }
+
+        let map = null;
+        let marker = null;
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        async function initLiveTracker() {
+            // Initial Check
+            const res = await fetch(`${SUPABASE_URL}/rest/v1/live_tracks?id=eq.admin`, { headers: defaultHeaders });
+            const data = await res.json();
+            if (data && data.length > 0 && data[0].is_active) {
+                updateMap(data[0].lat, data[0].lng);
+            }
+
+            // Realtime Subscription
+            const channel = supabaseClient.channel('live_tracking')
+                .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'live_tracks' }, payload => {
+                    const row = payload.new;
+                    if (row.id === 'admin') {
+                        if (row.is_active) {
+                            updateMap(row.lat, row.lng);
+                        } else {
+                            document.getElementById('liveRunSection').style.display = 'none';
+                        }
+                    }
+                })
+                .subscribe();
+        }
+
+        function updateMap(lat, lng) {
+            document.getElementById('liveRunSection').style.display = 'flex';
+            
+            if (!map) {
+                map = L.map('liveMap').setView([lat, lng], 15);
+                L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                    attribution: '&copy; OpenStreetMap'
+                }).addTo(map);
+                
+                const customIcon = L.divIcon({
+                    className: 'live-marker',
+                    html: '<div style="background:var(--neon-accent); width:16px; height:16px; border-radius:50%; border:3px solid white; box-shadow:0 0 10px var(--neon-accent);"></div>',
+                    iconSize: [22, 22]
+                });
+                marker = L.marker([lat, lng], { icon: customIcon }).addTo(map);
+            } else {
+                const newLatLng = new L.LatLng(lat, lng);
+                marker.setLatLng(newLatLng);
+                map.panTo(newLatLng);
+            }
         }
 
         async function renderRuns() {
