@@ -39,8 +39,9 @@
             <div style="font-family:'Outfit'; font-weight:800;">STRIDE RITE</div>
         </div>
         <div class="nav-links">
-            <a href="index.html">🏠 Home</a>
-            <a href="dashboard.html">📊 Dashboard</a>
+            <a href="index.html" class="btn btn-secondary">🏠 Home</a>
+            <a href="dashboard.html" class="btn btn-secondary">📊 Dashboard</a>
+            <button id="mockBtn" class="btn btn-secondary hidden" onclick="createMockRun()" style="border-color: #ff4444; color: #ff4444;">🛠 Mock Run</button>
             <a href="#" onclick="AuthService.logout()">Log Out</a>
         </div>
     </nav>
@@ -85,6 +86,17 @@
         document.getElementById('userInitial').innerText = user.name.charAt(0).toUpperCase();
         document.getElementById('userLevelBadge').innerText = user.level || 'Beginner';
 
+        if (user.is_admin) document.getElementById('mockBtn').classList.remove('hidden');
+
+        function formatPace(seconds, meters) {
+            if (meters === 0) return '0:00';
+            const km = meters / 1000;
+            const paceMin = (seconds / 60) / km;
+            const mins = Math.floor(paceMin);
+            const secs = Math.round((paceMin - mins) * 60);
+            return `${mins}:${secs.toString().padStart(2, '0')}`;
+        }
+
         async function loadProfile() {
             const stats = await AppService.getUserStats(user.id);
             document.getElementById('totalRuns').innerText = stats.totalRuns;
@@ -115,7 +127,7 @@
                 title: 'Create Your Story',
                 html: `<div style="text-align:left;">
                     <label style="font-size:0.7rem; color:var(--text-muted);">DISTANCE (KM)</label>
-                    <input id="s-dist" class="swal2-input" type="number" value="${cleanD}" style="width:100%; background:#0d0c11; color:white;">
+                    <input id="s-dist" class="swal2-input" type="number" step="0.01" value="${cleanD}" style="width:100%; background:#0d0c11; color:white;">
                     <label style="font-size:0.7rem; color:var(--text-muted); margin-top:1rem; display:block;">TIME (HH:MM:SS)</label>
                     <input id="s-time" class="swal2-input" type="text" placeholder="00:25:00" style="width:100%; background:#0d0c11; color:white;">
                     <p id="p-prev" style="color:var(--peach-accent); font-weight:700; margin-top:0.5rem;">Pace: --:--</p>
@@ -138,59 +150,48 @@
         async function processStory(date, loc, dist, time) {
             const canvas = document.getElementById('storyCanvas');
             const ctx = canvas.getContext('2d');
-            const W = 1080, H = 1920;
-            
-            // Background
+            const W = 1080, H = 1920; ctx.clearRect(0,0,W,H);
             const g = ctx.createRadialGradient(W/2, H/2, 0, W/2, H/2, H);
             g.addColorStop(0, '#1a1a24'); g.addColorStop(1, '#0d0c11');
-            ctx.fillStyle = g; ctx.fillRect(0,0,W,H);
-
-            // Branding
-            ctx.textAlign = 'center'; ctx.fillStyle = '#584adc';
+            ctx.fillStyle = g; ctx.fillRect(0,0,W,H); ctx.textAlign = 'center'; ctx.fillStyle = '#584adc';
             ctx.beginPath(); ctx.arc(W/2, 250, 80, 0, Math.PI*2); ctx.fill();
             ctx.fillStyle = 'white'; ctx.font = '800 80px Outfit'; ctx.fillText('S.', W/2+5, 275);
-            ctx.font = '700 40px Outfit'; ctx.letterSpacing = '10px'; ctx.fillText('STRIDE RITE', W/2, 400);
-
-            // Text
-            ctx.letterSpacing = '0px'; ctx.font = '800 95px Outfit'; ctx.fillText(user.name.toUpperCase(), W/2, 750);
+            ctx.font = '700 40px Outfit'; ctx.letterSpacing = '10px'; ctx.fillText('STRIDE RITE', W/2, 400); ctx.letterSpacing = '0px'; 
+            ctx.font = '800 95px Outfit'; ctx.fillText(user.name.toUpperCase(), W/2, 750);
             ctx.fillStyle = '#ff8b6a'; ctx.font = '600 45px Outfit'; ctx.fillText(`FINISHER · ${date.toUpperCase()}`, W/2, 830);
-
-            // Stats
             ctx.fillStyle = '#a1a1aa'; ctx.font = '600 40px Outfit'; ctx.fillText('DISTANCE', W/2, 1150);
             ctx.fillStyle = 'white'; ctx.font = '800 200px Outfit'; ctx.fillText(`${dist} KM`, W/2, 1330);
-            
             const tp = time.split(':'); const s = (parseInt(tp[0])*3600)+(parseInt(tp[1])*60)+parseInt(tp[2]);
             const pace = formatPace(s, parseFloat(dist)*1000);
-            
-            ctx.fillStyle = '#a1a1aa'; ctx.font = '600 40px Outfit';
-            ctx.fillText('PACE', W/4+50, 1500); ctx.fillText('TIME', (W/4*3)-50, 1500);
-            ctx.fillStyle = 'white'; ctx.font = '800 110px Outfit';
-            ctx.fillText(pace, W/4+50, 1630); ctx.fillText(time, (W/4*3)-50, 1630);
-
+            ctx.fillStyle = '#a1a1aa'; ctx.font = '600 40px Outfit'; ctx.fillText('PACE', W/4+50, 1500); ctx.fillText('TIME', (W/4*3)-50, 1500);
+            ctx.fillStyle = 'white'; ctx.font = '800 110px Outfit'; ctx.fillText(pace, W/4+50, 1630); ctx.fillText(time, (W/4*3)-50, 1630);
             const png = canvas.toDataURL('image/png');
-            Swal.fire({ title:'Ready to Share!', imageUrl:png, imageWidth:250, background:'#141419', confirmButtonText:'💾 Download PNG' })
+            Swal.fire({ title:'Story Ready!', imageUrl:png, imageWidth:250, background:'#141419', confirmButtonText:'💾 Download PNG' })
             .then(s => { if(s.isConfirmed){ const l = document.createElement('a'); l.download=`StrideRite_${date}.png`; l.href=png; l.click(); }});
         }
 
-        function formatPace(s, m) {
-            const km = m/1000; const p = (s/60)/km;
-            const mi = Math.floor(p); const se = Math.round((p-mi)*60);
-            return `${mi}:${se.toString().padStart(2,'0')}`;
+        async function createMockRun() {
+            Swal.fire({ title:'Creating Mock...', background:'#141419', didOpen:()=>Swal.showLoading() });
+            const runId = 'test-run-' + Date.now();
+            const pastRun = { id: runId, date_label: '[EXPORTED] Monday Run - 13 Apr || 2026-04-13', location: 'Zayed Park, New Zayed', location_link: 'https://maps.app.goo.gl/tareg62PBaQJVypk7', created_by: user.id };
+            const reg = { id: 'test-reg-' + Date.now(), run_id: runId, user_id: user.id, distance: '5K', level: 'Intermediate', registered_at: new Date().toISOString() };
+            const h = { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' };
+            await fetch(`${SUPABASE_URL}/rest/v1/stride_runs`, { method:'POST', headers:h, body:JSON.stringify(pastRun) });
+            await fetch(`${SUPABASE_URL}/rest/v1/stride_registrations`, { method:'POST', headers:h, body:JSON.stringify(reg) });
+            Swal.fire({ icon:'success', title:'Mock Created!', background:'#141419', color:'#fff' }).then(() => location.reload());
         }
 
         async function loadStrava() {
             if(!user.is_admin) return;
-            const sRes = await fetch(`${SUPABASE_URL}/rest/v1/stride_users?id=eq.${user.id}`, { headers: defaultHeaders });
-            const sData = await sRes.json();
-            if(sData[0]?.strava_access_token) {
-                document.getElementById('stravaSection').style.display = 'block';
-                document.getElementById('stravaStatus').innerHTML = '✅ Admin Linked';
+            const res = await fetch(`${SUPABASE_URL}/rest/v1/stride_users?id=eq.${user.id}`, { headers: defaultHeaders });
+            const data = await res.json();
+            if(data[0]?.strava_access_token) {
+                document.getElementById('stravaSection').style.display='block';
                 const aRes = await fetch(`/api/strava-activities?userId=${user.id}`);
                 const acts = await aRes.json();
-                document.getElementById('stravaContainer').innerHTML = acts.map(a => `<div class="glass-card" style="padding:1.2rem;"><div style="font-weight:800;">${a.name}</div><div style="font-size:0.8rem; color:var(--text-muted);">${(a.distance/1000).toFixed(2)}km</div></div>`).join('');
+                document.getElementById('stravaContainer').innerHTML = acts.map(a => `<div class="glass-card" style="padding:1.2rem;"><div style="font-weight:800;">${a.name}</div><div>${(a.distance/1000).toFixed(2)}km</div></div>`).join('');
             }
         }
-
         loadProfile(); loadStrava();
     </script>
 </body>
