@@ -304,7 +304,6 @@ const AppService = {
         const items = await dbGet('shop_items', 'is_active=eq.true');
         return items || [];
     },
-
     submitOrder: async (itemId, size, refNumber, phone) => {
         const currentUser = AuthService.getCurrentUser();
         if (!currentUser) return false;
@@ -316,19 +315,26 @@ const AppService = {
             size: size,
             receipt_ref: refNumber,
             phone_number: phone, 
+            payment_method: 'InstaPay/Telda', // Added to satisfy DB constraint
             status: 'pending'
         };
 
-        console.log("Submitting order...", newOrder);
+        console.log("Submitting order with payment method...", newOrder);
         let result = await dbInsert('shop_orders', newOrder);
         
-        // If it fails due to column name mismatch, try fallback
-        if (result === null && window.lastDbError && window.lastDbError.includes('receipt_ref')) {
-            console.log("Retrying with fallback column name 'reference'...");
-            const fallbackOrder = { ...newOrder };
-            delete fallbackOrder.receipt_ref;
-            fallbackOrder.reference = refNumber;
-            result = await dbInsert('shop_orders', fallbackOrder);
+        // If it fails due to column name mismatch, try common fallbacks
+        if (result === null && window.lastDbError) {
+            const err = window.lastDbError;
+            if (err.includes('receipt_ref') || err.includes('payment_method')) {
+                console.log("Retrying with fallback logic...");
+                const fallbackOrder = { ...newOrder };
+                // Handle various potential missing/renamed columns
+                if (err.includes('receipt_ref')) {
+                    delete fallbackOrder.receipt_ref;
+                    fallbackOrder.reference = refNumber;
+                }
+                result = await dbInsert('shop_orders', fallbackOrder);
+            }
         }
         if (result !== null) {
             const items = await dbGet('shop_items', `id=eq.${itemId}`);
