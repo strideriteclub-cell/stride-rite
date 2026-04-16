@@ -112,9 +112,9 @@
                         return chars[Math.floor(Math.random() * 26)];
                     }).join("");
                 
-                iterations += 1/3; // Speed of resolving
+                iterations += 1/8; // Slower resolve
                 if(iterations >= targetDay.length) clearInterval(shuffleInterval);
-            }, 30);
+            }, 80);
 
             setTimeout(() => {
                 Utils.animateNumber(document.getElementById('km2'), 0, 2, 800);
