@@ -119,7 +119,7 @@ const AppService = {
             const botToken = '8682463984:AAHA2PWT7WtQRskETmOanj0k2b45ZgGfYIs';
             const chatId = '1538316434';
             
-            const caption = `🛍️ *New VIP Shop Order!*\n\n*Runner:* ${user.name}\n${method === 'telda' ? `*Telda:* @${detail.replace('@','')}` : `*InstaPay:* ${detail}`}\n*WhatsApp:* ${phone}\n\n*Item:* ${itemName}\n*Size:* ${size}\n*Price:* ${price} EGP`;
+            const caption = `🛍️ *New VIP Shop Order!*\n\n*Runner:* ${user.name}\n*Method:* ${method}\n${method === 'telda' ? `*telda Username:* @${detail.replace('@','')}` : `*instapay Phone:* ${detail}`}\n*whatsapp Phone:* ${phone}\n\n*Item:* ${itemName}\n*Size:* ${size}\n*Price:* ${price} EGP`;
             
             const replyMarkup = JSON.stringify({
                 inline_keyboard: [[
