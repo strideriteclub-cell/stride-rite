@@ -48,7 +48,7 @@
         </div>
         <div class="hero-visual animate-up">
             <div class="stat-card stat-1" style="border-bottom: 4px solid var(--neon-accent); min-width: 250px;">
-                <div class="stat-value">SATURDAY</div>
+                <div class="stat-value" id="dayStat">SATURDAY</div>
                 <div class="stat-value"><span id="hourStat">0</span>:00 <span style="font-size:1.2rem;">AM</span></div>
                 <div style="width:50px; height:3px; background:var(--peach-accent); margin: 10px 0;"></div>
                 <div class="stat-label">Community run · All welcome</div>
@@ -100,6 +100,18 @@
     <script src="app.js?v=21"></script>
     <script>
         window.addEventListener('load', () => {
+            const days = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'];
+            let dayIdx = 0;
+            const dayEl = document.getElementById('dayStat');
+            const dayInterval = setInterval(() => {
+                dayEl.innerText = days[dayIdx % days.length];
+                dayIdx++;
+                if (dayIdx >= days.length) {
+                    clearInterval(dayInterval);
+                    dayEl.innerText = 'SATURDAY';
+                }
+            }, 100);
+
             setTimeout(() => {
                 Utils.animateNumber(document.getElementById('km2'), 0, 2, 800);
                 Utils.animateNumber(document.getElementById('km5'), 0, 5, 1000);
