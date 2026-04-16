@@ -54,9 +54,9 @@
                 <div class="stat-label">Community run · All welcome</div>
             </div>
             <div class="km-cards-container">
-                <div class="glass-card" style="padding:1.5rem; background:var(--neon-accent); border:none;"><div class="stat-value">2</div><div class="stat-label">KM</div></div>
-                <div class="glass-card" style="padding:1.5rem; background:#000; border:none;"><div class="stat-value">5</div><div class="stat-label">KM</div></div>
-                <div class="glass-card" style="padding:1.5rem; background:var(--peach-accent); border:none;"><div class="stat-value">8</div><div class="stat-label">KM</div></div>
+                <div class="glass-card" style="padding:1.5rem; background:var(--neon-accent); border:none;"><div class="stat-value" id="km2">0</div><div class="stat-label">KM</div></div>
+                <div class="glass-card" style="padding:1.5rem; background:#000; border:none;"><div class="stat-value" id="km5">0</div><div class="stat-label">KM</div></div>
+                <div class="glass-card" style="padding:1.5rem; background:var(--peach-accent); border:none;"><div class="stat-value" id="km8">0</div><div class="stat-label">KM</div></div>
             </div>
         </div>
     </header>
@@ -99,6 +99,13 @@
 
     <script src="app.js?v=21"></script>
     <script>
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                Utils.animateNumber(document.getElementById('km2'), 0, 2, 800);
+                Utils.animateNumber(document.getElementById('km5'), 0, 5, 1000);
+                Utils.animateNumber(document.getElementById('km8'), 0, 8, 1200);
+            }, 500);
+        });
         if (AuthService.getCurrentUser()) {
             document.getElementById('auth-section').innerHTML = `
                 <div class="pricing-container glass-panel" style="text-align: center;">
