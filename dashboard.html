@@ -26,14 +26,14 @@
     <nav class="navbar">
         <div class="logo">
             <div style="font-family:'Outfit'; font-weight:800; font-size:1.5rem;">S<span style="color:var(--peach-accent);">.</span></div>
-            <div style="font-family:'Outfit'; font-weight:800;">STRIDE RITE</div>
+            <div style="font-family:'Outfit'; font-weight:800;" class="hidden-mobile">STRIDE RITE</div>
         </div>
         <div class="nav-links">
-            <a href="index.html" class="btn btn-secondary">🏠 Home</a>
-            <a href="shop.html" class="btn btn-secondary">🛍 VIP Shop</a>
-            <a href="profile.html" class="btn btn-secondary">👤 Profile</a>
-            <a href="#" onclick="AuthService.logout()">Log Out</a>
+            <a href="index.html" class="nav-icon-link"><span>🏠</span><small>Home</small></a>
+            <a href="shop.html" class="nav-icon-link"><span>🛍</span><small>VIP Shop</small></a>
+            <a href="profile.html" class="nav-icon-link"><span>👤</span><small>Profile</small></a>
         </div>
+        <a href="#" onclick="AuthService.logout()" class="logout-link">Log Out</a>
     </nav>
 
     <div class="main-container" style="padding: 100px 5% 5rem;">
