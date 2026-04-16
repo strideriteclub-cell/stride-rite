@@ -5,246 +5,114 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My Profile | Stride Rite</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=5">
+    <link rel="stylesheet" href="styles.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
-        :root { --neon-accent: #584adc; --peach-accent: #ff8b6a; --text-muted: #a1a1aa; --border-color: rgba(255, 255, 255, 0.1); }
+        :root { --neon-accent: #584adc; --peach-accent: #ff8b6a; --text-muted: #a1a1aa; }
         .profile-container { max-width: 900px; margin: 0 auto; padding: 2rem; margin-top: 100px; }
         .profile-header { display: flex; align-items: center; gap: 2rem; margin-bottom: 2rem; flex-wrap: wrap; }
         .avatar-circle { width: 100px; height: 100px; background: linear-gradient(135deg, var(--neon-accent), var(--peach-accent)); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2.5rem; font-weight: 800; color: white; box-shadow: 0 10px 30px rgba(88, 74, 220, 0.3); }
-        .profile-info h1 { font-family: 'Outfit'; font-size: 2.5rem; margin-bottom: 0.5rem; }
-        .badge { display: inline-block; padding: 4px 12px; background: rgba(255, 180, 100, 0.15); color: var(--peach-accent); border-radius: 50px; font-size: 0.8rem; font-weight: 700; text-transform: uppercase; border: 1px solid var(--peach-accent); }
         .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-bottom: 4rem; }
-        .profile-stat-card { text-align: center; padding: 2.5rem 1rem; background: rgba(255,255,255,0.03); border-bottom: 4px solid var(--neon-accent); border-radius: 24px; border: 1px solid var(--border-color); }
-        .profile-stat-card.peach { border-bottom-color: var(--peach-accent); }
-        .stat-value { font-size: 3rem; font-weight: 800; font-family: 'Outfit'; line-height: 1; margin-bottom: 0.5rem; }
+        .profile-stat-card { text-align: center; padding: 2.5rem 1rem; background: rgba(255,255,255,0.03); border-bottom: 4px solid var(--neon-accent); border-radius: 24px; border: 1px solid rgba(255,255,255,0.1); }
+        .stat-value { font-size: 3rem; font-weight: 800; font-family: 'Outfit'; margin-bottom: 0.5rem; }
         .stat-label { color: var(--text-muted); text-transform: uppercase; letter-spacing: 2px; font-size: 0.75rem; font-weight: 600; }
-        .history-title { font-family: 'Outfit'; font-size: 1.8rem; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 12px; color: white; }
         .story-btn {
             margin-top: 1rem; width: 100%; background: rgba(88, 74, 220, 0.1); border: 1px solid var(--neon-accent);
             color: var(--neon-accent); padding: 12px; border-radius: 12px; font-size: 0.85rem; font-weight: 800;
             cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px; text-transform: uppercase;
         }
-        .story-btn:hover { background: var(--neon-accent); color: white; transform: translateY(-2px); box-shadow: 0 5px 15px rgba(88, 74, 220, 0.3); }
+        .story-btn:hover { background: var(--neon-accent); color: white; transform: translateY(-2px); }
         .hidden { display: none; }
     </style>
 </head>
 <body>
     <nav class="navbar">
-        <div class="logo">
-            <div style="font-family:'Outfit'; font-weight:800; font-size:1.5rem;">S<span style="color:var(--peach-accent);">.</span></div>
-            <div style="font-family:'Outfit'; font-weight:800;">STRIDE RITE</div>
-        </div>
+        <div class="logo">STRIDE RITE</div>
         <div class="nav-links">
             <a href="dashboard.html" class="btn btn-secondary">📊 Dashboard</a>
-            <button id="mockBtn" class="btn btn-secondary hidden" onclick="createMockRun()" style="border-color: #ff4444; color: #ff4444; padding: 0.4rem 1rem;">🛠 Mock Data Sync</button>
+            <button id="mockBtn" class="btn btn-secondary hidden" onclick="runDeepSync()" style="color: #ff4444; border-color: #ff4444;">🛠 Mock Data Sync</button>
             <a href="#" onclick="AuthService.logout()">Log Out</a>
         </div>
     </nav>
 
     <div class="profile-container">
-        <header class="profile-header animate-up">
+        <header class="profile-header">
             <div class="avatar-circle" id="userInitial">S</div>
             <div class="profile-info">
                 <h1 id="userName">Runner Name</h1>
-                <div style="margin-bottom: 1rem;"><span class="badge" id="userLevelBadge">Intermediate</span></div>
-                <div style="color: var(--text-muted); font-size: 0.95rem;">📧 <span id="userEmail">email@example.com</span></div>
+                <div style="color: var(--text-muted);" id="userEmail">email@example.com</div>
             </div>
         </header>
 
-        <div class="stats-grid animate-up delay-1">
+        <div class="stats-grid">
             <div class="profile-stat-card"><div class="stat-value" id="totalRuns">0</div><div class="stat-label">Total Runs</div></div>
-            <div class="profile-stat-card peach"><div class="stat-value" id="totalKms">0.0</div><div class="stat-label">Total Kilometers</div></div>
-            <div class="profile-stat-card"><div class="stat-value" id="avgDistance">0.0</div><div class="stat-label">Avg Range</div></div>
+            <div class="profile-stat-card"><div class="stat-value" id="totalKms">0.0</div><div class="stat-label">Total Kms</div></div>
         </div>
 
-        <div id="stravaSection" class="strava-section" style="display: none;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-                <h2 class="history-title" style="margin: 0;">🔥 Strava Feed</h2>
-                <div id="stravaStatus"></div>
-            </div>
-            <div class="b-grid" id="stravaContainer"></div>
-        </div>
-
-        <h2 class="history-title" style="margin-top: 3rem;">👟 Community Activity</h2>
+        <h2 style="font-family:'Outfit'; margin-bottom: 1.5rem;">👟 Community Activity</h2>
         <div class="b-grid" id="historyContainer"></div>
         <canvas id="storyCanvas" width="1080" height="1920" style="display:none;"></canvas>
     </div>
 
-    <script src="app.js?v=20"></script>
+    <script src="app.js"></script>
     <script>
         const user = AuthService.getCurrentUser();
         if (!user) window.location.href = 'index.html';
-
         document.getElementById('userName').innerText = user.name;
         document.getElementById('userEmail').innerText = user.email;
-        document.getElementById('userInitial').innerText = user.name.charAt(0).toUpperCase();
-        document.getElementById('userLevelBadge').innerText = user.level || 'Beginner';
-
-        // Show Mock button for Admin
+        document.getElementById('userInitial').innerText = user.name[0];
         if (user.is_admin) document.getElementById('mockBtn').classList.remove('hidden');
 
-        async function createMockRun() {
-            Swal.fire({ title:'Deep Syncing...', text:'Linking database accounts...', background:'#141419', didOpen:()=>Swal.showLoading() });
-            
+        async function runDeepSync() {
+            Swal.fire({ title:'Deep Syncing...', text:'Fixing IDs...', background:'#141419', didOpen:()=>Swal.showLoading() });
+            const ADMIN_UUID = 'd1b11111-1111-1111-1111-111111111111';
             const headers = { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' };
-            
+            const runId = 'run-' + Date.now();
+
             try {
-                // 1. Find or Create Real User ID
-                let realId = user.id;
-                const userCheck = await fetch(`${SUPABASE_URL}/rest/v1/stride_users?email=eq.${user.email}`, { headers });
-                const userData = await userCheck.json();
+                // Ensure record exists
+                await fetch(`${SUPABASE_URL}/rest/v1/stride_users`, { method:'POST', headers, body:JSON.stringify({ id:ADMIN_UUID, name:user.name, email:user.email, is_admin:true, level:'Elite' })});
+                // Create Mock
+                await fetch(`${SUPABASE_URL}/rest/v1/stride_runs`, { method:'POST', headers, body:JSON.stringify({ id:runId, date_label:'[EXPORTED] Monday Night Run || 2026-04-13', location:'Zayed Park', created_by:ADMIN_UUID })});
+                await fetch(`${SUPABASE_URL}/rest/v1/stride_registrations`, { method:'POST', headers, body:JSON.stringify({ id:'reg-'+Date.now(), run_id:runId, user_id:ADMIN_UUID, distance:'10K', level:'Elite', registered_at:new Date() })});
                 
-                if (userData.length > 0) {
-                    realId = userData[0].id;
-                } else {
-                    // Create a real database record if missing
-                    realId = crypto.randomUUID();
-                    await fetch(`${SUPABASE_URL}/rest/v1/stride_users`, {
-                        method: 'POST', headers,
-                        body: JSON.stringify({ id: realId, name: user.name, email: user.email, is_admin: true, level: 'Elite' })
-                    });
-                }
-
-                // Update local session to use the Real ID for this session
-                const updatedUser = { ...user, id: realId };
-                localStorage.setItem('stride_current_user', JSON.stringify(updatedUser));
-
-                // 2. Create the Mock Run
-                const runId = 'mock-' + Date.now();
-                const runData = {
-                    id: runId,
-                    date_label: '[EXPORTED] Monday Community Run || 2026-04-13',
-                    location: 'Zayed Park, Al Rehab City',
-                    location_link: 'https://maps.app.goo.gl/tareg62PBaQJVypk7',
-                    created_by: realId
-                };
-                await fetch(`${SUPABASE_URL}/rest/v1/stride_runs`, { method: 'POST', headers, body: JSON.stringify(runData) });
-
-                // 3. Create the Registration
-                await fetch(`${SUPABASE_URL}/rest/v1/stride_registrations`, { 
-                    method: 'POST', headers, 
-                    body: JSON.stringify({
-                        id: 'reg-' + Date.now(),
-                        run_id: runId,
-                        user_id: realId,
-                        distance: '8.5K',
-                        level: 'Advanced',
-                        registered_at: new Date().toISOString()
-                    })
-                });
-
-                Swal.fire({ icon:'success', title:'Deep Sync Success!', text:'Reloading your real history...', background:'#141419', color:'#fff' })
-                .then(() => location.reload());
-
-            } catch (e) {
-                console.error(e);
-                Swal.fire({ icon:'error', title:'Sync Failed', text: 'Database rejected the link. Check console.', background:'#141419', color:'#fff' });
-            }
+                Swal.fire({ icon:'success', title:'Success!', text:'Run added.', background:'#141419' }).then(() => location.reload());
+            } catch (e) { Swal.fire({ icon:'error', title:'Error', background:'#141419' }); }
         }
 
         async function loadProfile() {
-            // Must use the most up-to-date user ID
-            const currentUser = JSON.parse(localStorage.getItem('stride_current_user'));
-            const stats = await AppService.getUserStats(currentUser.id);
-            
+            const stats = await AppService.getUserStats(user.id);
             document.getElementById('totalRuns').innerText = stats.totalRuns;
             document.getElementById('totalKms').innerText = stats.totalKms;
-            document.getElementById('avgDistance').innerText = stats.totalRuns > 0 ? (stats.totalKms / stats.totalRuns).toFixed(1) : 0.0;
-
+            
             const container = document.getElementById('historyContainer');
-            if (!stats.pastRuns || stats.pastRuns.length === 0) {
-                container.innerHTML = `<p style="grid-column:1/-1; text-align:center; padding:3rem; color:#a1a1aa; background:rgba(255,255,255,0.02); border-radius:20px;">No runs found in history.</p>`;
-                return;
+            if (stats.pastRuns.length === 0) {
+                container.innerHTML = `<p style="text-align:center; padding:3rem; grid-column:1/-1;">No runs yet.</p>`; return;
             }
-
             container.innerHTML = stats.pastRuns.map(run => `
                 <div class="glass-card" style="padding:1.5rem;">
-                    <div style="font-weight:800; font-size:1.2rem; color: white;">${run.date_display}</div>
-                    <div style="color:var(--peach-accent); font-size:0.85rem; margin-bottom:1.5rem;">📍 ${run.location}</div>
-                    <div style="display:flex; justify-content:space-between; border-top:1px solid rgba(255,255,255,0.05); padding-top:1.5rem;">
-                        <div><div style="font-size:0.6rem; color:var(--text-muted); text-transform:uppercase;">Dist</div><div style="font-weight:700; color: white;">${run.user_distance}</div></div>
-                        <div><div style="font-size:0.6rem; color:var(--text-muted); text-transform:uppercase;">Lvl</div><div style="font-weight:700; color: white;">${run.user_level ? run.user_level.split(' ')[0] : 'N/A'}</div></div>
+                    <div style="font-weight:800; font-size:1.2rem;">${run.date_display}</div>
+                    <div style="color:var(--peach-accent); margin-bottom:1rem;">📍 ${run.location}</div>
+                    <div style="display:flex; justify-content:space-between; font-size:0.8rem;">
+                        <div>DIST: ${run.user_distance}</div>
                     </div>
-                    <button class="story-btn" onclick="openStoryGenerator('${run.date_display}', '${run.location}', '${run.user_distance}')">🤳 Generate Story</button>
+                    <button class="story-btn" onclick="openStory('${run.date_display}', '${run.user_distance}')">🤳 Generate Story</button>
                 </div>`).join('');
         }
 
-        window.openStoryGenerator = function(date, loc, defDist) {
-            const cleanD = defDist.replace(/[^\d.]/g, '');
-            Swal.fire({
-                title: 'Story Generator',
-                html: `<div style="text-align:left;">
-                    <label style="font-size:0.75rem; color:var(--text-muted); font-weight: 700;">DISTANCE (KM)</label>
-                    <input id="s-dist" class="swal2-input" type="number" step="0.01" value="${cleanD}" style="width:100%; background:#0d0c11; color:white;">
-                    <label style="font-size:0.75rem; color:var(--text-muted); margin-top:1rem; display:block; font-weight: 700;">TIME (HH:MM:SS)</label>
-                    <input id="s-time" class="swal2-input" type="text" placeholder="00:25:00" style="width:100%; background:#0d0c11; color:white;">
-                    <p id="p-prev" style="color:var(--peach-accent); font-weight:800; margin-top:1rem; font-size: 1.1rem;">Pace: --:--</p>
-                </div>`,
-                background:'#141419', color:'#fff', confirmButtonText:'Create Image',
-                didOpen: () => {
-                    const di = document.getElementById('s-dist'); const ti = document.getElementById('s-time');
-                    const up = () => {
-                        const d = parseFloat(di.value); const tp = ti.value.split(':');
-                        if(d > 0 && tp.length === 3) {
-                            const s = (parseInt(tp[0])*3600)+(parseInt(tp[1])*60)+parseInt(tp[2]);
-                            if(s>0) document.getElementById('p-prev').innerText = `Pace: ${formatPace(s, d*1000)} /km`;
-                        }
-                    };
-                    di.oninput = up; ti.oninput = up;
-                }
-            }).then(r => r.isConfirmed && processStory(date, loc, document.getElementById('s-dist').value, document.getElementById('s-time').value));
+        window.openStory = (date, dist) => {
+            const canvas = document.getElementById('storyCanvas'); const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#0d0c11'; ctx.fillRect(0,0,1080,1920);
+            ctx.fillStyle = '#584adc'; ctx.font = '800 100px Outfit'; ctx.textAlign = 'center';
+            ctx.fillText('STRIDE RITE', 540, 300);
+            ctx.fillStyle = 'white'; ctx.font = '800 150px Outfit'; ctx.fillText(dist, 540, 900);
+            ctx.font = '600 60px Outfit'; ctx.fillText(date, 540, 1000);
+            const png = canvas.toDataURL();
+            Swal.fire({ title:'Your Story', imageUrl:png, background:'#141419', confirmButtonText:'Download PNG' }).then(s => {
+                if(s.isConfirmed) { const a = document.createElement('a'); a.download='story.png'; a.href=png; a.click(); }
+            });
         }
-
-        async function processStory(date, loc, dist, time) {
-            const canvas = document.getElementById('storyCanvas');
-            const ctx = canvas.getContext('2d');
-            const W = 1080, H = 1920; ctx.clearRect(0,0,W,H);
-            const g = ctx.createRadialGradient(W/2, H/2, 0, W/2, H/2, H);
-            g.addColorStop(0, '#1a1a24'); g.addColorStop(1, '#0d0c11');
-            ctx.fillStyle = g; ctx.fillRect(0,0,W,H);
-            ctx.textAlign = 'center'; ctx.fillStyle = '#584adc';
-            ctx.beginPath(); ctx.arc(W/2, 250, 80, 0, Math.PI*2); ctx.fill();
-            ctx.fillStyle = 'white'; ctx.font = '800 80px Outfit'; ctx.fillText('S.', W/2+5, 275);
-            ctx.font = '700 40px Outfit'; ctx.letterSpacing = '10px'; ctx.fillText('STRIDE RITE', W/2, 400);
-            ctx.letterSpacing = '0px'; ctx.fillStyle = 'white'; ctx.font = '800 95px Outfit'; ctx.fillText(user.name.toUpperCase(), W/2, 750);
-            ctx.fillStyle = '#ff8b6a'; ctx.font = '600 45px Outfit'; ctx.fillText(`FINISHER · ${date.toUpperCase()}`, W/2, 830);
-            ctx.fillStyle = '#a1a1aa'; ctx.font = '600 40px Outfit'; ctx.fillText('DISTANCE', W/2, 1150);
-            ctx.fillStyle = 'white'; ctx.font = '800 210px Outfit'; ctx.fillText(`${dist} KM`, W/2, 1330);
-            const tp = time.split(':'); const s = (parseInt(tp[0])*3600)+(parseInt(tp[1])*60)+parseInt(tp[2]);
-            const pace = formatPace(s, parseFloat(dist)*1000);
-            ctx.fillStyle = '#a1a1aa'; ctx.font = '600 40px Outfit'; ctx.fillText('PACE', W/4+50, 1530); ctx.fillText('TIME', (W/4*3)-50, 1530);
-            ctx.fillStyle = 'white'; ctx.font = '800 115px Outfit'; ctx.fillText(pace, W/4+50, 1660); ctx.fillText(time, (W/4*3)-50, 1660);
-            const png = canvas.toDataURL('image/png');
-            Swal.fire({ title:'Story Ready!', imageUrl:png, imageWidth:250, background:'#141419', confirmButtonText:'💾 Download PNG' })
-            .then(s => { if(s.isConfirmed){ const l = document.createElement('a'); l.download=`StrideRite_${date}.png`; l.href=png; l.click(); }});
-        }
-
-        function formatPace(s, m) {
-            const km = m/1000; const p = (s/60)/km;
-            const mi = Math.floor(p); const se = Math.round((p-mi)*60);
-            return `${mi}:${se.toString().padStart(2,'0')}`;
-        }
-
-        async function loadStrava() {
-            if(!user.is_admin) return;
-            try {
-                const res = await fetch(`${SUPABASE_URL}/rest/v1/stride_users?id=eq.${user.id}`, { headers: defaultHeaders });
-                const data = await res.json();
-                if(data[0]?.strava_access_token) {
-                    document.getElementById('stravaSection').style.display='block';
-                    const aRes = await fetch(`/api/strava-activities?userId=${user.id}`);
-                    const acts = await aRes.json();
-                    document.getElementById('stravaContainer').innerHTML = acts.map(a => `
-                        <div class="glass-card" style="padding:1.2rem; display: flex; justify-content: space-between; align-items: center;">
-                            <div><div style="font-weight:800; color: white;">${a.name}</div><div style="font-size: 0.7rem; color: var(--text-muted);">${new Date(a.start_date_local).toLocaleDateString()}</div></div>
-                            <div style="text-align: right;"><div style="font-weight: 800; color: var(--peach-accent);">${(a.distance/1000).toFixed(2)} KM</div><div style="font-size: 0.6rem; color: var(--text-muted);">STRAVA</div></div>
-                        </div>`).join('');
-                }
-            } catch (e) {}
-        }
-
-        loadProfile(); loadStrava();
+        loadProfile();
     </script>
 </body>
 </html>
