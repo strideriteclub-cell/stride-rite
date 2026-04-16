@@ -5,64 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Stride Rite | Al Rehab Running Community</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-    <link rel="manifest" href="/manifest.json">
-    <meta name="theme-color" content="#584adc">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Stride Rite">
-    <link rel="apple-touch-icon" href="/icon.svg">
-    <link rel="stylesheet" href="styles.css?v=4">
+    <link rel="stylesheet" href="styles.css?v=15">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
     <style>
-        .custom-logo {
-            font-family: 'Outfit', sans-serif;
-            font-size: 2rem;
-            font-weight: 800;
-            letter-spacing: -1px;
-            color: #fff;
-            position: relative;
-            display: inline-block;
-        }
-        .custom-logo .dot {
-            content: '';
-            position: absolute;
-            top: 4px;
-            right: -8px;
-            width: 8px;
-            height: 8px;
-            background-color: var(--peach-accent);
-            border-radius: 50%;
-        }
-        .custom-logo-container {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-        .logo-text-stack {
-            display: flex;
-            flex-direction: column;
-            line-height: 1;
-        }
-        .logo-title {
-            font-family: 'Outfit', sans-serif;
-            font-weight: 800;
-            font-size: 1.2rem;
-            letter-spacing: 1px;
-        }
-        .logo-subtitle {
-            font-size: 0.6rem;
-            font-weight: 500;
-            letter-spacing: 0.5px;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            border-top: 1px solid var(--neon-accent);
-            padding-top: 2px;
-            margin-top: 2px;
-        }
-        .peach-text { color: var(--peach-accent); }
-        .purple-bg { background-color: var(--neon-accent); }
+        .custom-logo-container { display: flex; align-items: center; gap: 12px; }
+        .custom-logo { font-family: 'Outfit', sans-serif; font-size: 2rem; font-weight: 800; color: #fff; position: relative; }
+        .custom-logo .dot { position: absolute; top: 4px; right: -8px; width: 8px; height: 8px; background-color: var(--peach-accent); border-radius: 50%; }
+        .logo-text-stack { display: flex; flex-direction: column; line-height: 1; }
+        .logo-title { font-family: 'Outfit'; font-weight: 800; font-size: 1.2rem; }
+        .logo-subtitle { font-size: 0.6rem; color: var(--text-muted); text-transform: uppercase; border-top: 1px solid var(--neon-accent); padding-top: 2px; margin-top: 2px; }
     </style>
 </head>
 <body>
@@ -75,7 +26,7 @@
             </div>
         </div>
         <div class="nav-links">
-            <a href="https://www.instagram.com/strideriteclb?igsh=OGJ0aTlmamJydnU2" target="_blank" style="display: flex; align-items: center; gap: 5px;">
+            <a href="https://www.instagram.com/strideriteclb?igsh=OGJ0aTlmamJydnU2" target="_blank" style="display: flex; align-items: center; gap: 8px;">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
                 About Us
             </a>
@@ -84,46 +35,29 @@
 
     <header class="hero">
         <div class="hero-content">
-            <h1 class="animate-up" style="text-transform: uppercase;">Run With <span class="peach-text">Family.</span></h1>
-            <p class="animate-up delay-1">A running community for everyone. Show up. That's all it takes.<br><br>
-            <strong>WHEN WE RUN:</strong> Saturday 7:00 AM<br>
-            Garden beside Gateway Mall · Al Rehab City</p>
-            <div class="button-group animate-up delay-2" style="flex-wrap: wrap;">
-                <a href="#auth-section" class="btn btn-primary purple-bg">Join the Run</a>
-                <a href="https://maps.app.goo.gl/tareg62PBaQJVypk7" target="_blank" class="btn btn-secondary">Get Directions</a>
-                <a href="https://chat.whatsapp.com/BLYGyEaTTrF8lwS46fhuWM?mode=gi_t" target="_blank" class="btn" style="background: white; color: black; display: flex; align-items: center; gap: 8px;">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/></svg>
-                    Join on WhatsApp
-                </a>
-                <a href="https://www.instagram.com/strideriteclb?igsh=OGJ0aTlmamJydnU2" target="_blank" class="btn btn-secondary" style="border: none; padding: 1rem;">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
+            <h1 class="animate-up">Run With <span class="peach-text">Family.</span></h1>
+            <p class="animate-up delay-1"><strong>WHEN WE RUN:</strong> Saturday 7:00 AM<br>Garden beside Gateway Mall · Al Rehab City</p>
+            <div class="button-group animate-up delay-2">
+                <a href="#auth-section" class="btn btn-primary">Join the Run</a>
+                <a href="https://maps.app.goo.gl/tareg62PBaQJVypk7" target="_blank" class="btn btn-secondary">Directions</a>
+                <a href="https://chat.whatsapp.com/BLYGyEaTTrF8lwS46fhuWM?mode=gi_t" target="_blank" class="btn" style="background:white; color:black; display:flex; align-items:center; gap:8px;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/></svg>
+                    WhatsApp
                 </a>
             </div>
         </div>
-        <div class="hero-visual animate-fade delay-3">
-            <div class="glass-card stat-card stat-1" style="border-bottom: 4px solid var(--neon-accent);">
-                <div class="stat-value" style="color: white; font-size: 1.5rem;">SATURDAY</div>
-                <div class="stat-value" style="color: white; margin-bottom: 10px;">7:00 <span style="font-size: 1.5rem;">AM</span></div>
-                <div style="width: 50px; height: 3px; background: var(--peach-accent); margin-bottom: 5px;"></div>
+        <div class="hero-visual animate-up">
+            <div class="stat-card stat-1" style="border-bottom: 4px solid var(--neon-accent); min-width: 250px;">
+                <div class="stat-value">SATURDAY</div>
+                <div class="stat-value">7:00 <span style="font-size:1.2rem;">AM</span></div>
+                <div style="width:50px; height:3px; background:var(--peach-accent); margin: 10px 0;"></div>
                 <div class="stat-label">Community run · All welcome</div>
             </div>
-            
-            <div class="km-cards-container" style="display: flex; gap: 10px; z-index: 10;">
-                <div class="glass-card" style="padding: 1.5rem; background: var(--neon-accent); border-radius: 12px; text-align: center; border: none;">
-                    <div style="font-size: 2.5rem; font-weight: 800; color: white;">2</div>
-                    <div style="color: rgba(255,255,255,0.7); font-size: 0.8rem;">KM</div>
-                </div>
-                <div class="glass-card" style="padding: 1.5rem; background: #000; border-radius: 12px; text-align: center; border: none;">
-                    <div style="font-size: 2.5rem; font-weight: 800; color: white;">5</div>
-                    <div style="color: rgba(255,255,255,0.7); font-size: 0.8rem;">KM</div>
-                </div>
-                <div class="glass-card" style="padding: 1.5rem; background: var(--peach-accent); border-radius: 12px; text-align: center; border: none;">
-                    <div style="font-size: 2.5rem; font-weight: 800; color: white;">8</div>
-                    <div style="color: rgba(255,255,255,0.7); font-size: 0.8rem;">KM</div>
-                </div>
+            <div class="km-cards-container">
+                <div class="glass-card" style="padding:1.5rem; background:var(--neon-accent); border:none;"><div class="stat-value">2</div><div class="stat-label">KM</div></div>
+                <div class="glass-card" style="padding:1.5rem; background:#000; border:none;"><div class="stat-value">5</div><div class="stat-label">KM</div></div>
+                <div class="glass-card" style="padding:1.5rem; background:var(--peach-accent); border:none;"><div class="stat-value">8</div><div class="stat-label">KM</div></div>
             </div>
-
-            <div class="glow-orb" style="background: var(--neon-accent);"></div>
         </div>
     </header>
 
@@ -131,7 +65,7 @@
         <div class="pricing-container glass-panel">
             <div class="pricing-header">
                 <h2>Join the Community</h2>
-                <p>Register to RSVP for our Saturday runs. You don't need to be fast. You just need to show up.</p>
+                <p>Register to RSVP. You just need to show up.</p>
             </div>
             
             <div class="auth-tabs">
@@ -139,250 +73,62 @@
                 <button id="tabLogin" class="auth-tab" onclick="switchAuth('login')">Log In</button>
             </div>
 
-            <!-- Login Form -->
             <form id="loginForm" class="auth-form hidden">
-                <div class="input-group">
-                    <label>Email Address</label>
-                    <input type="email" id="loginEmail" required>
-                </div>
-                <div class="input-group">
-                    <label>Password</label>
-                    <input type="password" id="loginPassword" required>
-                </div>
-                <button type="submit" class="btn btn-primary btn-block purple-bg">Log In</button>
-                <p style="text-align:center; margin-top:1rem;">
-                    <a href="#" onclick="showForgotPassword()" style="color:var(--text-muted); font-size:0.85rem; text-decoration:none;">Forgot your password?</a>
-                </p>
+                <div class="input-group"><label>Email</label><input type="email" id="loginEmail" required></div>
+                <div class="input-group"><label>Password</label><input type="password" id="loginPassword" required></div>
+                <button type="submit" class="btn btn-primary btn-block">Log In</button>
             </form>
 
-            <!-- Forgot Password Form -->
-            <div id="forgotForm" class="auth-form hidden" style="text-align:center;">
-                <div style="font-size:2.5rem; margin-bottom:1rem;">🔐</div>
-                <h3 style="font-family:'Outfit'; margin-bottom:0.5rem;">Reset Password</h3>
-                <p style="color:var(--text-muted); font-size:0.9rem; margin-bottom:1.5rem;">Enter your email and we'll send you a reset link.</p>
-                <div class="input-group">
-                    <label>Your Email Address</label>
-                    <input type="email" id="forgotEmail" placeholder="you@example.com">
-                </div>
-                <button class="btn btn-primary btn-block purple-bg" onclick="sendResetEmail()" id="forgotBtn">Send Reset Link</button>
-                <p style="margin-top:1rem;">
-                    <a href="#" onclick="showLogin()" style="color:var(--text-muted); font-size:0.85rem; text-decoration:none;">← Back to Login</a>
-                </p>
-            </div>
-
-            <!-- Register Form -->
             <form id="registerForm" class="auth-form">
-                <div class="input-group">
-                    <label>Full Name</label>
-                    <input type="text" id="regName" required>
+                <div class="input-group"><label>Name</label><input type="text" id="regName" required></div>
+                <div class="input-group"><label>Email</label><input type="email" id="regEmail" required></div>
+                <div class="input-group"><label>Password</label><input type="password" id="regPassword" required></div>
+                <div style="display:flex; gap:1rem;">
+                    <div class="input-group" style="flex:1;"><label>Birthdate</label><input type="date" id="regBirthdate" required style="color-scheme:dark;"></div>
+                    <div class="input-group" style="flex:1;"><label>Gender</label><select id="regGender" required><option value="" disabled selected>Select</option><option value="Male">Male</option><option value="Female">Female</option></select></div>
                 </div>
-                <div class="input-group">
-                    <label>Email Address</label>
-                    <input type="email" id="regEmail" required>
-                </div>
-                <div class="input-group">
-                    <label>Password</label>
-                    <input type="password" id="regPassword" required>
-                </div>
-                
-                <!-- NEW FIELDS -->
-                <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem;">
-                    <div class="input-group" style="flex: 1; margin-bottom: 0;">
-                        <label>Date of Birth</label>
-                        <input type="date" id="regBirthdate" required style="color-scheme: dark;">
-                    </div>
-                    <div class="input-group" style="flex: 1; margin-bottom: 0;">
-                        <label>Gender</label>
-                        <select id="regGender" style="width: 100%; padding: 1rem; background: rgba(0,0,0,0.2); border: 1px solid var(--border-color); border-radius: 8px; color: white; font-size: 1rem;" required>
-                            <option value="" disabled selected>Select</option>
-                            <option value="Male">Male</option>
-                            <option value="Female">Female</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="input-group">
-                    <label>Running Level</label>
-                    <select id="regLevel" style="width: 100%; padding: 1rem; background: rgba(0,0,0,0.2); border: 1px solid var(--border-color); border-radius: 8px; color: white; font-size: 1rem;" required>
-                        <option value="" disabled selected>Select your level</option>
-                        <option value="Beginner (Walk/Run)">Beginner (Walk/Run)</option>
-                        <option value="Intermediate (5k-10k consistent)">Intermediate (5k-10k consistent)</option>
-                        <option value="Advanced (Fast paced/Long distance)">Advanced (Fast paced/Long distance)</option>
-                        <option value="Non-Runner (Just here for vibes)">Non-Runner (Just here for vibes)</option>
-                    </select>
-                </div>
-
-                <button type="submit" class="btn btn-primary btn-block purple-bg">Create Account</button>
+                <div class="input-group"><label>Level</label><select id="regLevel" required><option value="" disabled selected>Select Level</option><option value="Beginner">Beginner</option><option value="Intermediate">Intermediate</option><option value="Advanced">Advanced</option></select></div>
+                <button type="submit" class="btn btn-primary btn-block">Create Account</button>
             </form>
         </div>
     </section>
 
     <footer>
-        <p>&copy; 2026 Stride Rite | <a href="admin.html" style="color: var(--text-muted);">Admin Portal Login</a></p>
+        <p>&copy; 2026 Stride Rite | <a href="admin.html">Admin Portal</a></p>
     </footer>
 
-    <script src="app.js?v=2"></script>
+    <script src="app.js?v=21"></script>
     <script>
-        // Check if logged in to show dashboard link instead of forms
         if (AuthService.getCurrentUser()) {
-            const authSection = document.getElementById('auth-section');
-            if (authSection) {
-                authSection.innerHTML = `
-                    <div class="pricing-container glass-panel" style="text-align: center;">
-                        <h2 style="font-family: 'Outfit'; font-size: 2rem; margin-bottom: 1rem;">You're ready to run!</h2>
-                        <p style="color: var(--text-muted); margin-bottom: 2rem;">You've already joined the Stride Rite family.</p>
-                        <a href="dashboard.html" class="btn btn-primary purple-bg" style="display:inline-block; padding: 1rem 3rem;">View Dashboard & Runs</a>
-                        <br><br>
-                        <a href="#" onclick="AuthService.logout()" style="color: var(--text-muted); font-size: 0.9rem;">Log out</a>
-                    </div>
-                `;
-            }
+            document.getElementById('auth-section').innerHTML = `
+                <div class="pricing-container glass-panel" style="text-align: center;">
+                    <h2>You're ready to run!</h2>
+                    <p style="margin-bottom: 2rem;">Joined the Stride Rite family.</p>
+                    <a href="dashboard.html" class="btn btn-primary">View Dashboard</a><br><br>
+                    <a href="#" onclick="AuthService.logout()" style="color:var(--text-muted);">Log out</a>
+                </div>`;
         }
-
-        // Toggle logic
         function switchAuth(type) {
             document.getElementById('loginForm').classList.toggle('hidden', type !== 'login');
             document.getElementById('registerForm').classList.toggle('hidden', type !== 'register');
             document.getElementById('tabLogin').classList.toggle('active', type === 'login');
             document.getElementById('tabRegister').classList.toggle('active', type === 'register');
         }
-
-        // Handle Log in
         document.getElementById('loginForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const btn = e.target.querySelector('button');
-            const originalText = btn.innerText;
-            btn.innerText = 'Verifying...';
-            btn.disabled = true;
-
-            const success = await AuthService.login(
-                document.getElementById('loginEmail').value,
-                document.getElementById('loginPassword').value
-            );
-            
-            btn.innerText = originalText;
-            btn.disabled = false;
-
-            if (success) {
-                const redirect = new URLSearchParams(window.location.search).get('redirect');
-                window.location.href = redirect ? decodeURIComponent(redirect) : 'dashboard.html';
-            } else {
-                Swal.fire({icon: 'error', title: 'Invalid credentials', background: '#141419', color: '#fff'});
-            }
+            const success = await AuthService.login(document.getElementById('loginEmail').value, document.getElementById('loginPassword').value);
+            if (success) window.location.href = 'dashboard.html';
+            else Swal.fire({icon:'error', title:'Invalid Login', background:'#141419', color:'#fff'});
         });
-
-        // Handle Register
         document.getElementById('registerForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const btn = e.target.querySelector('button');
-            const originalText = btn.innerText;
-            btn.innerText = 'Creating Server Profile...';
-            btn.disabled = true;
-
             const success = await AuthService.register(
-                document.getElementById('regName').value,
-                document.getElementById('regEmail').value,
-                document.getElementById('regPassword').value,
-                document.getElementById('regBirthdate').value,
-                document.getElementById('regGender').value,
-                document.getElementById('regLevel').value
+                document.getElementById('regName').value, document.getElementById('regEmail').value,
+                document.getElementById('regPassword').value, document.getElementById('regBirthdate').value,
+                document.getElementById('regGender').value, document.getElementById('regLevel').value
             );
-
-            btn.innerText = originalText;
-            btn.disabled = false;
-
-            if (success) {
-                const newUserName = document.getElementById('regName').value.split(' ')[0];
-                const newUserEmail = document.getElementById('regEmail').value;
-
-                // Send branded welcome email (fire & forget)
-                emailjs.send('service_p70otdg', 'template_pcpxjmp', {
-                    to_name: newUserName,
-                    to_email: newUserEmail,
-                    email: newUserEmail
-                }).catch(e => console.log('Welcome email error:', e));
-
-                const redirect = new URLSearchParams(window.location.search).get('redirect');
-                Swal.fire({
-                    icon: 'success', 
-                    title: 'Welcome to the Family!', 
-                    html: `
-                        <p style="margin-bottom: 20px; font-size: 1.1rem;">We are incredibly excited to see you! 🏃‍♂️💨</p>
-                        <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 15px;">Make sure to join our WhatsApp group to stay updated!</p>
-                        <a href="https://chat.whatsapp.com/BLYGyEaTTrF8lwS46fhuWM?mode=gi_t" target="_blank" style="display: inline-block; background: #25D366; color: white; padding: 12px 24px; border-radius: 50px; text-decoration: none; font-weight: bold;">
-                            Join WhatsApp Group
-                        </a>
-                    `,
-                    background: '#141419', 
-                    color: '#fff',
-                    confirmButtonText: redirect ? 'Continue to Survey' : 'View Runs',
-                    confirmButtonColor: 'var(--peach-accent)'
-                }).then(() => window.location.href = redirect ? decodeURIComponent(redirect) : 'dashboard.html');
-            } else {
-                Swal.fire({icon: 'error', title: 'Email already exists or server error', background: '#141419', color: '#fff'});
-            }
+            if (success) Swal.fire({icon:'success', title:'Welcome!', background:'#141419', color:'#fff'}).then(()=>window.location.href='dashboard.html');
         });
-
-        // ─── FORGOT PASSWORD ─────────────────────────────────────────────────
-        emailjs.init('7K3J2f7N7nwefFXCq');
-
-        function showForgotPassword() {
-            document.getElementById('loginForm').classList.add('hidden');
-            document.getElementById('forgotForm').classList.remove('hidden');
-        }
-        function showLogin() {
-            document.getElementById('forgotForm').classList.add('hidden');
-            document.getElementById('loginForm').classList.remove('hidden');
-        }
-
-        window.sendResetEmail = async function() {
-            const email = document.getElementById('forgotEmail').value.trim();
-            if (!email) { Swal.fire({icon:'warning', title:'Enter your email', background:'#141419', color:'#fff'}); return; }
-
-            const btn = document.getElementById('forgotBtn');
-            btn.innerText = 'Sending...';
-            btn.disabled = true;
-
-            // Check if email exists
-            const users = await dbGet('stride_users', `email=eq.${encodeURIComponent(email)}`);
-            if (!users || users.length === 0) {
-                Swal.fire({icon:'error', title:'Email not found', text:'No account with that email exists.', background:'#141419', color:'#fff'});
-                btn.innerText = 'Send Reset Link';
-                btn.disabled = false;
-                return;
-            }
-
-            // Generate token and save to DB
-            const token = crypto.randomUUID();
-            const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString(); // 1 hour
-            await dbInsert('password_resets', { email, token, expires_at: expiresAt, used: false });
-
-            const resetLink = `${window.location.origin}/reset-password.html?token=${token}`;
-
-            // Send email via EmailJS
-            try {
-                const result = await emailjs.send('service_p70otdg', 'template_sc5tqp8', {
-                    to_name: users[0].name.split(' ')[0],
-                    to_email: email,
-                    email: email,
-                    reset_link: resetLink
-                });
-                console.log('EmailJS success:', result);
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Email Sent! 📬',
-                    text: 'Check your inbox for the reset link. It expires in 1 hour.',
-                    background: '#141419', color: '#fff',
-                    confirmButtonColor: 'var(--peach-accent)'
-                });
-                document.getElementById('forgotEmail').value = '';
-            } catch(e) {
-                console.error('EmailJS error:', e);
-                Swal.fire({icon:'error', title:'Failed to send email', text: `Error: ${e?.text || e?.status || JSON.stringify(e)}`, background:'#141419', color:'#fff'});
-            }
-
-            btn.innerText = 'Send Reset Link';
-            btn.disabled = false;
-        };
     </script>
 </body>
 </html>
