@@ -97,11 +97,20 @@
         };
 
         window.joinRun = async (rId) => {
+            const btn = event.target;
+            const originalText = btn.innerText;
+            btn.innerText = 'Joining...';
+            btn.disabled = true;
+
             const distance = runSelections[rId] || '5K';
             const success = await AppService.registerForRun(rId, distance, user.level);
+            
             if(success) {
                 Swal.fire({ icon: 'success', title: 'See you there! 🏃‍♂️', background: '#141419', color: '#fff' });
-                renderRuns();
+                await renderRuns(); // Refresh to lock the button
+            } else {
+                Swal.fire({ icon: 'info', title: 'Already Registered', text: 'You are already on the list!', background: '#141419', color: '#fff' });
+                await renderRuns();
             }
         };
 
