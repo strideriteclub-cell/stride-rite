@@ -37,7 +37,7 @@
         </div>
         <div class="nav-links">
             <a href="dashboard.html" class="btn btn-secondary">📊 Dashboard</a>
-            <button id="mockBtn" class="btn btn-secondary hidden" onclick="createMockRun()" style="border-color: #ff4444; color: #ff4444; padding: 0.4rem 1rem;">🛠 Mock Run</button>
+            <button id="mockBtn" class="btn btn-secondary hidden" onclick="createMockRun()" style="border-color: #ff4444; color: #ff4444; padding: 0.4rem 1rem;">🛠 Mock Data Sync</button>
             <a href="#" onclick="AuthService.logout()">Log Out</a>
         </div>
     </nav>
@@ -71,7 +71,7 @@
         <canvas id="storyCanvas" width="1080" height="1920" style="display:none;"></canvas>
     </div>
 
-    <script src="app.js?v=10"></script>
+    <script src="app.js?v=20"></script>
     <script>
         const user = AuthService.getCurrentUser();
         if (!user) window.location.href = 'index.html';
@@ -81,75 +81,80 @@
         document.getElementById('userInitial').innerText = user.name.charAt(0).toUpperCase();
         document.getElementById('userLevelBadge').innerText = user.level || 'Beginner';
 
+        // Show Mock button for Admin
         if (user.is_admin) document.getElementById('mockBtn').classList.remove('hidden');
 
-        function formatPace(seconds, meters) {
-            if (meters === 0) return '0:00';
-            const km = meters / 1000;
-            const paceMin = (seconds / 60) / km;
-            const mins = Math.floor(paceMin);
-            const secs = Math.round((paceMin - mins) * 60);
-            return `${mins}:${secs.toString().padStart(2, '0')}`;
-        }
-
         async function createMockRun() {
-            Swal.fire({ title:'Syncing Database...', background:'#141419', didOpen:()=>Swal.showLoading() });
+            Swal.fire({ title:'Deep Syncing...', text:'Linking database accounts...', background:'#141419', didOpen:()=>Swal.showLoading() });
             
             const headers = { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' };
-            const runId = 'mock-' + Date.now();
-
+            
             try {
-                // 1. SELF-HEALING: Check if Admin exists in Supabase
-                const userCheck = await fetch(`${SUPABASE_URL}/rest/v1/stride_users?id=eq.${user.id}`, { headers });
+                // 1. Find or Create Real User ID
+                let realId = user.id;
+                const userCheck = await fetch(`${SUPABASE_URL}/rest/v1/stride_users?email=eq.${user.email}`, { headers });
                 const userData = await userCheck.json();
                 
-                if (userData.length === 0) {
-                    // Create Admin Record if missing to avoid Foreign Key error
+                if (userData.length > 0) {
+                    realId = userData[0].id;
+                } else {
+                    // Create a real database record if missing
+                    realId = crypto.randomUUID();
                     await fetch(`${SUPABASE_URL}/rest/v1/stride_users`, {
                         method: 'POST', headers,
-                        body: JSON.stringify({ id: user.id, name: user.name, email: user.email, is_admin: true, level: 'Elite' })
+                        body: JSON.stringify({ id: realId, name: user.name, email: user.email, is_admin: true, level: 'Elite' })
                     });
                 }
 
-                // 2. Insert the Mock Run
+                // Update local session to use the Real ID for this session
+                const updatedUser = { ...user, id: realId };
+                localStorage.setItem('stride_current_user', JSON.stringify(updatedUser));
+
+                // 2. Create the Mock Run
+                const runId = 'mock-' + Date.now();
                 const runData = {
                     id: runId,
-                    date_label: '[EXPORTED] Friday Afternoon Run || 2026-04-10',
-                    location: 'Zayed Park, New Zayed',
+                    date_label: '[EXPORTED] Monday Community Run || 2026-04-13',
+                    location: 'Zayed Park, Al Rehab City',
                     location_link: 'https://maps.app.goo.gl/tareg62PBaQJVypk7',
-                    created_by: user.id
+                    created_by: realId
                 };
                 await fetch(`${SUPABASE_URL}/rest/v1/stride_runs`, { method: 'POST', headers, body: JSON.stringify(runData) });
 
-                // 3. Insert the Registration
-                const regData = {
-                    id: 'reg-' + Date.now(),
-                    run_id: runId,
-                    user_id: user.id,
-                    distance: '8.5K',
-                    level: user.level || 'Intermediate',
-                    registered_at: new Date().toISOString()
-                };
-                await fetch(`${SUPABASE_URL}/rest/v1/stride_registrations`, { method: 'POST', headers, body: JSON.stringify(regData) });
+                // 3. Create the Registration
+                await fetch(`${SUPABASE_URL}/rest/v1/stride_registrations`, { 
+                    method: 'POST', headers, 
+                    body: JSON.stringify({
+                        id: 'reg-' + Date.now(),
+                        run_id: runId,
+                        user_id: realId,
+                        distance: '8.5K',
+                        level: 'Advanced',
+                        registered_at: new Date().toISOString()
+                    })
+                });
 
-                Swal.fire({ icon:'success', title:'Mock Created!', text:'Your history is now updated.', background:'#141419', color:'#fff' })
+                Swal.fire({ icon:'success', title:'Deep Sync Success!', text:'Reloading your real history...', background:'#141419', color:'#fff' })
                 .then(() => location.reload());
 
             } catch (e) {
                 console.error(e);
-                Swal.fire({ icon:'error', title:'Error', text: 'Could not update history. Check console.', background:'#141419', color:'#fff' });
+                Swal.fire({ icon:'error', title:'Sync Failed', text: 'Database rejected the link. Check console.', background:'#141419', color:'#fff' });
             }
         }
 
         async function loadProfile() {
-            const stats = await AppService.getUserStats(user.id);
+            // Must use the most up-to-date user ID
+            const currentUser = JSON.parse(localStorage.getItem('stride_current_user'));
+            const stats = await AppService.getUserStats(currentUser.id);
+            
             document.getElementById('totalRuns').innerText = stats.totalRuns;
             document.getElementById('totalKms').innerText = stats.totalKms;
             document.getElementById('avgDistance').innerText = stats.totalRuns > 0 ? (stats.totalKms / stats.totalRuns).toFixed(1) : 0.0;
 
             const container = document.getElementById('historyContainer');
-            if (stats.pastRuns.length === 0) {
-                container.innerHTML = `<p style="grid-column:1/-1; text-align:center; padding:3rem; color:#a1a1aa;">No community runs yet.</p>`;
+            if (!stats.pastRuns || stats.pastRuns.length === 0) {
+                container.innerHTML = `<p style="grid-column:1/-1; text-align:center; padding:3rem; color:#a1a1aa; background:rgba(255,255,255,0.02); border-radius:20px;">No runs found in history.</p>`;
                 return;
             }
 
@@ -176,7 +181,7 @@
                     <input id="s-time" class="swal2-input" type="text" placeholder="00:25:00" style="width:100%; background:#0d0c11; color:white;">
                     <p id="p-prev" style="color:var(--peach-accent); font-weight:800; margin-top:1rem; font-size: 1.1rem;">Pace: --:--</p>
                 </div>`,
-                background:'#141419', color:'#fff', confirmButtonText:'Create Image', confirmButtonColor: 'var(--peach-accent)',
+                background:'#141419', color:'#fff', confirmButtonText:'Create Image',
                 didOpen: () => {
                     const di = document.getElementById('s-dist'); const ti = document.getElementById('s-time');
                     const up = () => {
@@ -192,7 +197,6 @@
         }
 
         async function processStory(date, loc, dist, time) {
-            Swal.fire({ title: 'Rendering...', background: '#141419', didOpen: () => Swal.showLoading() });
             const canvas = document.getElementById('storyCanvas');
             const ctx = canvas.getContext('2d');
             const W = 1080, H = 1920; ctx.clearRect(0,0,W,H);
@@ -206,16 +210,20 @@
             ctx.letterSpacing = '0px'; ctx.fillStyle = 'white'; ctx.font = '800 95px Outfit'; ctx.fillText(user.name.toUpperCase(), W/2, 750);
             ctx.fillStyle = '#ff8b6a'; ctx.font = '600 45px Outfit'; ctx.fillText(`FINISHER · ${date.toUpperCase()}`, W/2, 830);
             ctx.fillStyle = '#a1a1aa'; ctx.font = '600 40px Outfit'; ctx.fillText('DISTANCE', W/2, 1150);
-            ctx.fillStyle = 'white'; ctx.font = '800 200px Outfit'; ctx.fillText(`${dist} KM`, W/2, 1330);
+            ctx.fillStyle = 'white'; ctx.font = '800 210px Outfit'; ctx.fillText(`${dist} KM`, W/2, 1330);
             const tp = time.split(':'); const s = (parseInt(tp[0])*3600)+(parseInt(tp[1])*60)+parseInt(tp[2]);
             const pace = formatPace(s, parseFloat(dist)*1000);
             ctx.fillStyle = '#a1a1aa'; ctx.font = '600 40px Outfit'; ctx.fillText('PACE', W/4+50, 1530); ctx.fillText('TIME', (W/4*3)-50, 1530);
-            ctx.fillStyle = 'white'; ctx.font = '800 110px Outfit'; ctx.fillText(pace, W/4+50, 1660); ctx.fillText(time, (W/4*3)-50, 1660);
+            ctx.fillStyle = 'white'; ctx.font = '800 115px Outfit'; ctx.fillText(pace, W/4+50, 1660); ctx.fillText(time, (W/4*3)-50, 1660);
             const png = canvas.toDataURL('image/png');
-            Swal.fire({ 
-                title:'Story Ready!', imageUrl:png, imageWidth:250, background:'#141419', color: '#fff',
-                confirmButtonText:'💾 Download PNG', confirmButtonColor: 'var(--neon-accent)'
-            }).then(s => { if(s.isConfirmed){ const l = document.createElement('a'); l.download=`StrideRite_${date}.png`; l.href=png; l.click(); }});
+            Swal.fire({ title:'Story Ready!', imageUrl:png, imageWidth:250, background:'#141419', confirmButtonText:'💾 Download PNG' })
+            .then(s => { if(s.isConfirmed){ const l = document.createElement('a'); l.download=`StrideRite_${date}.png`; l.href=png; l.click(); }});
+        }
+
+        function formatPace(s, m) {
+            const km = m/1000; const p = (s/60)/km;
+            const mi = Math.floor(p); const se = Math.round((p-mi)*60);
+            return `${mi}:${se.toString().padStart(2,'0')}`;
         }
 
         async function loadStrava() {
@@ -235,6 +243,7 @@
                 }
             } catch (e) {}
         }
+
         loadProfile(); loadStrava();
     </script>
 </body>
