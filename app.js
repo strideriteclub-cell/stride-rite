@@ -16,21 +16,19 @@ const defaultHeaders = {
     'Prefer': 'return=representation'
 };
 
-function calculateAge(birthdate) {
-    if (!birthdate) return '?';
-    const birth = new Date(birthdate);
-    const now = new Date();
-    let age = now.getFullYear() - birth.getFullYear();
-    const m = now.getMonth() - birth.getMonth();
-    if (m < 0 || (m === 0 && now.getDate() < birth.getDate())) age--;
-    return age;
-}
-
 async function dbGet(table, query = 'select=*') {
     try {
         const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${query}`, { headers: defaultHeaders });
+        if (!res.ok) {
+            const err = await res.json();
+            console.error(`DB Get Error [${table}]:`, err);
+            return [];
+        }
         return await res.json();
-    } catch (e) { return []; }
+    } catch (e) { 
+        console.error(`Fetch Error [${table}]:`, e);
+        return []; 
+    }
 }
 
 async function dbInsert(table, data) {
@@ -40,16 +38,26 @@ async function dbInsert(table, data) {
             headers: defaultHeaders,
             body: JSON.stringify(data)
         });
+        if (!res.ok) {
+            const err = await res.json();
+            console.error(`DB Insert Error [${table}]:`, err);
+            return null;
+        }
         return await res.json();
-    } catch (e) { return null; }
+    } catch (e) { 
+        console.error(`Insert Fetch Error [${table}]:`, e);
+        return null; 
+    }
 }
 
 const KEYS = { SESSION: "stride_current_user" };
 
 const AuthService = {
     login: async (email, password) => {
+        // Use a real UUID for admin to avoid DB type issues
+        const ADMIN_ID = '00000000-0000-0000-0000-000000000001';
         if (email === 'tsmhaleem@gmail.com' && password === 'haleem@147') {
-            const adminUser = { id: 'admin-1', name: 'Admin Haleem', email: 'tsmhaleem@gmail.com', is_admin: true };
+            const adminUser = { id: ADMIN_ID, name: 'Admin Haleem', email: 'tsmhaleem@gmail.com', is_admin: true };
             localStorage.setItem(KEYS.SESSION, JSON.stringify(adminUser));
             return true;
         }
@@ -60,8 +68,9 @@ const AuthService = {
         }
         return false;
     },
+    // ... rest of AuthService
     register: async (name, email, password, birthdate, gender, level) => {
-        const newUser = { id: crypto.randomUUID(), name, email, password, birthdate, age: calculateAge(birthdate), gender, level, is_admin: false };
+        const newUser = { id: crypto.randomUUID(), name, email, password, birthdate, age: calculateAge(birthdate || '2000-01-01'), gender, level, is_admin: false };
         const inserted = await dbInsert('stride_users', newUser);
         if (inserted) {
             localStorage.setItem(KEYS.SESSION, JSON.stringify(newUser));
@@ -82,8 +91,8 @@ const AppService = {
             if (r.date_label.includes('||')) {
                 const parts = r.date_label.split('||');
                 const runDate = new Date(parts[1]);
-                if (runDate < now) return false; // Hide expired
-                r.date_label = parts[0]; // Clean for UI
+                if (runDate < now) return false;
+                r.date_label = parts[0].trim(); // CLEANED FOR UI
             }
             return true;
         });
@@ -92,16 +101,25 @@ const AppService = {
         const user = AuthService.getCurrentUser();
         if (!user) return false;
 
-        // Prevention: Double check if already registered
+        // CRITICAL CHECK: Check if already registered
         const existing = await dbGet('stride_registrations', `run_id=eq.${runId}&user_id=eq.${user.id}`);
-        if(existing && existing.length > 0) return false;
+        if(existing && existing.length > 0) return true; // Pretend success if already there
 
-        const newReg = { id: crypto.randomUUID(), run_id: runId, user_id: user.id, distance, level, registered_at: new Date().toISOString() };
-        return await dbInsert('stride_registrations', newReg);
+        const newReg = { 
+            id: crypto.randomUUID(), 
+            run_id: runId, 
+            user_id: user.id, 
+            distance: distance || '5K', 
+            level: level || 'Intermediate', 
+            registered_at: new Date().toISOString() 
+        };
+        const result = await dbInsert('stride_registrations', newReg);
+        return result !== null;
     },
     getUserRegistrations: async (userId) => {
+        if (!userId) return [];
         const regs = await dbGet('stride_registrations', `user_id=eq.${userId}`);
-        return regs.map(r => r.run_id);
+        return (regs || []).map(r => r.run_id);
     },
     getUserStats: async (userId) => {
         const regs = await dbGet('stride_registrations', `user_id=eq.${userId}`);
