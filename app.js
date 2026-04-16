@@ -214,3 +214,45 @@ const Utils = {
 window.AuthService = AuthService;
 window.AppService = AppService;
 window.Utils = Utils;
+
+// --- MOBILE NAV (Hamburger Menu) ---
+document.addEventListener('DOMContentLoaded', () => {
+    const navbar = document.querySelector('.navbar');
+    const navLinks = document.querySelector('.nav-links');
+    if (!navbar || !navLinks) return;
+
+    // Create hamburger button
+    const btn = document.createElement('button');
+    btn.className = 'hamburger-btn';
+    btn.setAttribute('aria-label', 'Open menu');
+    btn.innerHTML = '<span></span><span></span><span></span>';
+    navbar.appendChild(btn);
+
+    // Create overlay
+    const overlay = document.createElement('div');
+    overlay.className = 'mobile-nav-overlay';
+    document.body.appendChild(overlay);
+
+    // Create side panel, cloning the existing nav links
+    const panel = document.createElement('nav');
+    panel.className = 'mobile-nav-panel';
+    panel.innerHTML = navLinks.innerHTML;
+    document.body.appendChild(panel);
+
+    const open = () => {
+        btn.classList.add('open');
+        overlay.classList.add('open');
+        panel.classList.add('open');
+        document.body.style.overflow = 'hidden';
+    };
+    const close = () => {
+        btn.classList.remove('open');
+        overlay.classList.remove('open');
+        panel.classList.remove('open');
+        document.body.style.overflow = '';
+    };
+
+    btn.addEventListener('click', () => btn.classList.contains('open') ? close() : open());
+    overlay.addEventListener('click', close);
+    panel.querySelectorAll('a').forEach(a => a.addEventListener('click', close));
+});
