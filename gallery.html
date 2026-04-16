@@ -5,18 +5,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Run Gallery | Stride Rite</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=15">
+    <link rel="stylesheet" href="styles.css?v=22">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
         .custom-logo-container { display: flex; align-items: center; gap: 12px; }
         .custom-logo { font-family: 'Outfit', sans-serif; font-size: 1.5rem; font-weight: 800; color: #fff; position: relative; }
         .custom-logo .dot { position: absolute; top: 3px; right: -6px; width: 6px; height: 6px; background-color: var(--peach-accent); border-radius: 50%; }
         .gallery-grid { columns: 3 280px; column-gap: 1.25rem; width: 100%; margin-top: 2rem; }
-        .gallery-item { break-inside: avoid; margin-bottom: 1.25rem; border-radius: 16px; overflow: hidden; position: relative; cursor: pointer; border: 1px solid var(--border-color); }
+        .gallery-item { break-inside: avoid; margin-bottom: 1.25rem; border-radius: 16px; overflow: hidden; position: relative; cursor: pointer; border: 1px solid var(--border-color); transition: 0.3s; }
+        .gallery-item:hover { border-color: var(--neon-accent); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(88,74,220,0.2); }
         .gallery-item img { width: 100%; display: block; }
-        .filter-bar { display:flex; gap:0.5rem; flex-wrap:wrap; margin-bottom:2rem; }
-        .filter-btn { padding:0.5rem 1.2rem; border-radius:50px; background:transparent; border:1px solid var(--border-color); color:var(--text-muted); cursor:pointer; }
-        .filter-btn.active { background:var(--neon-accent); border-color:var(--neon-accent); color:white; }
+        .filter-bar { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 2rem; }
+        .filter-btn { padding: 0.5rem 1.2rem; border-radius: 50px; background: transparent; border: 1px solid var(--border-color); color: var(--text-muted); cursor: pointer; transition: 0.2s; font-size: 0.9rem; }
+        .filter-btn:hover { border-color: var(--neon-accent); color: white; }
+        .filter-btn.active { background: var(--neon-accent); border-color: var(--neon-accent); color: white; }
+        .empty-state { text-align: center; padding: 4rem; color: var(--text-muted); }
+        .empty-state svg { width: 80px; opacity: 0.3; margin-bottom: 1rem; }
     </style>
 </head>
 <body>
@@ -27,6 +31,7 @@
         </div>
         <div class="nav-links">
             <a href="dashboard.html">📊 Board</a>
+            <a href="shop.html">🛍 Shop</a>
             <a href="index.html">🏠 Home</a>
             <a href="#" onclick="AuthService.logout()">Logout</a>
         </div>
@@ -37,30 +42,90 @@
         <p style="color:var(--text-muted); margin-bottom:2rem;">Photos from our community runs</p>
 
         <div class="filter-bar" id="filterBar">
-            <button class="filter-btn active" onclick="filterGallery('all', this)">All Runs</button>
+            <button class="filter-btn active" id="filterAll" onclick="filterGallery('all', this)">All Runs</button>
         </div>
 
         <div class="gallery-grid" id="galleryGrid">
-            <div style="text-align:center; padding:4rem; color:var(--text-muted);">Loading photos...</div>
+            <div class="empty-state" style="grid-column:1/-1;">
+                <p>Loading photos...</p>
+            </div>
         </div>
     </div>
 
-    <script src="app.js?v=21"></script>
+    <script src="app.js?v=22"></script>
     <script>
-        const SUPABASE_URL_G = 'https://qcqyyfnsfyuaaaacddsm.supabase.co';
-        const SUPABASE_KEY_G = 'sb_publishable_uXs2e5aPzrIL_M2xsYDmWg_hPOUaG1l';
-        const headers = { 'apikey': SUPABASE_KEY_G, 'Authorization': `Bearer ${SUPABASE_KEY_G}`, 'Content-Type': 'application/json' };
+        let allPhotos = [];
 
         async function loadGallery() {
-            const res = await fetch(`${SUPABASE_URL_G}/rest/v1/gallery_photos?select=*`, { headers });
+            const res = await fetch(`${SUPABASE_URL}/rest/v1/gallery_photos?select=*&order=uploaded_at.desc`, { headers: defaultHeaders });
             const photos = await res.json();
             const grid = document.getElementById('galleryGrid');
-            if(!photos || photos.length === 0) {
-                grid.innerHTML = `<p style="padding:4rem; text-align:center; color:var(--text-muted);">No memories uploaded yet.</p>`;
+            const filterBar = document.getElementById('filterBar');
+
+            if (!photos || photos.length === 0) {
+                grid.innerHTML = `
+                    <div class="empty-state" style="column-span:all;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 20M14 8h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                        <p>No memories uploaded yet.</p>
+                        <p style="font-size:0.85rem; margin-top:0.5rem;">Photos can be added via the Telegram bot → 📸 Add to Gallery</p>
+                    </div>`;
                 return;
             }
-            grid.innerHTML = photos.map(p => `<div class="gallery-item"><img src="${p.photo_url}" loading="lazy"></div>`).join('');
+
+            allPhotos = photos;
+
+            // Build dynamic filter buttons from run_labels
+            const labels = [...new Set(photos.map(p => p.run_label).filter(Boolean))];
+            labels.forEach(label => {
+                const btn = document.createElement('button');
+                btn.className = 'filter-btn';
+                btn.textContent = `🏃 ${label}`;
+                btn.onclick = function() { filterGallery(label, this); };
+                filterBar.appendChild(btn);
+            });
+
+            renderPhotos(photos);
         }
+
+        function renderPhotos(photos) {
+            const grid = document.getElementById('galleryGrid');
+            if (!photos || photos.length === 0) {
+                grid.innerHTML = `<div class="empty-state" style="column-span:all;"><p>No photos for this filter.</p></div>`;
+                return;
+            }
+            grid.innerHTML = photos.map(p => `
+                <div class="gallery-item" onclick="openPhoto('${p.photo_url}', '${(p.caption || '').replace(/'/g, '\\x27')}')">
+                    <img src="${p.photo_url}" loading="lazy" onerror="this.parentElement.style.display='none'">
+                </div>`).join('');
+        }
+
+        function filterGallery(label, btn) {
+            // Update active button
+            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+
+            if (label === 'all') {
+                renderPhotos(allPhotos);
+            } else {
+                const filtered = allPhotos.filter(p => p.run_label === label);
+                renderPhotos(filtered);
+            }
+        }
+
+        function openPhoto(url, caption) {
+            Swal.fire({
+                imageUrl: url,
+                imageAlt: caption || 'Run photo',
+                title: caption || null,
+                background: '#0d0c11',
+                color: '#fff',
+                showCloseButton: true,
+                showConfirmButton: false,
+                width: 'auto',
+                customClass: { popup: 'swal-photo-popup' }
+            });
+        }
+
         loadGallery();
     </script>
 </body>
