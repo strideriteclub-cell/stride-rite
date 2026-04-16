@@ -204,3 +204,40 @@ const Utils = {
 window.AuthService = AuthService;
 window.AppService = AppService;
 window.Utils = Utils;
+
+// --- PAGE TRANSITION ENGINE ---
+const PageTransition = {
+    init: () => {
+        const overlay = document.getElementById('page-transition');
+        if (!overlay) return;
+
+        // Play the ENTER animation (shrink from fullscreen to dot)
+        overlay.classList.add('pt-enter');
+        overlay.addEventListener('animationend', () => {
+            overlay.classList.remove('pt-enter');
+        }, { once: true });
+
+        // Intercept all internal link clicks
+        document.addEventListener('click', (e) => {
+            const link = e.target.closest('a[href]');
+            if (!link) return;
+            const href = link.getAttribute('href');
+            // Skip anchors, external links, javascript:, and mailto:
+            if (!href || href.startsWith('#') || href.startsWith('http') || 
+                href.startsWith('mailto') || href.startsWith('javascript')) return;
+            e.preventDefault();
+            PageTransition.exit(href);
+        });
+    },
+    exit: (url) => {
+        const overlay = document.getElementById('page-transition');
+        if (!overlay) { window.location.href = url; return; }
+        overlay.classList.remove('pt-enter');
+        overlay.classList.add('pt-exit');
+        overlay.addEventListener('animationend', () => {
+            window.location.href = url;
+        }, { once: true });
+    }
+};
+window.navigateTo = PageTransition.exit;
+document.addEventListener('DOMContentLoaded', PageTransition.init);
