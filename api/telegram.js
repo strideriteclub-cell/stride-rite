@@ -110,13 +110,25 @@ async function checkBirthdays(chatId) {
 
 // ─── MENU ─────────────────────────────────────────────────────────────────────
 async function sendMenu(chatId, msg = "🏠 *Stride Rite Admin Menu*\nWhat would you like to manage today?") {
+    // Check tracking state
+    const tracks = await dbGet('live_tracks', 'id=eq.admin');
+    const isActive = (tracks && tracks.length > 0) ? tracks[0].is_active : false;
+    
+    const liveButton = isActive 
+        ? [{ text: "🛑 Stop Live Run", callback_data: "cmd_stop_live" }]
+        : [{ text: "🚀 Start Live Run", callback_data: "cmd_start_live" }];
+
     const replyMarkup = {
         inline_keyboard: [
-            [{ text: "🏃‍♂️ Manage Runs", callback_data: "cmd_runs" }, { text: "🛍️ VIP Shop", callback_data: "cmd_shop_menu" }],
-            [{ text: "🚀 Start Live Run", callback_data: "cmd_start_live" }, { text: "🛑 Stop Live Run", callback_data: "cmd_stop_live" }],
-            [{ text: "📊 Stats", callback_data: "cmd_stats" }, { text: "📸 Gallery", callback_data: "cmd_gallery_start" }],
-            [{ text: "📣 Broadcast", callback_data: "cmd_broadcast_start" }, { text: "🎂 Birthdays", callback_data: "cmd_birthdays" }],
-            [{ text: "📥 Export Data", callback_data: "cmd_export" }, { text: "📉 Growth", callback_data: "cmd_growth" }]
+            [{ text: "📊 Run Stats", callback_data: "cmd_stats" }, { text: "📋 List All Runs", callback_data: "cmd_runs" }],
+            [{ text: "📥 Export Excel", callback_data: "cmd_export" }, { text: "📲 WhatsApp Blast", callback_data: "cmd_blast" }],
+            [{ text: "📝 Survey Link", callback_data: "cmd_survey" }, { text: "🎂 Birthdays", callback_data: "cmd_birthdays" }],
+            [{ text: "🔍 Runner Lookup", callback_data: "cmd_lookup_start" }, { text: "📣 Broadcast", callback_data: "cmd_broadcast_start" }],
+            [{ text: "📈 Growth Graph", callback_data: "cmd_growth" }, { text: "✏️ Edit a Run", callback_data: "cmd_edit_list" }],
+            [{ text: "📸 Add to Gallery", callback_data: "cmd_gallery_start" }, { text: "🛍️ VIP Shop Admin", callback_data: "cmd_shop_menu" }],
+            [{ text: "🚫 Cancel a Run", callback_data: "cmd_cancel_list" }, { text: "🗑️ Delete a Run", callback_data: "cmd_delete_list" }],
+            liveButton,
+            [{ text: "🆕 Create New Run ", callback_data: "create_step1" }]
         ]
     };
     await sendMessage(chatId, msg, replyMarkup);
