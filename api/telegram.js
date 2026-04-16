@@ -112,16 +112,6 @@ async function checkBirthdays(chatId) {
 
 // ─── MENU ─────────────────────────────────────────────────────────────────────
 async function sendMenu(chatId, msg = "🏠 *Stride Rite Admin V4*\nWhat would you like to manage today?") {
-    let isActive = false;
-    try {
-        const tracks = await dbGet('live_tracks', 'id=eq.admin');
-        isActive = (tracks && tracks.length > 0) ? tracks[0].is_active : false;
-    } catch (e) { console.error("Menu state check failed", e); }
-    
-    const liveButton = isActive 
-        ? [{ text: "🛑 Stop Live Run", callback_data: "cmd_stop_live" }]
-        : [{ text: "🚀 Start Live Run", callback_data: "cmd_start_live" }];
-
     const replyMarkup = {
         inline_keyboard: [
             [{ text: "📊 Run Stats", callback_data: "cmd_stats" }, { text: "📋 List All Runs", callback_data: "cmd_runs" }],
@@ -131,7 +121,6 @@ async function sendMenu(chatId, msg = "🏠 *Stride Rite Admin V4*\nWhat would y
             [{ text: "📈 Growth Graph", callback_data: "cmd_growth" }, { text: "✏️ Edit a Run", callback_data: "cmd_edit_list" }],
             [{ text: "📸 Add to Gallery", callback_data: "cmd_gallery_start" }, { text: "🛍️ VIP Shop Admin", callback_data: "cmd_shop_menu" }],
             [{ text: "🚫 Cancel a Run", callback_data: "cmd_cancel_list" }, { text: "🗑️ Delete a Run", callback_data: "cmd_delete_list" }],
-            liveButton,
             [{ text: "🆕 Create New Run ", callback_data: "create_step1" }]
         ]
     };
@@ -262,33 +251,6 @@ async function handleShopMenu(chatId) {
     await sendMessage(chatId, text, replyMarkup);
 }
 
-// ─── LIVE TRACKING ──────────────────────────────────────────────────────────
-async function handleStartLiveRun(chatId) {
-    const text = "🚀 *Stride Rite Live Tracker*\n\nWhen you're ready to start the community run, click the button below to share your **Live Location**. \n\nI will then broadcast your movement to the dashboard for 1 hour!";
-    const replyMarkup = {
-        keyboard: [[{ text: "📍 Share My Live Location", request_location: true }], [{ text: "↩️ Cancel" }]],
-        resize_keyboard: true,
-        one_time_keyboard: true
-    };
-    await sendMessage(chatId, text, replyMarkup);
-}
-
-async function handleStopLiveRun(chatId) {
-    await dbUpsert('live_tracks', { id: 'admin', is_active: false, updated_at: new Date().toISOString() });
-    await sendMessage(chatId, "🛑 *Live Run Ended.*\n\nThe map on the dashboard has been hidden. Great work today, Runner!", { remove_keyboard: true });
-    await sendMenu(chatId);
-}
-
-async function updateLiveLocation(chatId, location) {
-    const { latitude, longitude } = location;
-    await dbUpsert('live_tracks', { 
-        id: 'admin', 
-        is_active: true, 
-        lat: latitude, 
-        lng: longitude, 
-        updated_at: new Date().toISOString() 
-    });
-}
 
 async function handleShopToggle(chatId, newStateStr) {
     const newState = newStateStr === "true";
@@ -961,8 +923,6 @@ export default async function handler(req, res) {
             else if (data.startsWith('shop_appr_')) await handleShopOrderApprove(chatId, data.replace('shop_appr_', ''), cq.message.message_id, !!cq.message.photo);
             else if (data.startsWith('shop_rej_')) await handleShopOrderReject(chatId, data.replace('shop_rej_', ''), cq.message.message_id, !!cq.message.photo);
             else if (data === 'cmd_shop_export') await handleShopExportOrders(chatId);
-            else if (data === 'cmd_start_live') await handleStartLiveRun(chatId);
-            else if (data === 'cmd_stop_live') await handleStopLiveRun(chatId);
             else if (data === 'cmd_shop_prd_menu') await handleShopProductMenu(chatId);
             else if (data === 'cmd_shop_prd_add') await handleShopProductAdd(chatId);
             else if (data.startsWith('shop_prd_edit_mn_')) await handleShopProductEditMenu(chatId, data.replace('shop_prd_edit_mn_', ''));
@@ -1032,24 +992,6 @@ export default async function handler(req, res) {
             res.status(200).send('ok'); return;
         }
 
-        // Handle regular location sharing
-        if (body.message && body.message.location) {
-            const chatId = body.message.chat.id.toString();
-            if (chatId === ADMIN_CHAT_ID) {
-                await updateLiveLocation(chatId, body.message.location);
-                await sendMessage(chatId, "📍 *Live Tracking Active!*\n\nI am now broadcasting your location to the Member Dashboard. \n\n🛑 Click */stop\_live* in the menu when finished.", { remove_keyboard: true });
-            }
-            res.status(200).send('ok'); return;
-        }
-
-        // Handle LIVE location updates (these come as edited_message)
-        if (body.edited_message && body.edited_message.location) {
-            const chatId = body.edited_message.chat.id.toString();
-            if (chatId === ADMIN_CHAT_ID) {
-                await updateLiveLocation(chatId, body.edited_message.location);
-            }
-            res.status(200).send('ok'); return;
-        }
 
         if (!body.message || !body.message.text) { res.status(200).send('ok'); return; }
         const chatId = body.message.chat.id.toString();
@@ -1127,7 +1069,6 @@ export default async function handler(req, res) {
             else if (cmd === '/growth') await handleGrowthGraph(chatId);
             else if (cmd === '/lookup') await handleLookupStart(chatId);
             else if (cmd === '/broadcast') await handleBroadcastStart(chatId);
-            else if (cmd === '/stop_live') await handleStopLiveRun(chatId);
             else if (cmd === '/cancel') await handleCancelList(chatId);
             else if (cmd === '/delete') await handleDeleteList(chatId);
             else if (cmd === '/create') await createStep1(chatId);
