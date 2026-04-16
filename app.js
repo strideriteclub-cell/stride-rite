@@ -151,5 +151,22 @@ const AppService = {
     }
 };
 
+// --- UTILS ---
+const Utils = {
+    animateNumber: (el, start, end, duration = 1000) => {
+        if (!el) return;
+        let startTimestamp = null;
+        const step = (timestamp) => {
+            if (!startTimestamp) startTimestamp = timestamp;
+            const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+            const value = progress * (end - start) + start;
+            el.innerText = end % 1 === 0 ? Math.floor(value) : value.toFixed(1);
+            if (progress < 1) window.requestAnimationFrame(step);
+        };
+        window.requestAnimationFrame(step);
+    }
+};
+
 window.AuthService = AuthService;
 window.AppService = AppService;
+window.Utils = Utils;
