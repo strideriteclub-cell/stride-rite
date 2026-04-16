@@ -125,7 +125,7 @@ async function sendMenu(chatId, msg = "👟 *Stride Rite Admin Bot*\nHey Haleem!
     });
 }
 
-// ─── GALLERY UPLOAD ──────────────────────────────────────────────────────────
+// ─── GALLERY ─────────────────────────────────────────────────────────────────
 async function handleGalleryStart(chatId) {
     const runs = await dbGet('stride_runs');
     const buttons = (runs || []).map(r => {
@@ -142,7 +142,7 @@ async function handleGalleryRunPicked(chatId, runLabel) {
     const label = runLabel === 'general' ? '' : decodeURIComponent(runLabel);
     await setSession('waiting_gallery_photo', { runLabel: label });
     const msg = label
-        ? `✅ Run: *${label}*\n\n📸 Now *send the photo*! You can add a caption too (just type it in the caption field when sending).\n\nSend one photo at a time.`
+        ? `✅ Run: *${label}*\n\n📸 Now *send the photo*! You can add a caption too.\n\nSend one photo at a time.`
         : `📸 *Send the photo now!* You can add a caption too.\n\nSend one photo at a time.`;
     await sendMessage(chatId, msg);
 }
@@ -152,69 +152,44 @@ async function handleGalleryPhoto(chatId, message, session) {
     const fileId = photos[photos.length - 1].file_id;
     const caption = message.caption || '';
     const runLabel = session.data.runLabel || '';
-
     await sendMessage(chatId, "⏳ Uploading photo...");
-
-    // Get file path from Telegram
     const fileRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getFile?file_id=${fileId}`);
     const fileData = await fileRes.json();
     const filePath = fileData.result?.file_path;
     if (!filePath) { await sendMessage(chatId, "❌ Couldn't get the file from Telegram."); return; }
-
-    // Download the photo
     const imgRes = await fetch(`https://api.telegram.org/file/bot${BOT_TOKEN}/${filePath}`);
     if (!imgRes.ok) { await sendMessage(chatId, "❌ Failed to download photo."); return; }
     const imgBuffer = await imgRes.arrayBuffer();
-
-    // Upload to Supabase Storage
     const fileName = `${Date.now()}.jpg`;
     const uploadRes = await fetch(`${SUPABASE_URL}/storage/v1/object/gallery/${fileName}`, {
         method: 'POST',
-        headers: {
-            'apikey': SUPABASE_KEY,
-            'Authorization': `Bearer ${SUPABASE_KEY}`,
-            'Content-Type': 'image/jpeg',
-        },
+        headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'image/jpeg' },
         body: imgBuffer
     });
-
     if (!uploadRes.ok) {
         const errText = await uploadRes.text();
         await sendMessage(chatId, `❌ Storage upload failed: ${errText}`);
         return;
     }
-
     const publicUrl = `${SUPABASE_URL}/storage/v1/object/public/gallery/${fileName}`;
-
-    // Save to gallery_photos table
     await dbInsert('gallery_photos', { run_label: runLabel || null, photo_url: publicUrl, caption });
-
-    // ── Rolling 150-photo limit: delete oldest if over cap ──────────────────
     const allPhotos = await dbGet('gallery_photos', 'order=uploaded_at.asc&select=id,photo_url');
     if (allPhotos && allPhotos.length > 150) {
-        const toDelete = allPhotos.slice(0, allPhotos.length - 150); // oldest ones
+        const toDelete = allPhotos.slice(0, allPhotos.length - 150);
         for (const old of toDelete) {
             const oldFileName = old.photo_url.split('/public/gallery/')[1];
             if (oldFileName) {
-                await fetch(`${SUPABASE_URL}/storage/v1/object/gallery/${oldFileName}`, {
-                    method: 'DELETE', headers: dbHeaders
-                });
+                await fetch(`${SUPABASE_URL}/storage/v1/object/gallery/${oldFileName}`, { method: 'DELETE', headers: dbHeaders });
             }
-            await fetch(`${SUPABASE_URL}/rest/v1/gallery_photos?id=eq.${old.id}`, {
-                method: 'DELETE', headers: dbHeaders
-            });
+            await fetch(`${SUPABASE_URL}/rest/v1/gallery_photos?id=eq.${old.id}`, { method: 'DELETE', headers: dbHeaders });
         }
     }
-
     const totalNow = Math.min((allPhotos?.length || 1), 150);
-    const autoDeletedMsg = allPhotos && allPhotos.length > 150
-        ? `\n♻️ _Oldest photo auto-removed to stay within 150 limit_` : '';
-
+    const autoDeletedMsg = allPhotos && allPhotos.length > 150 ? `\n♻️ _Oldest photo auto-removed to stay within 150 limit_` : '';
     await sendMessage(chatId,
         `✅ *Photo added to gallery!*\n\n🎨 Caption: ${caption || '_none_'}\n🏃 Run: ${runLabel || 'General'}\n📸 Gallery: ${totalNow}/150 photos${autoDeletedMsg}\n\nSend another photo or go back to menu.`,
         { inline_keyboard: [[{ text: "📸 Add Another", callback_data: `gallery_run_${runLabel ? encodeURIComponent(runLabel) : 'general'}` }], [{ text: "↩️ Menu", callback_data: "cmd_menu" }]] }
     );
-    // Keep session for another photo
 }
 
 async function handleGalleryDeleteList(chatId) {
@@ -245,17 +220,11 @@ async function handleGalleryDeleteExecute(chatId, photoId) {
     const photos = await dbGet('gallery_photos', `id=eq.${photoId}`);
     if (photos && photos.length > 0) {
         const photoUrl = photos[0].photo_url;
-        // Delete from storage
         const fileName = photoUrl.split('/public/gallery/')[1];
         if (fileName) {
-            await fetch(`${SUPABASE_URL}/storage/v1/object/gallery/${fileName}`, {
-                method: 'DELETE', headers: dbHeaders
-            });
+            await fetch(`${SUPABASE_URL}/storage/v1/object/gallery/${fileName}`, { method: 'DELETE', headers: dbHeaders });
         }
-        // Delete from DB
-        await fetch(`${SUPABASE_URL}/rest/v1/gallery_photos?id=eq.${photoId}`, {
-            method: 'DELETE', headers: dbHeaders
-        });
+        await fetch(`${SUPABASE_URL}/rest/v1/gallery_photos?id=eq.${photoId}`, { method: 'DELETE', headers: dbHeaders });
     }
     await sendMessage(chatId, "✅ *Photo deleted from gallery!*");
     await sendMenu(chatId, "What else?");
@@ -265,11 +234,8 @@ async function handleGalleryDeleteExecute(chatId, photoId) {
 async function handleShopMenu(chatId) {
     const settings = await dbGet('shop_settings');
     const isShopOpen = (settings && settings.length > 0) ? settings[0].is_open : false;
-    
-    // Status text
-    const statusText = isShopOpen ? "🟢 *OPEN* (Visible to everyone)" : "🔴 *CLOSED* (Hidden, Merch Dropping Soon text)";
+    const statusText = isShopOpen ? "🟢 *OPEN* (Visible to everyone)" : "🔴 *CLOSED* (Hidden)";
     const toggleText = isShopOpen ? "🔴 Hide Shop / Turn Off" : "🟢 Open Shop / Turn On";
-
     await sendMessage(chatId, `🛍️ *VIP Shop Admin*\n\nCurrent Status: ${statusText}`, {
         inline_keyboard: [
             [{ text: toggleText, callback_data: `shop_toggle_${!isShopOpen}` }],
@@ -283,29 +249,20 @@ async function handleShopMenu(chatId) {
 async function handleShopToggle(chatId, newStateStr) {
     const newState = newStateStr === "true";
     const settings = await dbGet('shop_settings');
-    
     if (settings && settings.length > 0) {
-        // Update
         await fetch(`${SUPABASE_URL}/rest/v1/shop_settings?id=eq.${settings[0].id}`, {
-            method: 'PATCH',
-            headers: dbHeaders,
-            body: JSON.stringify({ is_open: newState })
+            method: 'PATCH', headers: dbHeaders, body: JSON.stringify({ is_open: newState })
         });
     } else {
-        // Insert
         await dbInsert('shop_settings', { id: crypto.randomUUID(), is_open: newState });
     }
-    
     await sendMessage(chatId, newState ? "✅ Shop is now *LIVE* to the community!" : "🚫 Shop is now *HIDDEN*.");
     await handleShopMenu(chatId);
 }
 
-// Order Actions
 async function handleShopOrderApprove(chatId, orderId) {
-    // We will replace #EMAILJS_SERVICE_ID# shortly!
     await updateOrderStatusAndEmail(chatId, orderId, 'approved', 'template_qgow76l');
 }
-
 async function handleShopOrderReject(chatId, orderId) {
     await updateOrderStatusAndEmail(chatId, orderId, 'rejected', 'template_59dgsfw');
 }
@@ -313,36 +270,27 @@ async function handleShopOrderReject(chatId, orderId) {
 function formatWhatsAppPhone(phone) {
     if (!phone) return '';
     let p = phone.replace(/[^\d]/g, '');
-    if (p.startsWith('0')) p = '20' + p.substring(1); // Handle Egyptian 01... -> 201...
+    if (p.startsWith('0')) p = '20' + p.substring(1);
     return p;
 }
 
 async function updateOrderStatusAndEmail(chatId, orderId, newStatus, templateId) {
     await sendMessage(chatId, `⏳ Processing ${newStatus} for order...`);
-    
-    // Get Order
     const orders = await dbGet('shop_orders', `id=eq.${orderId}`);
-    if(!orders || orders.length===0) return;
+    if (!orders || orders.length === 0) { await sendMessage(chatId, "❌ Order not found."); return; }
     const order = orders[0];
-
-    // Get Item and User info
     const items = await dbGet('shop_items', `id=eq.${order.item_id}`);
-    const itemName = (items && items.length>0)?items[0].name:'Item';
-    const itemPrice = (items && items.length>0)?items[0].price:'0';
-
+    const itemName = (items && items.length > 0) ? items[0].name : 'Item';
+    const itemPrice = (items && items.length > 0) ? items[0].price : '0';
     const users = await dbGet('stride_users', `id=eq.${order.user_id}`);
-    const userEmail = (users && users.length>0)?users[0].email:'';
-    const userNameFull = (users && users.length>0)?users[0].name:'Runner';
+    const userEmail = (users && users.length > 0) ? users[0].email : '';
+    const userNameFull = (users && users.length > 0) ? users[0].name : 'Runner';
     const userName = userNameFull.split(' ')[0];
 
-    // Update DB
     await fetch(`${SUPABASE_URL}/rest/v1/shop_orders?id=eq.${orderId}`, {
-        method: 'PATCH',
-        headers: dbHeaders,
-        body: JSON.stringify({ status: newStatus })
+        method: 'PATCH', headers: dbHeaders, body: JSON.stringify({ status: newStatus })
     });
 
-    // Fire EmailJS via REST API
     let emailSent = false;
     try {
         const emailRes = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
@@ -353,22 +301,14 @@ async function updateOrderStatusAndEmail(chatId, orderId, newStatus, templateId)
                 template_id: templateId,
                 user_id: 'GBTxpiwg_SF7bN2tH',
                 accessToken: '9yAc3NjCBB5wATwThsv6U',
-                template_params: {
-                    to_name: userName,
-                    to_email: userEmail,
-                    price: itemPrice,
-                    item_name: itemName,
-                    item_size: order.size
-                }
+                template_params: { to_name: userName, to_email: userEmail, price: itemPrice, item_name: itemName, item_size: order.size }
             })
         });
         emailSent = emailRes.ok;
-    } catch(e) { console.error("EmailJS fail", e); }
+    } catch (e) { console.error("EmailJS fail", e); }
 
-    // Send Admin Confirmation + WhatsApp Link
     const statusEmoji = newStatus === 'approved' ? '✅' : '❌';
     const statusText = newStatus.toUpperCase();
-    
     const waPhone = formatWhatsAppPhone(order.phone_number);
     const waMsg = encodeURIComponent(`Hey ${userName}! 👋 Your Stride Rite order for the ${itemName} has been ${statusText} ${statusEmoji}.\n\nSee you at the next run! 🏃‍♂️💨`);
     const waUrl = `https://wa.me/${waPhone}?text=${waMsg}`;
@@ -380,50 +320,40 @@ async function updateOrderStatusAndEmail(chatId, orderId, newStatus, templateId)
         ]
     };
 
-    let finalMsg = `📦 Order for *${itemName}* marked as *${statusText}* ${statusEmoji}.\n👤 *Runner:* ${userNameFull}`;
+    let finalMsg = `📦 Order for *${itemName}* marked as *${statusText}* ${statusEmoji}.\n👤 *Runner:* ${userNameFull}\n📏 *Size:* ${order.size}\n💰 *Price:* ${itemPrice} EGP`;
     if (!emailSent) finalMsg += `\n\n⚠️ _Note: Email failed to send, but status is updated._`;
     else finalMsg += `\n📧 _Email notification sent!_`;
 
     await sendMessage(chatId, finalMsg, replyMarkup);
 }
 
-// Export Orders
 async function handleShopExportOrders(chatId) {
-    await sendMessage(chatId, "⏳ Compiling orders into Excel sheet...");
-    
+    await sendMessage(chatId, "⏳ Compiling orders...");
     const orders = await dbGet('shop_orders');
     const items = await dbGet('shop_items');
     const users = await dbGet('stride_users');
-
-    let csv = "Date,Customer Name,Phone,Email,Item,Size,Price,Status,Reference Number,Delivery Status\n";
-    
+    let csv = "Date,Customer Name,Phone,Email,Item,Size,Price,Status,Reference Number\n";
     for (const o of (orders || [])) {
-        const item = (items||[]).find(i => i.id === o.item_id) || {};
-        const user = (users||[]).find(u => u.id === o.user_id) || {};
-        csv += `"${new Date(o.created_at).toLocaleDateString()}","${user.name||'Unknown'}","${o.phone_number||''}","${user.email||''}","${item.name||'Unknown'}","${o.size}","${item.price||''}","${o.status}","${o.receipt_ref}","${o.is_delivered?'Delivered':'Pending'}"\n`;
+        const item = (items || []).find(i => i.id === o.item_id) || {};
+        const user = (users || []).find(u => u.id === o.user_id) || {};
+        csv += `"${new Date(o.created_at).toLocaleDateString()}","${user.name || 'Unknown'}","${o.phone_number || ''}","${user.email || ''}","${item.name || 'Unknown'}","${o.size}","${item.price || ''}","${o.status}","${o.receipt_ref || ''}"\n`;
     }
-
     const formData = new FormData();
     formData.append('chat_id', chatId);
-    formData.append('document', new Blob([csv], {type: 'text/csv'}), `StrideRite_Shop_Orders.csv`);
-    formData.append('caption', `📦 Here is the full list of Shop Orders!`);
-    
+    formData.append('document', new Blob([csv], { type: 'text/csv' }), `StrideRite_Shop_Orders.csv`);
+    formData.append('caption', `📦 Here is the full list of Shop Orders (${(orders || []).length} total).`);
     await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendDocument`, { method: 'POST', body: formData });
 }
 
-// Product Management Start
 async function handleShopProductMenu(chatId) {
     const items = await dbGet('shop_items');
     const buttons = [];
-    
     (items || []).forEach(item => {
         const icon = item.is_active ? '🟢' : '🔴';
         buttons.push([{ text: `${icon} ${item.name} (${item.price} EGP)`, callback_data: `shop_prd_edit_mn_${item.id}` }]);
     });
-    
     buttons.push([{ text: "➕ Add New Product", callback_data: "cmd_shop_prd_add" }]);
     buttons.push([{ text: "↩️ Back to Shop Admin", callback_data: "cmd_shop_menu" }]);
-
     await sendMessage(chatId, "👕 *Manage Products*\n\nHere are the items currently in your store:", { inline_keyboard: buttons });
 }
 
@@ -431,39 +361,33 @@ async function uploadShopPhoto(chatId, message) {
     const photos = message.photo;
     const fileId = photos[photos.length - 1].file_id;
     await sendMessage(chatId, "⏳ Uploading photo to VIP Shop cloud...");
-
     const fileRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getFile?file_id=${fileId}`);
     const fileData = await fileRes.json();
     const filePath = fileData.result?.file_path;
     if (!filePath) return null;
-
     const imgRes = await fetch(`https://api.telegram.org/file/bot${BOT_TOKEN}/${filePath}`);
     if (!imgRes.ok) return null;
     const imgBuffer = await imgRes.arrayBuffer();
-
     const fileName = `shop_${Date.now()}.jpg`;
     const uploadRes = await fetch(`${SUPABASE_URL}/storage/v1/object/gallery/${fileName}`, {
         method: 'POST',
         headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'image/jpeg' },
         body: imgBuffer
     });
-
     if (!uploadRes.ok) return null;
     return `${SUPABASE_URL}/storage/v1/object/public/gallery/${fileName}`;
 }
 
 async function handleShopProductAdd(chatId) {
     await setSession('shop_add_item', { step: 'name' });
-    await sendMessage(chatId, "🛍️ *Add New Product (Step 1/4)*\n\nWhat is the name of this product? (e.g., 'Official Midnight Runner Tee')");
+    await sendMessage(chatId, "🛍️ *Add New Product (Step 1/4)*\n\nWhat is the name of this product?");
 }
 
 async function handleShopProductEditMenu(chatId, productId) {
     const items = await dbGet('shop_items', `id=eq.${productId}`);
     if (!items || items.length === 0) return;
     const item = items[0];
-
     const statusObj = item.is_active ? { icon: '🔴', text: 'Hide Product', val: false } : { icon: '🟢', text: 'Show Product', val: true };
-
     const buttons = [
         [{ text: "✏️ Edit Name", callback_data: `shop_prd_upd_name_${item.id}` }],
         [{ text: "✏️ Edit Price", callback_data: `shop_prd_upd_price_${item.id}` }],
@@ -473,28 +397,23 @@ async function handleShopProductEditMenu(chatId, productId) {
         [{ text: "🗑️ Delete Product", callback_data: `shop_prd_del_${item.id}` }],
         [{ text: "↩️ Back to Products", callback_data: "cmd_shop_prd_menu" }]
     ];
-
     await sendMessage(chatId, `🛠️ *Edit Product: ${item.name}*\n\nPrice: ${item.price} EGP\nSizes: ${item.sizes}\nStatus: ${item.is_active ? 'Live 🟢' : 'Hidden 🔴'}\n\nWhat would you like to change?`, { inline_keyboard: buttons });
 }
 
 async function handleShopProductUpdateField(chatId, productId, fieldStr) {
     await setSession('shop_edit_item', { productId, field: fieldStr });
-    
     let msg = "";
     if (fieldStr === 'name') msg = "✏️ Send the new *Name*:";
     if (fieldStr === 'price') msg = "✏️ Send the new *Price* (e.g. 300):";
     if (fieldStr === 'sizes') msg = "✏️ Send the new *Sizes* (e.g. S, M, L, XL):";
     if (fieldStr === 'photo') msg = "📸 Send the *new photo* directly in this chat:";
-
     await sendMessage(chatId, msg);
 }
 
 async function handleShopProductToggle(chatId, dataStr) {
-    // format: `shop_prd_tgl_UUID_true`
     const parts = dataStr.split('_');
     const newState = parts.pop() === "true";
     const productId = parts.join('_');
-
     await fetch(`${SUPABASE_URL}/rest/v1/shop_items?id=eq.${productId}`, {
         method: 'PATCH', headers: dbHeaders, body: JSON.stringify({ is_active: newState })
     });
@@ -503,13 +422,10 @@ async function handleShopProductToggle(chatId, dataStr) {
 }
 
 async function handleShopProductDelete(chatId, productId) {
-    await fetch(`${SUPABASE_URL}/rest/v1/shop_items?id=eq.${productId}`, {
-        method: 'DELETE', headers: dbHeaders
-    });
+    await fetch(`${SUPABASE_URL}/rest/v1/shop_items?id=eq.${productId}`, { method: 'DELETE', headers: dbHeaders });
     await sendMessage(chatId, `🗑️ ✅ Product permanently deleted.`);
     await handleShopProductMenu(chatId);
 }
-
 
 // ─── EDIT RUN ──────────────────────────────────────────────────────────────
 async function handleEditList(chatId) {
@@ -628,8 +544,6 @@ async function handleGrowthGraph(chatId) {
     await sendMessage(chatId, "📈 Generating growth graph...");
     const users = await dbGet('stride_users');
     if (!users || users.length === 0) { await sendMessage(chatId, "❌ No members yet."); return; }
-
-    // Group by month using created_at
     const monthCounts = {};
     const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
     users.forEach(u => {
@@ -639,10 +553,8 @@ async function handleGrowthGraph(chatId) {
         const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
         monthCounts[key] = (monthCounts[key] || 0) + 1;
     });
-
     const keys = Object.keys(monthCounts).sort();
     if (keys.length === 0) { await sendMessage(chatId, "❌ No registration dates found."); return; }
-
     const labels = keys.map(k => {
         const [y, m] = k.split('-');
         return `${monthNames[parseInt(m)-1]} '${y.slice(2)}`;
@@ -651,38 +563,18 @@ async function handleGrowthGraph(chatId) {
     const data = keys.map(k => { cumulative += monthCounts[k]; return cumulative; });
     const newThisMonth = monthCounts[keys[keys.length-1]] || 0;
     const totalMembers = data[data.length-1];
-
     const chartConfig = {
         type: 'line',
         data: {
             labels,
-            datasets: [{
-                label: 'Total Members',
-                data,
-                borderColor: '#7c6ffa',
-                backgroundColor: 'rgba(88,74,220,0.15)',
-                fill: true,
-                tension: 0.4,
-                pointBackgroundColor: '#ff9e6d',
-                pointBorderColor: '#ff9e6d',
-                pointRadius: 6,
-                borderWidth: 3
-            }]
+            datasets: [{ label: 'Total Members', data, borderColor: '#7c6ffa', backgroundColor: 'rgba(88,74,220,0.15)', fill: true, tension: 0.4, pointBackgroundColor: '#ff9e6d', pointRadius: 6, borderWidth: 3 }]
         },
         options: {
-            plugins: {
-                legend: { display: false },
-                title: { display: true, text: '🏃 Stride Rite — Community Growth', color: '#ffffff', font: { size: 16, weight: 'bold' } }
-            },
-            scales: {
-                y: { beginAtZero: true, ticks: { color: '#a1a1aa', stepSize: 1 }, grid: { color: 'rgba(255,255,255,0.08)' } },
-                x: { ticks: { color: '#a1a1aa' }, grid: { display: false } }
-            }
+            plugins: { legend: { display: false }, title: { display: true, text: '🏃 Stride Rite — Community Growth', color: '#ffffff', font: { size: 16, weight: 'bold' } } },
+            scales: { y: { beginAtZero: true, ticks: { color: '#a1a1aa', stepSize: 1 }, grid: { color: 'rgba(255,255,255,0.08)' } }, x: { ticks: { color: '#a1a1aa' }, grid: { display: false } } }
         }
     };
-
     const chartUrl = `https://quickchart.io/chart?c=${encodeURIComponent(JSON.stringify(chartConfig))}&backgroundColor=%23141419&width=700&height=380`;
-
     await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -768,7 +660,7 @@ async function handleSurvey(chatId) {
 // ─── RUNNER LOOKUP ────────────────────────────────────────────────────────────
 async function handleLookupStart(chatId) {
     await setSession('waiting_lookup_name');
-    await sendMessage(chatId, "🔍 *Runner Lookup*\n\nType the runner's name (or part of it) and I'll find them:");
+    await sendMessage(chatId, "🔍 *Runner Lookup*\n\nType the runner's name (or part of it):");
 }
 
 async function handleLookup(chatId, query) {
@@ -798,7 +690,7 @@ async function handleLookup(chatId, query) {
 🏃 ${u.level}
 
 📋 *Run History (${allRegs ? allRegs.length : 0} runs):*
-${history || '  No runs yet'}` );
+${history || '  No runs yet'}`);
     }
 }
 
@@ -816,7 +708,6 @@ async function handleBroadcast(chatId, message) {
     const subject = encodeURIComponent('Message from Stride Rite 🏃');
     const body = encodeURIComponent(message);
     const mailtoLink = `https://mail.google.com/mail/?view=cm&bcc=${encodeURIComponent(bccList)}&su=${subject}&body=${body}`;
-
     await sendMessage(chatId,
 `📣 *Broadcast Ready!*
 
@@ -828,7 +719,7 @@ async function handleBroadcast(chatId, message) {
 *All emails (copy these as BCC):*
 \`${bccList}\`
 
-👆 Copy the emails above and paste into BCC in Gmail, or tap the link below to open Gmail directly (on phone, tap & hold → open in browser):
+👆 Copy emails above and paste into BCC in Gmail:
 ${mailtoLink}`);
 }
 
@@ -849,24 +740,20 @@ async function handleCancelPick(chatId, runId) {
     await setSession('waiting_cancel_reason', { runId });
     const runs = await dbGet('stride_runs', `id=eq.${runId}`);
     const dt = runs[0]?.date_label.includes('||') ? runs[0].date_label.split('||')[0] : runs[0]?.date_label;
-    await sendMessage(chatId, `🚫 *Cancel: ${dt}*\n\nPlease type the reason for cancellation:\n(e.g., "Bad weather", "Venue unavailable")`);
+    await sendMessage(chatId, `🚫 *Cancel: ${dt}*\n\nPlease type the reason for cancellation:`);
 }
 
 async function handleCancelExecute(chatId, runId, reason) {
     await clearSession();
     await dbPatch('stride_runs', 'id', runId, { is_cancelled: true, cancel_reason: reason });
-
-    // Notify all registered runners via their emails (compile list)
     const regs = await dbGet('stride_registrations', `run_id=eq.${runId}`);
     const users = await dbGet('stride_users');
     const registeredEmails = (regs || []).map(r => {
         const u = (users || []).find(uu => uu.id === r.user_id);
         return u ? u.email : null;
     }).filter(Boolean);
-
     const runs = await dbGet('stride_runs', `id=eq.${runId}`);
     const dt = runs[0]?.date_label.includes('||') ? runs[0].date_label.split('||')[0] : runs[0]?.date_label;
-
     await sendMessage(chatId,
 `✅ *Run Cancelled!*
 
@@ -877,9 +764,8 @@ async function handleCancelExecute(chatId, runId, reason) {
 📣 *Notify them — copy into Gmail BCC:*
 \`${registeredEmails.join(',')}\`
 
-Suggested cancellation message:
-
-_Hey Striders! Unfortunately the ${dt} run has been cancelled due to ${reason}. We apologize for the inconvenience and look forward to seeing you at the next run! 💪_`);
+Suggested message:
+_Hey Striders! Unfortunately the ${dt} run has been cancelled due to ${reason}. We apologize and look forward to seeing you at the next run! 💪_`);
 }
 
 // ─── DELETE LIST ──────────────────────────────────────────────────────────────
@@ -985,7 +871,7 @@ async function createExecute(chatId) {
         await clearSession();
         await sendMessage(chatId, `🎉 *Run Created!*\n\n📅 ${fd}\n⏰ ${ft}\n📍 ${d.locationName}\n\nLive on the site now! 🚀`);
         await sendMenu(chatId, "What else do you want to do?");
-    } catch(e) {
+    } catch (e) {
         await sendMessage(chatId, "❌ Something went wrong. Try again from the menu.");
     }
 }
@@ -1075,19 +961,21 @@ export default async function handler(req, res) {
                     await handleGalleryPhoto(chatId, body.message, session);
                 } else if (session.state === 'shop_add_item' && session.data.step === 'photo') {
                     const imgUrl = await uploadShopPhoto(chatId, body.message);
-                    if (!imgUrl) { await sendMessage(chatId, "❌ Failed to upload photo."); return; }
-                    
+                    if (!imgUrl) { await sendMessage(chatId, "❌ Failed to upload photo."); res.status(200).send('ok'); return; }
                     await dbInsert('shop_items', {
-                        name: session.data.name, price: session.data.price, sizes: session.data.sizes,
-                        image_url: imgUrl, is_active: true
+                        id: crypto.randomUUID(),
+                        name: session.data.name,
+                        price: parseInt(session.data.price),
+                        sizes: session.data.sizes,
+                        image_url: imgUrl,
+                        is_active: true
                     });
                     await sendMessage(chatId, "✅ *Product successfully added to the VIP Shop!*");
                     await clearSession();
                     await handleShopProductMenu(chatId);
                 } else if (session.state === 'shop_edit_item' && session.data.field === 'photo') {
                     const imgUrl = await uploadShopPhoto(chatId, body.message);
-                    if (!imgUrl) { await sendMessage(chatId, "❌ Failed to upload photo."); return; }
-
+                    if (!imgUrl) { await sendMessage(chatId, "❌ Failed to upload photo."); res.status(200).send('ok'); return; }
                     await fetch(`${SUPABASE_URL}/rest/v1/shop_items?id=eq.${session.data.productId}`, {
                         method: 'PATCH', headers: dbHeaders, body: JSON.stringify({ image_url: imgUrl })
                     });
@@ -1108,7 +996,7 @@ export default async function handler(req, res) {
         const cmd = text.split(' ')[0].toLowerCase();
         const session = await getSession();
 
-        // Handle Product Addition Flow
+        // Product addition flow
         if (session.state === 'shop_add_item') {
             const step = session.data.step;
             if (step === 'name') {
@@ -1118,12 +1006,12 @@ export default async function handler(req, res) {
             }
             if (step === 'price') {
                 await setSession('shop_add_item', { ...session.data, step: 'sizes', price: text });
-                await sendMessage(chatId, "🛍️ *Add New Product (Step 3/4)*\n\nWhat sizes are available? (e.g., 'S, M, L, XL, XXL' or 'One Size')");
+                await sendMessage(chatId, "🛍️ *Add New Product (Step 3/4)*\n\nWhat sizes are available? (e.g., 'S, M, L, XL, XXL')");
                 res.status(200).send('ok'); return;
             }
             if (step === 'sizes') {
                 await setSession('shop_add_item', { ...session.data, step: 'photo', sizes: text });
-                await sendMessage(chatId, "🛍️ *Add New Product (Step 4/4)*\n\nReply with a *link to an image* for this product (e.g., a Supabase gallery link or Imgur).\n\n_(Photo upload directly via bot coming later, just paste a link for now!)_");
+                await sendMessage(chatId, "🛍️ *Add New Product (Step 4/4)*\n\n📸 Now send the *product photo* from your gallery:");
                 res.status(200).send('ok'); return;
             }
             if (step === 'photo') {
@@ -1132,17 +1020,16 @@ export default async function handler(req, res) {
             }
         }
 
-        // Handle Product Edit Flow (Text Fields)
+        // Product edit flow
         if (session.state === 'shop_edit_item') {
             const { productId, field } = session.data;
             if (field === 'photo') {
                 await sendMessage(chatId, "📸 Please send an *IMAGE* from your phone's gallery, not text.");
                 res.status(200).send('ok'); return;
             }
-
             const updateData = {};
-            updateData[field] = text;
-
+            if (field === 'price') updateData[field] = parseInt(text);
+            else updateData[field] = text;
             await fetch(`${SUPABASE_URL}/rest/v1/shop_items?id=eq.${productId}`, {
                 method: 'PATCH', headers: dbHeaders, body: JSON.stringify(updateData)
             });
@@ -1185,7 +1072,7 @@ export default async function handler(req, res) {
         }
 
         res.status(200).send('ok');
-    } catch(e) {
+    } catch (e) {
         console.error(e);
         res.status(500).send('Error');
     }
