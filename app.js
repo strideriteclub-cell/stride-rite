@@ -46,11 +46,19 @@ async function dbInsert(table, data) {
             headers: defaultHeaders,
             body: JSON.stringify(data)
         });
-        if (!res.ok) throw new Error(await res.text());
-        const result = await res.json();
-        return Array.isArray(result) ? result[0] : result;
+        if (!res.ok) {
+            const errBody = await res.text();
+            console.error(`DB Insert Error (${table}):`, errBody);
+            window.lastDbError = errBody; // Expose for UI
+            throw new Error(errBody);
+        }
+        if (res.status === 201) {
+            const result = await res.json();
+            return Array.isArray(result) ? result[0] : (result || true);
+        }
+        return true;
     } catch (e) {
-        console.error(`Error inserting into ${table}:`, e);
+        console.error(`Catch inserting into ${table}:`, e);
         return null;
     }
 }
@@ -119,8 +127,7 @@ const AuthService = {
             name, email, password,
             birthdate,
             age: calculateAge(birthdate),
-            gender, level, is_admin: false,
-            created_at: new Date().toISOString()
+            gender, level, is_admin: false
         };
         const inserted = await dbInsert('stride_users', newUser);
         if (inserted) {
@@ -202,8 +209,7 @@ const AppService = {
             run_id: runId,
             user_id: currentUser.id,
             distance: distance,
-            level: level,
-            registered_at: new Date().toISOString()
+            level: level
         };
         const result = await dbInsert('stride_registrations', newRegistration);
         if (result !== null) {
@@ -310,8 +316,7 @@ const AppService = {
             size: size,
             receipt_ref: refNumber,
             phone_number: phone,
-            status: 'pending',
-            created_at: new Date().toISOString()
+            status: 'pending'
         };
 
         console.log("Submitting order...", newOrder);
