@@ -260,11 +260,11 @@ async function handleShopToggle(chatId, newStateStr) {
     await handleShopMenu(chatId);
 }
 
-async function handleShopOrderApprove(chatId, orderId, messageId) {
-    await updateOrderStatusAndEmail(chatId, orderId, 'approved', 'template_qgow76l', messageId);
+async function handleShopOrderApprove(chatId, orderId, messageId, isPhoto) {
+    await updateOrderStatusAndEmail(chatId, orderId, 'approved', 'template_qgow76l', messageId, isPhoto);
 }
-async function handleShopOrderReject(chatId, orderId, messageId) {
-    await updateOrderStatusAndEmail(chatId, orderId, 'rejected', 'template_59dgsfw', messageId);
+async function handleShopOrderReject(chatId, orderId, messageId, isPhoto) {
+    await updateOrderStatusAndEmail(chatId, orderId, 'rejected', 'template_59dgsfw', messageId, isPhoto);
 }
 
 function formatWhatsAppPhone(phone) {
@@ -274,7 +274,7 @@ function formatWhatsAppPhone(phone) {
     return p;
 }
 
-async function updateOrderStatusAndEmail(chatId, orderId, newStatus, templateId, messageId) {
+async function updateOrderStatusAndEmail(chatId, orderId, newStatus, templateId, messageId, isPhoto) {
     const orders = await dbGet('shop_orders', `id=eq.${orderId}`);
     if (!orders || orders.length === 0) return;
     const order = orders[0];
@@ -306,16 +306,21 @@ async function updateOrderStatusAndEmail(chatId, orderId, newStatus, templateId,
 
     const text = `${statusEmoji} *Order ${newStatus.toUpperCase()}*\n\n*Customer:* ${user.name}\n*Item:* ${item.name}\n*Ref:* ${order.payment_detail || order.receipt_ref || order.reference || 'N/A'}`;
     
-    await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/editMessageText`, {
+    // Detect if we need to edit a CAPTION (photo message) or TEXT (normal message)
+    const method = isPhoto ? 'editMessageCaption' : 'editMessageText';
+    const payload = {
+        chat_id: chatId,
+        message_id: messageId,
+        parse_mode: 'Markdown',
+        reply_markup: { inline_keyboard: [[{ text: "📲 WhatsApp Customer", url: waUrl }], [{ text: "↩️ Back to Menu", callback_data: "cmd_menu" }]] }
+    };
+    if (isPhoto) payload.caption = text;
+    else payload.text = text;
+
+    await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/${method}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            chat_id: chatId,
-            message_id: messageId,
-            text: text,
-            parse_mode: 'Markdown',
-            reply_markup: { inline_keyboard: [[{ text: "📲 WhatsApp Customer", url: waUrl }], [{ text: "↩️ Back to Menu", callback_data: "cmd_menu" }]] }
-        })
+        body: JSON.stringify(payload)
     });
 }
 
@@ -909,8 +914,8 @@ export default async function handler(req, res) {
             else if (data.startsWith('gallery_del_')) await handleGalleryDeleteConfirm(chatId, data.replace('gallery_del_', ''));
             else if (data === 'cmd_shop_menu') await handleShopMenu(chatId);
             else if (data.startsWith('shop_toggle_')) await handleShopToggle(chatId, data.replace('shop_toggle_', ''));
-            else if (data.startsWith('shop_appr_')) await handleShopOrderApprove(chatId, data.replace('shop_appr_', ''), cq.message.message_id);
-            else if (data.startsWith('shop_rej_')) await handleShopOrderReject(chatId, data.replace('shop_rej_', ''), cq.message.message_id);
+            else if (data.startsWith('shop_appr_')) await handleShopOrderApprove(chatId, data.replace('shop_appr_', ''), cq.message.message_id, !!cq.message.photo);
+            else if (data.startsWith('shop_rej_')) await handleShopOrderReject(chatId, data.replace('shop_rej_', ''), cq.message.message_id, !!cq.message.photo);
             else if (data === 'cmd_shop_export') await handleShopExportOrders(chatId);
             else if (data === 'cmd_shop_prd_menu') await handleShopProductMenu(chatId);
             else if (data === 'cmd_shop_prd_add') await handleShopProductAdd(chatId);
