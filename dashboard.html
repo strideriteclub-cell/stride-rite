@@ -4,13 +4,30 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard | Stride Rite</title>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css?v=12">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        .advisor-card {
+            background: linear-gradient(135deg, rgba(88, 74, 220, 0.1), rgba(255, 139, 106, 0.05));
+            border: 1px solid rgba(88, 74, 220, 0.3);
+            border-radius: 20px; padding: 1.5rem; margin-bottom: 2.5rem;
+            display: flex; align-items: center; gap: 1.5rem; position: relative; overflow: hidden;
+        }
+        .advisor-icon-wrap { width: 60px; height: 60px; background: rgba(255,255,255,0.05); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2rem; border: 1px solid var(--neon-accent); }
+        .advisor-content { flex: 1; }
+        .advisor-title { font-family: 'Outfit'; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 2px; color: var(--neon-accent); font-weight: 800; margin-bottom: 0.5rem; }
+        .advisor-tip { font-size: 1.1rem; font-weight: 600; color: white; line-height: 1.4; }
+        .weather-meta { display: flex; gap: 1rem; margin-top: 0.8rem; font-size: 0.8rem; color: var(--text-muted); }
+        .weather-meta b { color: white; }
+    </style>
 </head>
 <body>
     <nav class="navbar">
-        <div class="logo">STRIDE RITE</div>
+        <div class="logo">
+            <div style="font-family:'Outfit'; font-weight:800; font-size:1.5rem;">S<span style="color:var(--peach-accent);">.</span></div>
+            <div style="font-family:'Outfit'; font-weight:800;">STRIDE RITE</div>
+        </div>
         <div class="nav-links">
             <a href="index.html" class="btn btn-secondary">🏠 Home</a>
             <a href="shop.html" class="btn btn-secondary">🛍 VIP Shop</a>
@@ -19,35 +36,83 @@
         </div>
     </nav>
 
-    <div style="padding:120px 5% 5rem;">
-        <h1 style="font-family:'Outfit'; font-size:2.5rem; margin-bottom:2rem;">Upcoming Community Runs</h1>
-        <div id="runsContainer" class="b-grid"></div>
+    <div class="main-container" style="padding: 100px 5% 5rem;">
+        <header class="animate-up" style="margin-bottom: 3rem;">
+            <h1 style="font-family:'Outfit'; font-size: 2.5rem; margin-bottom: 0.5rem;">Community Dashboard</h1>
+            <p id="welcomeUser" style="color: var(--text-muted); font-size: 1.1rem;"></p>
+        </header>
+
+        <div id="advisorContainer"></div>
+
+        <section>
+            <h2 style="font-family:'Outfit'; font-size: 1.5rem; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 10px;">🗓 Upcoming Runs</h2>
+            <div class="b-grid" id="runsContainer"></div>
+        </section>
     </div>
 
-    <script src="app.js"></script>
+    <script src="app.js?v=21"></script>
     <script>
         const user = AuthService.getCurrentUser();
         if (!user) window.location.href = 'index.html';
+        document.getElementById('welcomeUser').innerText = `Welcome back, ${user.name}!`;
 
-        async function render() {
-            const runs = await AppService.getRuns();
+        async function renderRuns() {
             const container = document.getElementById('runsContainer');
-            container.innerHTML = runs.map(r => `
+            const runs = await AppService.getRuns();
+            const myRegs = await AppService.getUserRegistrations(user.id);
+            
+            if(!runs || runs.length === 0) {
+                container.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 4rem; background: rgba(255,255,255,0.02); border-radius: 20px; color: var(--text-muted);">No runs scheduled this week.</div>`;
+                return;
+            }
+
+            container.innerHTML = runs.map(run => {
+                const isReg = myRegs.includes(run.id);
+                return `
                 <div class="glass-card" style="padding:2rem;">
-                    <div style="font-weight:800; font-size:1.5rem; font-family:'Outfit';">${r.date_label}</div>
-                    <div style="color:var(--peach-accent); margin-bottom:1.5rem;">📍 ${r.location}</div>
-                    <button class="btn btn-primary btn-block" onclick="join('${r.id}')">Register for Run</button>
-                </div>
-            `).join('');
+                    <div style="font-weight:800; font-size:1.5rem; font-family:'Outfit'; color: white;">${run.date_label}</div>
+                    <div style="color:var(--peach-accent); margin-bottom:1.5rem;">📍 ${run.location}</div>
+                    ${isReg ? `<button class="btn btn-secondary btn-block" disabled>✓ Registered</button>` : `<button class="btn btn-primary btn-block" onclick="joinRun('${run.id}')">Join Run</button>`}
+                </div>`;
+            }).join('');
+
+            if(runs.length > 0) loadAIAdvisor(runs[0]);
         }
 
-        window.join = (id) => {
-            Swal.fire({ title:'Registering...', background:'#141419', didOpen:()=>Swal.showLoading()});
-            AppService.registerForRun(id, '5K', 'Intermediate').then(() => {
-                Swal.fire({ icon:'success', title:'Registered!', background:'#141419' });
-            });
-        };
-        render();
+        async function loadAIAdvisor(run) {
+            const apiKey = '686edc30f7764d08ada12150261604';
+            try {
+                const res = await fetch(`https://api.weatherapi.com/v1/current.json?key=${apiKey}&q=${encodeURIComponent(run.location)}`);
+                const data = await res.json();
+                const cur = data.current;
+                const advice = getAIAdvice(cur.temp_c);
+                
+                document.getElementById('advisorContainer').innerHTML = `
+                <div class="advisor-card animate-up">
+                    <div class="advisor-icon-wrap"><img src="${cur.condition.icon}" style="width:40px;"></div>
+                    <div class="advisor-content">
+                        <div class="advisor-title">🌤 AI Run Advisor</div>
+                        <div class="advisor-tip">"${advice}"</div>
+                        <div class="weather-meta">
+                            <div>🌡 <b>${cur.temp_c}°C</b></div>
+                            <div>💨 <b>${cur.wind_kph}kph</b></div>
+                            <div>💧 <b>${cur.humidity}%</b></div>
+                            <div>📍 <i>${run.location}</i></div>
+                        </div>
+                    </div>
+                </div>`;
+            } catch (e) {}
+        }
+
+        function getAIAdvice(t) {
+            if (t > 32) return "🔥 Heat Alert! Hydrate aggressively and consider a slower pace.";
+            if (t > 28) return "🥵 Looking hot. Watch your heart rate today.";
+            if (t >= 15 && t <= 22) return "✨ Perfect Vibes! These are PR-breaking conditions.";
+            return "Solid conditions! Enjoy the community energy.";
+        }
+
+        window.joinRun = (rId) => AppService.registerForRun(rId, '5K', user.level).then(()=>renderRuns());
+        renderRuns();
     </script>
 </body>
 </html>
