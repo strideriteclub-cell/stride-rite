@@ -11,7 +11,7 @@ const defaultHeaders = {
 
 function generateUUID() {
     if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
         var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
         return v.toString(16);
     });
@@ -238,6 +238,80 @@ const AppService = {
         } catch (e) { console.error('Telegram alert failed', e); }
     },
 
+    sendApplicationNotification: async (runName, userName) => {
+        const botToken = '8682463984:AAHA2PWT7WtQRskETmOanj0k2b45ZgGfYIs';
+        const chatId = '1538316434';
+        const text = `🎉 *New Run Registration!*\n\n🏃‍♂️ *Runner:* ${userName}\n🗓 *Run:* ${runName}\n\n_Check the admin panel for details._`;
+        try {
+            await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ chat_id: chatId, text, parse_mode: 'Markdown' })
+            });
+        } catch (e) { console.error("Notification failed", e); }
+    }
+};
+
+// ─── LIVE TRACKER SERVICE ──────────────────────────────────────────────────
+const LiveTrackerService = {
+    map: null,
+    marker: null,
+    
+    init: async () => {
+        const container = document.getElementById('liveRunContainer');
+        if (!container) return;
+
+        // 1. Initial Load
+        const { data } = await supabase.from('live_tracks').select('*').eq('id', 'admin').single();
+        if (data && data.is_active) {
+            LiveTrackerService.showTracker(data.lat, data.lng);
+        }
+
+        // 2. Realtime Subscription
+        supabase.channel('custom-filter-channel')
+          .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'live_tracks', filter: 'id=eq.admin' }, (payload) => {
+              const state = payload.new;
+              if (state.is_active) {
+                  LiveTrackerService.showTracker(state.lat, state.lng);
+              } else {
+                  LiveTrackerService.hideTracker();
+              }
+          })
+          .subscribe();
+    },
+
+    showTracker: (lat, lng) => {
+        const container = document.getElementById('liveRunContainer');
+        container.style.display = 'block';
+
+        if (!LiveTrackerService.map) {
+            LiveTrackerService.map = L.map('liveMap').setView([lat, lng], 16);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                attribution: '&copy; OpenStreetMap &copy; CARTO'
+            }).addTo(LiveTrackerService.map);
+
+            LiveTrackerService.marker = L.marker([lat, lng]).addTo(LiveTrackerService.map);
+        } else {
+            LiveTrackerService.marker.setLatLng([lat, lng]);
+            LiveTrackerService.map.panTo([lat, lng]);
+        }
+    },
+
+    hideTracker: () => {
+        const container = document.getElementById('liveRunContainer');
+        if (container) container.style.display = 'none';
+        if (LiveTrackerService.map) {
+            LiveTrackerService.map.remove();
+            LiveTrackerService.map = null;
+        }
+    }
+};
+
+// Auto-init dashboard components
+if (document.getElementById('liveRunContainer')) {
+    LiveTrackerService.init();
+}
+
     getUserRegistrations: async (userId) => {
         const regs = await dbGet('stride_registrations', `user_id=eq.${userId}`);
         return regs.map(r => r.run_id);
@@ -315,13 +389,13 @@ const AppService = {
             size: size,
             payment_method: paymentMethod || 'InstaPay/Telda',
             payment_detail: refNumber,
-            phone_number: phone, 
+            phone_number: phone,
             status: 'pending'
         };
 
         console.log("Saving order to database...", newOrder);
         let result = await dbInsert('shop_orders', newOrder);
-        
+
         // Handle common schema fallback
         if (result === null && window.lastDbError && window.lastDbError.includes('receipt_ref')) {
             const fallbackOrder = { ...newOrder, receipt_ref: refNumber };
@@ -334,7 +408,7 @@ const AppService = {
 
             const botToken = '8682463984:AAHA2PWT7WtQRskETmOanj0k2b45ZgGfYIs';
             const chatId = '1538316434';
-            
+
             const caption = `🛍️ *NEW ORDER: ${item.name}*\n\n👤 *Customer:* ${currentUser.name}\n📧 *Email:* ${currentUser.email}\n📞 *Phone:* ${phone}\n📏 *Size:* ${size}\n💰 *Price:* ${item.price} EGP\n\n💳 *Method:* ${paymentMethod}\n🔢 *${paymentMethod} Ref:* \`${refNumber}\`\n\n👇 *Review and Approve:*`;
 
             const replyMarkup = JSON.stringify({
