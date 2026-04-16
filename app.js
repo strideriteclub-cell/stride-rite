@@ -313,13 +313,14 @@ const AppService = {
             user_id: currentUser.id,
             item_id: itemId,
             size: size,
-            receipt_ref: refNumber,
+            payment_method: 'InstaPay/Telda',
+            payment_detail: refNumber, // Map the Ref # to payment_detail
+            receipt_ref: refNumber,    // Keep for safety/legacy
             phone_number: phone, 
-            payment_method: 'InstaPay/Telda', // Added to satisfy DB constraint
             status: 'pending'
         };
 
-        console.log("Submitting order with payment method...", newOrder);
+        console.log("Submitting order with payment details...", newOrder);
         let result = await dbInsert('shop_orders', newOrder);
         
         // If it fails due to column name mismatch, try common fallbacks
