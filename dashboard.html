@@ -11,82 +11,22 @@
         .advisor-card {
             background: linear-gradient(135deg, rgba(88, 74, 220, 0.15), rgba(255, 139, 106, 0.05));
             border: 1px solid rgba(88, 74, 220, 0.3);
-            border-radius: 20px;
-            padding: 2rem;
-            margin-bottom: 2.5rem;
-            display: flex;
-            align-items: center;
-            gap: 2rem;
-            position: relative;
-            overflow: hidden;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            border-radius: 20px; padding: 2rem; margin-bottom: 2.5rem;
+            display: flex; align-items: center; gap: 2rem; position: relative; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.3);
         }
         .advisor-card::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
+            content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
             background: radial-gradient(circle, rgba(88, 74, 220, 0.1) 0%, transparent 70%);
-            animation: pulse 4s infinite alternate;
-            z-index: 0;
+            animation: pulse 4s infinite alternate; z-index: 0;
         }
-        .advisor-icon-wrap {
-            width: 80px;
-            height: 80px;
-            background: rgba(255,255,255,0.05);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 2.5rem;
-            z-index: 1;
-            border: 2px solid var(--neon-accent);
-        }
-        .advisor-content {
-            flex: 1;
-            z-index: 1;
-        }
-        .advisor-title {
-            font-family: 'Outfit';
-            font-size: 0.8rem;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            color: var(--neon-accent);
-            font-weight: 800;
-            margin-bottom: 0.5rem;
-        }
-        .advisor-tip {
-            font-size: 1.25rem;
-            font-weight: 600;
-            color: white;
-            line-height: 1.4;
-        }
-        .weather-meta {
-            display: flex;
-            gap: 1.5rem;
-            margin-top: 1rem;
-            z-index: 1;
-        }
-        .weather-item {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            font-size: 0.85rem;
-            color: var(--text-muted);
-        }
+        .advisor-icon-wrap { width: 80px; height: 80px; background: rgba(255,255,255,0.05); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2.5rem; z-index: 1; border: 2px solid var(--neon-accent); }
+        .advisor-content { flex: 1; z-index: 1; }
+        .advisor-title { font-family: 'Outfit'; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 2px; color: var(--neon-accent); font-weight: 800; margin-bottom: 0.5rem; }
+        .advisor-tip { font-size: 1.25rem; font-weight: 600; color: white; line-height: 1.4; }
+        .weather-meta { display: flex; gap: 1.5rem; margin-top: 1rem; z-index: 1; }
+        .weather-item { display: flex; align-items: center; gap: 5px; font-size: 0.85rem; color: var(--text-muted); }
         .weather-item b { color: white; }
-        
-        @keyframes pulse {
-            0% { opacity: 0.3; transform: scale(1); }
-            100% { opacity: 0.6; transform: scale(1.1); }
-        }
-        .animate-up { animation: fadeInUp 0.6s ease-out forwards; }
-        @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
+        @keyframes pulse { 0% { opacity: 0.3; transform: scale(1); } 100% { opacity: 0.6; transform: scale(1.1); } }
     </style>
 </head>
 <body>
@@ -114,48 +54,33 @@
     <script>
         const user = AuthService.getCurrentUser();
         if (!user) window.location.href = 'index.html';
-
         document.getElementById('welcomeText').innerText = `Hello, ${user.name}`;
 
         async function renderRuns() {
             const container = document.getElementById('runsContainer');
             const runs = await AppService.getRuns();
             const myRunIds = await AppService.getUserRegistrations(user.id);
-
-            if(!runs || runs.length === 0) {
-                container.innerHTML = `<p>No upcoming runs scheduled.</p>`;
-                return;
-            }
-
+            if(!runs || runs.length === 0) { container.innerHTML = `<p>No runs scheduled.</p>`; return; }
             container.innerHTML = runs.map(run => {
-                const isRegistered = myRunIds.includes(run.id);
-                return `
-                <div class="glass-card" style="padding:2rem; border-bottom:4px solid var(--neon-accent); margin-bottom:1.5rem;">
+                const isReg = myRunIds.includes(run.id);
+                return `<div class="glass-card" style="padding:2rem; border-bottom:4px solid var(--neon-accent); margin-bottom:1.5rem;">
                     <div style="font-weight:800; font-size:1.5rem; font-family:'Outfit';">${run.date_label}</div>
                     <div style="color:var(--peach-accent); margin-bottom:1.5rem;">📍 ${run.location}</div>
-                    ${isRegistered 
-                        ? `<button class="btn btn-secondary btn-block" disabled>✓ Registered</button>`
-                        : `<button class="btn btn-primary btn-block" onclick="promptRegistration('${run.id}')">Register Now</button>`
-                    }
+                    ${isReg ? `<button class="btn btn-secondary btn-block" disabled>✓ Registered</button>` : `<button class="btn btn-primary btn-block" onclick="promptRegistration('${run.id}')">Register Now</button>`}
                 </div>`;
             }).join('');
-
             if (runs.length > 0) loadWeatherAdvisor(runs[0]);
         }
 
         async function loadWeatherAdvisor(run) {
-            const container = document.getElementById('advisorContainer');
             const apiKey = '686edc30f7764d08ada12150261604';
-            
             try {
                 const res = await fetch(`https://api.weatherapi.com/v1/current.json?key=${apiKey}&q=${encodeURIComponent(run.location)}`);
                 const data = await res.json();
                 if (data.error) return;
-
                 const cur = data.current;
                 const advice = getAIAdvice(cur.temp_c, cur.condition.text, cur.wind_kph, cur.humidity);
-
-                container.innerHTML = `
+                document.getElementById('advisorContainer').innerHTML = `
                     <div class="advisor-card animate-up">
                         <div class="advisor-icon-wrap"><img src="${cur.condition.icon}" style="width:50px;"></div>
                         <div class="advisor-content">
@@ -163,40 +88,26 @@
                             <div class="advisor-tip">"${advice}"</div>
                             <div class="weather-meta">
                                 <div class="weather-item">🌡 <b>${cur.temp_c}°C</b></div>
-                                <div class="weather-item">💨 <b>${cur.wind_kph}km/h</b></div>
+                                <div class="weather-item">💨 <b>${cur.wind_kph}kph</b></div>
                                 <div class="weather-item">💧 <b>${cur.humidity}%</b></div>
                                 <div class="weather-item">📍 <i>${data.location.name}</i></div>
                             </div>
                         </div>
                     </div>`;
-            } catch (e) { container.innerHTML = ''; }
+            } catch (e) { }
         }
 
-        function getAIAdvice(temp, cond, wind, hum) {
-            if (temp > 32) return "🔥 Heat Alert! Take it slow (back off 30s/km) and hydrate every 2km. Safety first!";
-            if (temp > 28) return "🥵 It's getting toasty. Pace yourself and drink extra water today.";
-            if (temp >= 15 && temp <= 20) return "✨ Perfect Vibes! These are PR-breaking conditions. Give it your all!";
-            if (temp < 12) return "❄️ Chilly morning. Warm up longer than usual to keep the muscles happy.";
-            if (wind > 25) return "💨 Windy day! Run in a pack at the back to save 20% effort.";
-            return "Looking like a solid day for a run! Keep a steady rhythm and enjoy the vibes.";
+        function getAIAdvice(t, c, w, h) {
+            if (t > 32) return "🔥 Heat Alert! Stay hydrated and slow down by 20-30s/km today.";
+            if (t > 28) return "🥵 Looking hot! Watch your heart rate and keep drinking water.";
+            if (t >= 15 && t <= 20) return "✨ Perfect Vibes! These are PR-breaking conditions. Give it your all!";
+            if (t < 12) return "❄️ Chilly morning. Warm up well before the start!";
+            return "Solid running conditions! Keep a steady rhythm and enjoy the vibes.";
         }
 
-        window.promptRegistration = function(runId) {
-            Swal.fire({
-                title: 'Join this Run',
-                text: 'Select your distance and level:',
-                background: '#141419', color: '#fff',
-                confirmButtonText: 'RSVP Now',
-                confirmButtonColor: 'var(--peach-accent)'
-            }).then((res) => {
-                if(res.isConfirmed) register(runId, '5K', 'Intermediate');
-            });
-        };
-
-        window.register = async (runId, dist, lvl) => {
-            if (await AppService.registerForRun(runId, dist, lvl)) {
-                Swal.fire({icon:'success', title:'See you there!', background:'#141419', color:'#fff'}).then(()=>renderRuns());
-            }
+        window.promptRegistration = (rId) => {
+            Swal.fire({ title:'Join Run', background:'#141419', color:'#fff', confirmButtonText:'RSVP' })
+            .then(r => r.isConfirmed && AppService.registerForRun(rId, '5K', 'Level').then(()=>renderRuns()));
         };
 
         renderRuns();
