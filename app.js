@@ -1,4 +1,5 @@
 // --- SUPABASE CONFIGURATION ---
+// Deployment Heartbeat: 2026-04-16T18:18:00Z (V4.1)
 const SUPABASE_URL = 'https://qcqyyfnsfyuaaaacddsm.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_uXs2e5aPzrIL_M2xsYDmWg_hPOUaG1l';
 
