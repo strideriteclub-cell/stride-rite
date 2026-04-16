@@ -5,243 +5,63 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>VIP Shop | Stride Rite</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-    <link rel="manifest" href="/manifest.json">
-    <meta name="theme-color" content="#584adc">
-    <link rel="stylesheet" href="styles.css?v=5">
+    <link rel="stylesheet" href="styles.css?v=15">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
-        .shop-container { max-width: 1200px; margin: 0 auto; padding: 2rem 1.5rem; }
         .hero-banner {
-            background: linear-gradient(135deg, rgba(88,74,220,0.2), rgba(139,92,246,0.05));
-            border: 1px solid rgba(88,74,220,0.3);
-            border-radius: 20px; padding: 3rem 2rem; text-align: center; margin-bottom: 3rem;
-            position: relative; overflow: hidden;
+            background: linear-gradient(135deg, rgba(88,74,220,0.1), rgba(255,139,106,0.05));
+            border: 1px solid var(--border-color);
+            border-radius: 24px; padding: 4rem 2rem; text-align: center; margin-bottom: 3rem;
+            margin-top: 1rem; /* Added extra space as requested */
         }
-        .hero-banner::before {
-            content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
-            background: radial-gradient(circle, rgba(255,255,255,0.05) 10%, transparent 10%), radial-gradient(circle, rgba(255,255,255,0.05) 10%, transparent 10%);
-            background-size: 20px 20px; background-position: 0 0, 10px 10px; z-index: 0; opacity: 0.5;
-        }
-        .hero-banner > * { position: relative; z-index: 1; }
-        
-        .closed-state { text-align: center; padding: 5rem 1rem; }
-        .closed-state h2 { font-size: 2.5rem; color: var(--peach-accent); margin-bottom: 1rem; font-family: 'Outfit', sans-serif;}
-        .closed-state p { color: var(--text-muted); font-size: 1.1rem; max-width: 500px; margin: 0 auto;}
-        
         .products-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 2rem; }
-        .product-card {
-            background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 16px;
-            overflow: hidden; transition: all 0.3s; display: flex; flex-direction: column;
-        }
-        .product-card:hover { border-color: var(--neon-accent); transform: translateY(-5px); box-shadow: 0 10px 30px rgba(88,74,220,0.15); }
-        .product-image { width: 100%; height: 280px; object-fit: cover; background: #0a0a0f; }
-        .product-info { padding: 1.5rem; flex: 1; display: flex; flex-direction: column; }
-        .product-title { font-size: 1.3rem; font-weight: 700; margin-bottom: 0.5rem; font-family: 'Outfit', sans-serif;}
-        .product-price { color: var(--neon-accent); font-size: 1.2rem; font-weight: 600; margin-bottom: 1rem; }
-        .buy-btn { margin-top: auto; padding: 0.8rem; font-weight: 600; width: 100%; background: var(--peach-accent); color: #000; border: none; border-radius: 8px; cursor: pointer; transition: all 0.2s;}
-        .buy-btn:hover { background: #ff9d70; transform: scale(1.02); }
-
-        .checkout-modal {
-            text-align: left;
-        }
-        .checkout-step {
-            background: rgba(0,0,0,0.2); border: 1px solid var(--border-color); border-radius: 12px;
-            padding: 1rem; margin-bottom: 1rem;
-        }
-        .checkout-step h4 { margin-bottom: 0.5rem; color: var(--neon-accent); display: flex; align-items: center; gap: 8px; }
-        .size-selector { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1rem; }
-        .size-btn {
-            background: transparent; border: 1px solid var(--border-color); color: white;
-            padding: 0.5rem 1rem; border-radius: 8px; cursor: pointer; transition: all 0.2s;
-        }
-        .size-btn.selected { background: var(--neon-accent); border-color: var(--neon-accent); }
+        .product-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 20px; overflow: hidden; transition: 0.3s; display: flex; flex-direction: column; }
+        .product-image { width: 100%; height: 280px; object-fit: cover; }
+        .product-info { padding: 1.5rem; flex: 1; }
+        .buy-btn { background: var(--peach-accent); color: black; border: none; padding: 1rem; border-radius: 12px; font-weight: 700; width: 100%; cursor: pointer; }
     </style>
 </head>
 <body>
     <nav class="navbar">
-        <div class="logo">Stride Rite</div>
+        <div style="font-family:'Outfit'; font-weight:800; font-size:1.5rem;">S<span style="color:var(--peach-accent);">.</span></div>
         <div class="nav-links">
-            <a href="dashboard.html" class="btn btn-secondary" style="padding:0.4rem 1rem; font-size:0.85rem; margin-right:8px;">🏃 Board</a>
-            <a href="gallery.html" class="btn btn-secondary" style="padding:0.4rem 1rem; font-size:0.85rem; margin-right:8px;">📸 Gallery</a>
-            <a href="#" onclick="AuthService.logout()">Log Out</a>
+            <a href="dashboard.html">📊 Board</a>
+            <a href="gallery.html">📸 Gallery</a>
+            <a href="#" onclick="AuthService.logout()">Logout</a>
         </div>
     </nav>
 
-    <div class="shop-container">
-        <!-- Dynamic Content Area -->
+    <div class="shop-container animate-up">
+        <div class="hero-banner">
+            <h1 style="font-size: 3rem; margin-bottom: 1rem;">Stride Rite Gear</h1>
+            <p style="color: var(--text-muted); max-width: 600px; margin: 0 auto;">Grab official community gear before it sells out.</p>
+        </div>
+
         <div id="shopContent">
-            <div style="text-align:center; padding: 4rem;"><p>Loading Shop...</p></div>
+            <div class="products-grid" id="productsGrid"></div>
         </div>
     </div>
 
-    <script src="app.js?v=5"></script>
+    <script src="app.js?v=21"></script>
     <script>
-        let selectedItem = null;
-        let selectedSize = '';
-
-        async function initShop() {
-            const user = AuthService.getCurrentUser();
-            if (!user) {
-                window.location.href = 'index.html?redirect=' + encodeURIComponent('shop.html');
-                return;
-            }
-
-            const contentDiv = document.getElementById('shopContent');
-            const isOpen = await AppService.getShopStatus();
-            
-            if (!isOpen && !user.is_admin) {
-                contentDiv.innerHTML = `
-                    <div class="closed-state">
-                        <h2>🔒 The VIP Shop is closed.</h2>
-                        <p>We're currently brewing up some fresh new merch for the community! Keep an eye on the Telegram/WhatsApp group for the next drop announcement.</p>
-                        <br><br>
-                        <a href="dashboard.html" class="btn btn-primary purple-bg">Back to Dashboard</a>
-                    </div>
-                `;
-                return;
-            }
-
+        async function loadShop() {
             const items = await AppService.getShopItems();
-            
-            let adminBanner = '';
-            if (user.is_admin && !isOpen) {
-                adminBanner = `<div style="background:rgba(255,0,0,0.2); border:1px solid red; color:white; padding:10px; text-align:center; border-radius:8px; margin-bottom:20px;">
-                    ⚠️ Admin Notice: The shop is currently hidden from normal users. Toggle it on via the Telegram Bot.
-                </div>`;
-            }
-
-            if (items.length === 0) {
-                contentDiv.innerHTML = adminBanner + `
-                    <div class="hero-banner">
-                        <h1 style="font-family:'Outfit'; font-size:2.8rem; margin-bottom:1rem;">Stride Rite Gear</h1>
-                        <p style="color:var(--text-muted); font-size:1.1rem;">Wear the community.</p>
-                    </div>
-                    <div style="text-align:center; padding: 3rem; color:var(--text-muted);">No items currently in stock.</div>
-                `;
+            const grid = document.getElementById('productsGrid');
+            if(!items || items.length === 0) {
+                grid.innerHTML = `<p style="grid-column:1/-1; text-align:center; padding:4rem; color:var(--text-muted);">Shop is currently closed for restocking.</p>`;
                 return;
             }
-
-            const gridHtml = items.map(item => `
+            grid.innerHTML = items.map(item => `
                 <div class="product-card">
-                    <img src="${item.image_url || 'https://via.placeholder.com/400x400/101015/ffffff?text=Merch'}" alt="${item.name}" class="product-image" onerror="this.src='https://via.placeholder.com/400x400/101015/ffffff?text=Merch'">
+                    <img src="${item.image_url}" class="product-image">
                     <div class="product-info">
-                        <div class="product-title">${item.name}</div>
-                        <div class="product-price">${item.price} EGP</div>
-                        <button class="buy-btn" onclick='openCheckout(${JSON.stringify(item).replace(/'/g, "&apos;")})'>Purchase Now</button>
+                        <div style="font-weight:800; font-size:1.3rem; margin-bottom:0.5rem;">${item.name}</div>
+                        <div style="color:var(--neon-accent); font-weight:700; margin-bottom:1rem;">${item.price} EGP</div>
+                        <button class="buy-btn">In Person Only</button>
                     </div>
-                </div>
-            `).join('');
-
-            contentDiv.innerHTML = adminBanner + `
-                <div class="hero-banner">
-                    <h1 style="font-family:'Outfit'; font-size:2.8rem; margin-bottom:1rem;">Stride Rite Gear</h1>
-                    <p style="color:var(--text-muted); font-size:1.1rem; max-width:600px; margin:0 auto;">Exclusive gear for the Al Rehab running community. Grab yours before the next drop sells out.</p>
-                </div>
-                <div class="products-grid">${gridHtml}</div>
-            `;
+                </div>`).join('');
         }
-
-        window.openCheckout = function(item) {
-            selectedItem = item;
-            selectedSize = '';
-            
-            // Parse sizes if it's a string, assuming comma separated
-            let sizes = ['S', 'M', 'L', 'XL', 'XXL'];
-            if (item.sizes) {
-                sizes = item.sizes.split(',').map(s => s.trim());
-            }
-
-            const sizeHtml = sizes.map(s => `<button type="button" class="size-btn" onclick="selectSize(this, '${s}')">${s}</button>`).join('');
-
-            Swal.fire({
-                title: 'Checkout',
-                html: `
-                    <div class="checkout-modal">
-                        <div style="display:flex; align-items:center; gap:1rem; margin-bottom:1.5rem; background:rgba(0,0,0,0.3); padding:1rem; border-radius:12px;">
-                            <img src="${item.image_url}" style="width:60px; height:60px; object-fit:cover; border-radius:8px;" onerror="this.style.display='none'">
-                            <div>
-                                <div style="font-weight:700; font-size:1.1rem;">${item.name}</div>
-                                <div style="color:var(--neon-accent); font-weight:600;">${item.price} EGP</div>
-                            </div>
-                        </div>
-
-                        <div class="checkout-step">
-                            <h4><span>1️⃣</span> Select Size</h4>
-                            <div class="size-selector" id="sizeSelector">${sizeHtml}</div>
-                        </div>
-
-                        <div class="checkout-step">
-                            <h4><span>2️⃣</span> Make Payment</h4>
-                            <p style="color:#a1a1aa; font-size:0.9rem; margin-bottom:10px;">Please transfer <strong style="color:white;">${item.price} EGP</strong> to easily secure your item.</p>
-                            <div style="background:#1a1827; padding:10px; border-radius:8px; font-family:monospace; margin-bottom:8px;">
-                                🟣 <strong>InstaPay:</strong> striderite (Example)<br>
-                                🔴 <strong>Vodafone Cash:</strong> 01000000000 (Example)
-                            </div>
-                        </div>
-
-                        <div class="checkout-step">
-                            <h4><span>3️⃣</span> Contact & Confirm</h4>
-                            
-                            <label style="color:#a1a1aa; font-size:0.85rem; display:block; margin-bottom:6px;">WhatsApp / Phone Number:</label>
-                            <input type="tel" id="phoneInput" placeholder="e.g. 01012345678" style="width:100%; padding:12px; border-radius:8px; border:1px solid #333; background:rgba(0,0,0,0.3); color:white; margin-bottom:12px; font-size:1rem;" maxlength="15">
-
-                            <label style="color:#a1a1aa; font-size:0.85rem; display:block; margin-bottom:6px;">12-digit transaction reference number:</label>
-                            <input type="text" id="refInput" placeholder="e.g. 192837465012" style="width:100%; padding:12px; border-radius:8px; border:1px solid #333; background:rgba(0,0,0,0.3); color:white; text-align:center; font-family:monospace; font-size:1.1rem; letter-spacing:1px;" maxlength="20">
-                            
-                            <div style="margin-top: 15px; color:#f87171; font-size: 0.9rem; text-align: center; border: 1px dashed #f87171; padding: 10px; border-radius: 8px;">
-                                ⚠️ <strong>Important:</strong> Physical items must be collected in person from Haleem at the next Stride Rite community run! There is no delivery.
-                            </div>
-                        </div>
-                    </div>
-                `,
-                background: '#141419', color: '#fff',
-                showCancelButton: true,
-                confirmButtonText: 'Submit Order',
-                confirmButtonColor: 'var(--peach-accent)',
-                width: '500px',
-                preConfirm: () => {
-                    const phone = document.getElementById('phoneInput').value.trim();
-                    const ref = document.getElementById('refInput').value.trim();
-                    if (!selectedSize) {
-                        Swal.showValidationMessage('Please select a size first!');
-                        return false;
-                    }
-                    if (!phone || phone.length < 8) {
-                        Swal.showValidationMessage('Please enter a valid phone number!');
-                        return false;
-                    }
-                    if (!ref || ref.length < 5) {
-                        Swal.showValidationMessage('Please enter a valid reference number!');
-                        return false;
-                    }
-                    return { phone, ref };
-                }
-            }).then(async (result) => {
-                if (result.isConfirmed) {
-                    Swal.fire({ title: 'Submitting...', background:'#141419', color:'#fff', didOpen: () => Swal.showLoading()});
-                    const success = await AppService.submitOrder(selectedItem.id, selectedSize, result.value.ref, result.value.phone);
-                    if (success) {
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'Order Received! 🎉',
-                            html: '<p>Our admins will verify your payment and email you a confirmation! See you at the next run!</p>',
-                            background: '#141419', color: '#fff',
-                            confirmButtonColor: 'var(--neon-accent)'
-                        });
-                    } else {
-                        Swal.fire({icon: 'error', title: 'Failed to submit', background: '#141419', color: '#fff'});
-                    }
-                }
-            });
-        };
-
-        window.selectSize = function(btn, size) {
-            document.querySelectorAll('.size-btn').forEach(b => b.classList.remove('selected'));
-            btn.classList.add('selected');
-            selectedSize = size;
-        };
-
-        initShop();
+        loadShop();
     </script>
 </body>
 </html>
