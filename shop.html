@@ -172,8 +172,14 @@
                             confirmButtonColor: 'var(--neon-accent)'
                         });
                     } else {
-                        console.error("Order submission failed at AppService level.");
-                        Swal.fire({icon: 'error', title: 'Failed to submit', text: 'Please check your connection and try again.', background: '#141419', color: '#fff'});
+                        const errorMsg = window.lastDbError || 'Please check your connection and try again.';
+                        console.error("Order submission failed:", errorMsg);
+                        Swal.fire({
+                            icon: 'error', 
+                            title: 'Failed to submit', 
+                            html: `<p style="font-size:0.9rem; color:#fca5a5;">Reason: ${errorMsg}</p>`,
+                            background: '#141419', color: '#fff'
+                        });
                     }
                 }
             });
