@@ -54,6 +54,7 @@
     <script>
         let selectedItem = null;
         let selectedSize = '';
+        let selectedPaymentMethod = 'InstaPay';
 
         async function initShop() {
             const user = AuthService.getCurrentUser();
@@ -115,54 +116,65 @@
             const sizeHtml = sizes.map(s => `<button type="button" class="size-btn" onclick="selectSize(this, '${s}')">${s}</button>`).join('');
 
             Swal.fire({
-                title: 'Complete Order',
+                title: 'Confirm Your Order',
                 html: `
-                    <div style="text-align:left;">
-                        <div class="checkout-step" style="display:flex; align-items:center; gap:1.5rem; background:rgba(255,255,255,0.05); border:1px solid var(--neon-accent);">
-                            <img src="${item.image_url}" style="width:80px; height:80px; object-fit:cover; border-radius:12px;" onerror="this.style.display='none'">
+                    <div style="text-align: left; background: #1a1a21; padding: 15px; border-radius: 12px; margin-bottom: 15px;">
+                        <div style="display:flex; align-items:center; gap:1.5rem; background:rgba(255,255,255,0.05); padding:10px; border-radius:12px; border:1px solid var(--neon-accent); margin-bottom:15px;">
+                            <img src="${item.image_url}" style="width:60px; height:60px; object-fit:cover; border-radius:8px;" onerror="this.style.display='none'">
                             <div>
-                                <div style="font-weight:800; font-size:1.1rem; color:white;">${item.name}</div>
+                                <div style="font-weight:800; font-size:1rem; color:white;">${item.name}</div>
                                 <div style="color:var(--neon-accent); font-weight:700;">${item.price} EGP</div>
-                                <div id="summarySize" style="font-size:0.85rem; color:var(--peach-accent); font-weight:600; margin-top:4px;">Size: (Select below)</div>
+                                <div id="summarySize" style="font-size:0.75rem; color:var(--peach-accent); font-weight:600;">Size: (Select below)</div>
                             </div>
                         </div>
-                        <div class="checkout-step">
-                            <div style="font-weight:700; margin-bottom:8px;">👕 Select Size:</div>
-                            <div class="size-selector">${sizeHtml}</div>
+
+                        <p style="font-weight:700; margin-bottom:8px; color:#fff; font-size:0.9rem;">1. Select Size:</p>
+                        <div class="size-selector">${sizeHtml}</div>
+
+                        <p style="font-weight:700; margin-top:15px; margin-bottom:8px; color:#fff; font-size:0.9rem;">2. Payment — Transfer ${item.price} EGP to:</p>
+                        <div style="background:#1a1827; padding:10px; border-radius:8px; font-family:monospace; font-size:0.85rem; border:1px solid #333; margin-bottom:15px;">
+                            🟣 <strong>InstaPay:</strong> 01128828954<br>
+                            🔴 <strong>Telda:</strong> @ckh
                         </div>
-                        <div class="checkout-step">
-                            <div style="font-weight:700; margin-bottom:8px;">💳 Payment — Transfer ${item.price} EGP to:</div>
-                            <div style="background:#1a1827; padding:12px; border-radius:8px; font-family:monospace; font-size:0.9rem;">
-                                🟣 <strong>InstaPay:</strong> 01128828954<br>
-                                🔴 <strong>Telda:</strong> @ckh
-                            </div>
+
+                        <p style="font-size: 0.85rem; color: #a1a1aa; margin-bottom: 10px;">3. Choose Your Method:</p>
+                        <div class="payment-toggle" style="display: flex; gap: 10px; margin-bottom: 20px;">
+                            <button type="button" onclick="setPaymentMethod('InstaPay')" id="btnInsta" style="flex: 1; padding: 10px; border-radius: 8px; border: 1px solid var(--peach-accent); background: var(--peach-accent); color: #000; font-weight: bold; cursor: pointer;">InstaPay</button>
+                            <button type="button" onclick="setPaymentMethod('Telda')" id="btnTelda" style="flex: 1; padding: 10px; border-radius: 8px; border: 1px solid #333; background: transparent; color: #fff; cursor: pointer;">Telda</button>
                         </div>
-                        <div class="checkout-step">
-                            <div style="font-weight:700; margin-bottom:8px;">📋 Confirmation:</div>
-                            <input type="tel" id="checkPhone" placeholder="WhatsApp Number (e.g. 01012345678)" class="input-box">
-                            <input type="text" id="checkRef" placeholder="Transaction Ref / Telda Username" class="input-box" style="margin-top:8px;">
-                            <div style="margin-top:12px; color:#f87171; font-size:0.82rem; border:1px dashed #f87171; padding:10px; border-radius:8px; text-align:center;">
-                                ⚠️ Items must be collected in person at the next community run. No delivery.
-                            </div>
+
+                        <div id="paymentInputs">
+                            <label id="refLabel" style="display: block; font-size: 0.8rem; color: #ff9e6d; margin-bottom: 5px;">InstaPay Number:</label>
+                            <input id="checkRef" class="swal2-input" placeholder="Enter number..." style="width: 100%; margin: 0 0 15px 0; background: #000; color: #fff; border: 1px solid #333; font-size:0.9rem; height:40px;">
                         </div>
+
+                        <label style="display: block; font-size: 0.8rem; color: #ff9e6d; margin-bottom: 5px;">WhatsApp Number:</label>
+                        <input id="checkPhone" class="swal2-input" placeholder="01..." style="width: 100%; margin: 0 0 15px 0; background: #000; color: #fff; border: 1px solid #333; font-size:0.9rem; height:40px;">
+                        
+                        <label style="display: block; font-size: 0.8rem; color: #ff9e6d; margin-bottom: 5px;">Upload Proof (Screenshot):</label>
+                        <input type="file" id="checkReceipt" accept="image/*" style="width: 100%; padding: 8px; background: #000; color: #fff; border: 1px dashed #444; border-radius: 8px; font-size:0.8rem;">
                     </div>`,
-                background: '#141419', color: '#fff',
+                background: '#141419',
+                color: '#fff',
                 showCancelButton: true,
                 confirmButtonText: 'Submit Order',
                 confirmButtonColor: 'var(--peach-accent)',
-                width: '500px',
+                width: '450px',
                 preConfirm: () => {
                     const phone = document.getElementById('checkPhone').value.trim();
                     const ref = document.getElementById('checkRef').value.trim();
+                    const receipt = document.getElementById('checkReceipt').files[0];
                     if (!selectedSize) return Swal.showValidationMessage('Please select a size!');
                     if (!phone || phone.length < 8) return Swal.showValidationMessage('Enter a valid phone number!');
-                    if (!ref) return Swal.showValidationMessage('Enter your transaction reference or Telda username!');
-                    return { phone, ref };
+                    if (!ref) return Swal.showValidationMessage(`Enter your ${selectedPaymentMethod} handle!`);
+                    if (!receipt) return Swal.showValidationMessage('Please upload a screenshot of your transaction!');
+                    return { phone, ref, receipt };
                 }
             }).then(async (result) => {
                 if (result.isConfirmed) {
                     Swal.fire({ title: 'Submitting Order...', didOpen: () => Swal.showLoading(), background:'#141419', color:'#fff' });
-                    const success = await AppService.submitOrder(selectedItem.id, selectedSize, result.value.ref, result.value.phone);
+                    const { phone, ref, receipt } = result.value;
+                    const success = await AppService.submitOrder(selectedItem.id, selectedSize, ref, phone, selectedPaymentMethod, receipt);
                     if (success) {
                         Swal.fire({
                             icon: 'success',
@@ -172,8 +184,7 @@
                             confirmButtonColor: 'var(--neon-accent)'
                         });
                     } else {
-                        const errorMsg = window.lastDbError || 'Please check your connection and try again.';
-                        console.error("Order submission failed:", errorMsg);
+                        const errorMsg = window.lastDbError || 'Submission failed. Please try again.';
                         Swal.fire({
                             icon: 'error', 
                             title: 'Failed to submit', 
@@ -191,6 +202,23 @@
             selectedSize = size;
             const label = document.getElementById('summarySize');
             if (label) label.innerText = `Size: ${size}`;
+        };
+
+        window.setPaymentMethod = function(method) {
+            selectedPaymentMethod = method;
+            const bI = document.getElementById('btnInsta');
+            const bT = document.getElementById('btnTelda');
+            const label = document.getElementById('refLabel');
+            
+            if (method === 'InstaPay') {
+                bI.style.background = 'var(--peach-accent)'; bI.style.color = '#000';
+                bT.style.background = 'transparent'; bT.style.color = '#fff';
+                label.innerText = 'InstaPay Number:';
+            } else {
+                bT.style.background = 'var(--peach-accent)'; bT.style.color = '#000';
+                bI.style.background = 'transparent'; bI.style.color = '#fff';
+                label.innerText = 'Telda Username:';
+            }
         };
 
         initShop();
