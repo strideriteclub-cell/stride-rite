@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard | Stride Rite</title>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css?v=12">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 <body>
@@ -13,15 +13,15 @@
         <div class="logo">STRIDE RITE</div>
         <div class="nav-links">
             <a href="index.html" class="btn btn-secondary">🏠 Home</a>
+            <a href="shop.html" class="btn btn-secondary">🛍 VIP Shop</a>
             <a href="profile.html" class="btn btn-secondary">👤 Profile</a>
             <a href="#" onclick="AuthService.logout()">Log Out</a>
         </div>
     </nav>
 
-    <div style="padding: 100px 5%;">
-        <div id="advisorContainer"></div>
-        <h2 style="font-family:'Outfit'; margin-bottom: 1.5rem;">🗓 Upcoming Runs</h2>
-        <div class="b-grid" id="runsContainer"></div>
+    <div style="padding:120px 5% 5rem;">
+        <h1 style="font-family:'Outfit'; font-size:2.5rem; margin-bottom:2rem;">Upcoming Community Runs</h1>
+        <div id="runsContainer" class="b-grid"></div>
     </div>
 
     <script src="app.js"></script>
@@ -31,38 +31,22 @@
 
         async function render() {
             const runs = await AppService.getRuns();
-            const myRegs = await AppService.getUserRegistrations(user.id);
             const container = document.getElementById('runsContainer');
-            
-            container.innerHTML = runs.map(run => `
+            container.innerHTML = runs.map(r => `
                 <div class="glass-card" style="padding:2rem;">
-                    <div style="font-weight:800; font-size:1.5rem;">${run.date_label}</div>
-                    <div style="color:var(--peach-accent); margin-bottom:1.5rem;">📍 ${run.location}</div>
-                    ${myRegs.includes(run.id) ? `<button class="btn btn-secondary btn-block" disabled>Registered</button>` : `<button class="btn btn-primary btn-block" onclick="join('${run.id}')">Join Run</button>`}
-                </div>`).join('');
-            
-            if (runs.length > 0) loadWeather(runs[0]);
+                    <div style="font-weight:800; font-size:1.5rem; font-family:'Outfit';">${r.date_label}</div>
+                    <div style="color:var(--peach-accent); margin-bottom:1.5rem;">📍 ${r.location}</div>
+                    <button class="btn btn-primary btn-block" onclick="join('${r.id}')">Register for Run</button>
+                </div>
+            `).join('');
         }
 
-        async function loadWeather(run) {
-            const api = '686edc30f7764d08ada12150261604';
-            try {
-                const res = await fetch(`https://api.weatherapi.com/v1/current.json?key=${api}&q=${encodeURIComponent(run.location)}`);
-                const data = await res.json();
-                const temp = data.current.temp_c;
-                let advice = "Perfect vibes for a run!";
-                if (temp > 32) advice = "🔥 Over 32°C! Slow your pace and hydrate.";
-                
-                document.getElementById('advisorContainer').innerHTML = `
-                <div class="glass-card" style="padding:1.5rem; margin-bottom:2rem; border-left: 5px solid var(--neon-accent);">
-                    <div style="font-family:'Outfit'; color:var(--neon-accent); font-weight:800;">🌤 AI ADVISOR</div>
-                    <div style="font-size:1.2rem; font-weight:700; margin-top:5px;">"${advice}"</div>
-                    <div style="font-size:0.8rem; color:var(--text-muted); margin-top:10px;">TEMP: ${temp}°C | LOC: ${run.location}</div>
-                </div>`;
-            } catch (e) {}
-        }
-
-        window.join = (id) => AppService.registerForRun(id, '5K', 'Intermediate').then(()=>render());
+        window.join = (id) => {
+            Swal.fire({ title:'Registering...', background:'#141419', didOpen:()=>Swal.showLoading()});
+            AppService.registerForRun(id, '5K', 'Intermediate').then(() => {
+                Swal.fire({ icon:'success', title:'Registered!', background:'#141419' });
+            });
+        };
         render();
     </script>
 </body>
