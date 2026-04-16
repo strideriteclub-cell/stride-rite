@@ -12,31 +12,32 @@
             max-width: 900px;
             margin: 0 auto;
             padding: 2rem;
+            margin-top: 100px; /* Space for navbar */
         }
         .profile-header {
             display: flex;
             align-items: center;
             gap: 2rem;
-            margin-bottom: 3rem;
+            margin-bottom: 2rem;
             flex-wrap: wrap;
         }
         .avatar-circle {
-            width: 120px;
-            height: 120px;
+            width: 100px;
+            height: 100px;
             background: linear-gradient(135deg, var(--neon-accent), var(--peach-accent));
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 3rem;
+            font-size: 2.5rem;
             font-weight: 800;
             color: white;
             box-shadow: 0 10px 30px rgba(88, 74, 220, 0.3);
         }
         .profile-info h1 {
             font-family: 'Outfit';
-            font-size: 2.5rem;
-            margin-bottom: 0.5rem;
+            font-size: 2rem;
+            margin-bottom: 0.2rem;
         }
         .badge {
             display: inline-block;
@@ -44,28 +45,35 @@
             background: rgba(255, 180, 100, 0.15);
             color: var(--peach-accent);
             border-radius: 50px;
-            font-size: 0.8rem;
+            font-size: 0.75rem;
             font-weight: 700;
             text-transform: uppercase;
-            letter-spacing: 1px;
             border: 1px solid var(--peach-accent);
         }
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
             gap: 1.5rem;
-            margin-bottom: 4rem;
+            margin-bottom: 3rem;
         }
-        .stat-card {
+        /* Specific Profile Card Style to avoid collision */
+        .profile-stat-card {
             text-align: center;
-            padding: 2.5rem;
+            padding: 2rem 1rem;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.05);
             border-bottom: 4px solid var(--neon-accent);
+            border-radius: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
         }
-        .stat-card.peach {
+        .profile-stat-card.peach {
             border-bottom-color: var(--peach-accent);
         }
         .stat-value {
-            font-size: 3rem;
+            font-size: 2.5rem;
             font-weight: 800;
             font-family: 'Outfit';
             line-height: 1;
@@ -75,20 +83,22 @@
             color: var(--text-muted);
             text-transform: uppercase;
             letter-spacing: 2px;
-            font-size: 0.75rem;
+            font-size: 0.7rem;
             font-weight: 600;
         }
         .history-title {
             font-family: 'Outfit';
-            font-size: 1.8rem;
+            font-size: 1.6rem;
+            margin-top: 2rem;
             margin-bottom: 1.5rem;
             display: flex;
             align-items: center;
             gap: 10px;
         }
+        /* Strava UI */
         .strava-connect-btn {
             background: #FC6100;
-            color: white;
+            color: white !important;
             border: none;
             padding: 10px 20px;
             border-radius: 8px;
@@ -102,13 +112,10 @@
             text-decoration: none;
             width: fit-content;
         }
-        .strava-connect-btn:hover {
-            background: #E55600;
-            transform: translateY(-2px);
-        }
+        .strava-connect-btn:hover { background: #E55600; transform: translateY(-2px); }
         .strava-section {
-            margin-top: 3rem;
-            padding-top: 3rem;
+            margin: 3rem 0;
+            padding-top: 2rem;
             border-top: 1px solid rgba(255,255,255,0.05);
         }
         .strava-run-card {
@@ -128,13 +135,13 @@
 </head>
 <body>
     <nav class="navbar">
-        <div class="logo" style="display:flex; align-items:center; gap:10px;">
+        <div class="logo">
             <div style="font-family:'Outfit'; font-weight:800; font-size:1.5rem;">S<span style="color:var(--peach-accent);">.</span></div>
             <div style="font-family:'Outfit'; font-weight:800;">STRIDE RITE</div>
         </div>
         <div class="nav-links">
-            <a href="index.html" class="btn btn-secondary" style="padding: 0.4rem 1rem; font-size: 0.85rem; margin-right: 8px;">🏠 Home</a>
-            <a href="dashboard.html" class="btn btn-secondary" style="padding: 0.4rem 1rem; font-size: 0.85rem; margin-right: 8px;">📊 Dashboard</a>
+            <a href="index.html">🏠 Home</a>
+            <a href="dashboard.html">📊 Dashboard</a>
             <a href="#" onclick="AuthService.logout()">Log Out</a>
         </div>
     </nav>
@@ -144,25 +151,25 @@
             <div class="avatar-circle" id="userInitial">S</div>
             <div class="profile-info">
                 <h1 id="userName">Runner Name</h1>
-                <div style="margin-bottom: 1rem;">
+                <div style="margin-bottom: 0.8rem;">
                     <span class="badge" id="userLevelBadge">Intermediate</span>
                 </div>
-                <div style="color: var(--text-muted); font-size: 0.95rem;">
+                <div style="color: var(--text-muted); font-size: 0.9rem;">
                     📧 <span id="userEmail">email@example.com</span>
                 </div>
             </div>
         </header>
 
         <div class="stats-grid animate-up delay-1">
-            <div class="glass-card stat-card">
+            <div class="profile-stat-card">
                 <div class="stat-value" id="totalRuns">0</div>
                 <div class="stat-label">Total Runs</div>
             </div>
-            <div class="glass-card stat-card peach">
+            <div class="profile-stat-card peach">
                 <div class="stat-value" id="totalKms">0.0</div>
                 <div class="stat-label">Total Kilometers</div>
             </div>
-            <div class="glass-card stat-card">
+            <div class="profile-stat-card">
                 <div class="stat-value" id="avgDistance">0.0</div>
                 <div class="stat-label">Avg Range</div>
             </div>
@@ -175,17 +182,17 @@
                 <div id="stravaStatus"></div>
             </div>
             <div class="b-grid" id="stravaContainer">
-                <!-- Strava runs injected here -->
+                <!-- Data injected here -->
             </div>
         </div>
 
-        <h2 class="history-title animate-up delay-2">👟 Recent Activity</h2>
+        <h2 class="history-title animate-up delay-3">👟 Recent Activity</h2>
         <div class="b-grid" id="historyContainer">
             <!-- History injected here -->
         </div>
     </div>
 
-    <script src="app.js?v=6"></script>
+    <script src="app.js?v=7"></script>
     <script>
         const user = AuthService.getCurrentUser();
         if (!user) window.location.href = 'index.html';
@@ -200,10 +207,9 @@
         if (urlParams.has('strava')) {
             const status = urlParams.get('strava');
             if (status === 'success') {
-                Swal.fire({ title: 'Connected!', text: 'Your Strava account is now linked to Stride Rite.', icon: 'success', background: '#1a1a1e', color: '#fff' });
+                Swal.fire({ title: 'Connected!', text: 'Your Strava count linked successfully.', icon: 'success', background: '#1a1a1e', color: '#fff' });
             } else {
-                const msg = urlParams.get('msg') || 'Failed to connect.';
-                Swal.fire({ title: 'Error', text: msg, icon: 'error', background: '#1a1a1e', color: '#fff' });
+                Swal.fire({ title: 'Error', text: urlParams.get('msg') || 'Failed to connect.', icon: 'error', background: '#1a1a1e', color: '#fff' });
             }
             window.history.replaceState({}, document.title, window.location.pathname);
         }
@@ -213,63 +219,53 @@
             const stravaStatus = document.getElementById('stravaStatus');
             const stravaContainer = document.getElementById('stravaContainer');
 
-            const dbUserRes = await fetch(`${AppService.SUPABASE_URL}/rest/v1/stride_users?id=eq.${user.id}`, {
-                headers: AppService.dbHeaders
+            // Corrected variables from app.js
+            const dbUserRes = await fetch(`${SUPABASE_URL}/rest/v1/stride_users?id=eq.${user.id}`, {
+                headers: defaultHeaders
             });
             const dbUserData = await dbUserRes.json();
             const dbUser = dbUserData[0];
 
-            if (!dbUser || !dbUser.strava_access_token) {
-                stravaSection.style.display = 'block';
+            stravaSection.style.display = 'block';
+
+            if (!dbUser.strava_access_token) {
                 stravaStatus.innerHTML = `
                     <a href="https://www.strava.com/oauth/authorize?client_id=203804&redirect_uri=https://stride-rite.vercel.app/api/strava-callback&response_type=code&scope=activity:read_all&state=${user.id}" class="strava-connect-btn">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/></svg>
                         Connect Strava
                     </a>
                 `;
-                stravaContainer.innerHTML = `<div style="grid-column: 1/-1; padding: 2rem; text-align: center; color: var(--text-muted); font-size: 0.9rem;">Connect your Strava to show your personal runs here.</div>`;
+                stravaContainer.innerHTML = `<div style="grid-column: 1/-1; text-align: center; color: var(--text-muted); opacity:0.5;">Personal Strava runs will appear here once connected.</div>`;
                 return;
             }
 
-            stravaSection.style.display = 'block';
-            stravaStatus.innerHTML = `<span style="color:var(--text-muted); font-size:0.8rem;">✅ Linked</span>`;
-            stravaContainer.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:2rem;">⏳ Loading Strava data...</div>`;
+            stravaStatus.innerHTML = `<span style="color:var(--text-muted); font-size:0.8rem;">✅ Connected</span>`;
+            stravaContainer.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:2rem;">⏳ Fetching runs...</div>`;
 
             try {
                 const res = await fetch(`/api/strava-activities?userId=${user.id}`);
                 const activities = await res.json();
 
                 if (!activities || activities.length === 0) {
-                    stravaContainer.innerHTML = `<div style="grid-column:1/-1; padding:2rem; text-align:center; color:var(--text-muted);">No recent Strava runs found.</div>`;
+                    stravaContainer.innerHTML = `<div style="grid-column:1/-1; text-align:center; color:var(--text-muted);">No recent runs found on your Strava.</div>`;
                     return;
                 }
 
                 stravaContainer.innerHTML = activities.map(a => {
-                    const date = new Date(a.start_date_local).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-                    const distanceKm = (a.distance / 1000).toFixed(2);
+                    const date = new Date(a.start_date_local).toLocaleDateString();
+                    const dist = (a.distance / 1000).toFixed(2);
                     const pace = formatPace(a.moving_time, a.distance);
                     return `
                         <div class="glass-card strava-run-card" style="padding: 1.2rem; border-radius: 12px; text-align: left;">
-                            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
-                                <div style="font-weight: 800; font-family: 'Outfit'; color: white;">${a.name}</div>
-                                <span class="strava-badge">Run</span>
+                            <div style="font-weight: 800; color: white;">${a.name}</div>
+                            <div style="color: var(--text-muted); font-size: 0.8rem; margin-bottom: 0.5rem;">📅 ${date}</div>
+                            <div style="display: flex; gap: 1rem;">
+                                <div><div style="font-size:0.6rem; color:var(--text-muted);">DISTANCE</div><div style="font-weight:700;">${dist}km</div></div>
+                                <div><div style="font-size:0.6rem; color:var(--text-muted);">PACE</div><div style="font-weight:700;">${pace}/km</div></div>
                             </div>
-                            <div style="color: var(--text-muted); font-size: 0.8rem; margin-bottom: 1rem;">📅 ${date}</div>
-                            <div style="display: flex; gap: 1.5rem;">
-                                <div>
-                                    <div style="font-size: 0.6rem; color: var(--text-muted); text-transform: uppercase;">Distance</div>
-                                    <div style="font-weight: 700; color: white; font-size: 1.1rem;">${distanceKm} <span style="font-size: 0.7rem; font-weight: 400;">KM</span></div>
-                                </div>
-                                <div>
-                                    <div style="font-size: 0.6rem; color: var(--text-muted); text-transform: uppercase;">Pace</div>
-                                    <div style="font-weight: 700; color: white; font-size: 1.1rem;">${pace} <span style="font-size: 0.7rem; font-weight: 400;">/km</span></div>
-                                </div>
-                            </div>
-                        </div>
-                    `;
+                        </div>`;
                 }).join('');
-            } catch (err) {
-                stravaContainer.innerHTML = `<div style="grid-column:1/-1; padding:2rem; text-align:center; color:#ff4444;">Failed to load Strava data.</div>`;
+            } catch (e) {
+                stravaContainer.innerHTML = `<div style="grid-column:1/-1; text-align:center; color:#ff4444;">Error fetching data.</div>`;
             }
         }
 
@@ -291,34 +287,16 @@
             document.getElementById('avgDistance').innerText = avg;
 
             if (!stats.pastRuns || stats.pastRuns.length === 0) {
-                historyContainer.innerHTML = `
-                    <div style="grid-column: 1/-1; padding: 4rem; text-align: center; background: rgba(255,255,255,0.02); border-radius: 20px; border: 1px dashed rgba(255,255,255,0.1);">
-                        <div style="font-size: 3rem; margin-bottom: 1rem;">🏁</div>
-                        <div style="color: white; font-weight: 600;">No runs completed yet</div>
-                        <p style="color: var(--text-muted); margin-top: 0.5rem;">Join a Saturday run to start tracking your journey!</p>
-                        <a href="dashboard.html" class="btn btn-primary purple-bg" style="display:inline-block; margin-top: 1.5rem;">View Upcoming Runs</a>
-                    </div>
-                `;
+                historyContainer.innerHTML = `<p style="grid-column:1/-1; text-align:center; color:var(--text-muted); padding:3rem;">No community runs completed yet.</p>`;
                 return;
             }
 
             historyContainer.innerHTML = stats.pastRuns.map(run => `
-                <div class="glass-card" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 1.5rem; text-align: left; position: relative;">
-                    <div style="position: absolute; top:0; right: 0; background: var(--neon-accent); color: white; padding: 4px 12px; font-size: 0.7rem; font-weight: 800; border-bottom-left-radius: 8px;">COMPLETED</div>
-                    <div style="font-weight: 800; font-size: 1.2rem; color: white; font-family: 'Outfit'; margin-bottom: 0.5rem;">${run.date_display}</div>
-                    <div style="color: var(--peach-accent); font-size: 0.85rem; margin-bottom: 1rem;">📍 ${run.location}</div>
-                    <div style="display: flex; gap: 1rem; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 1rem;">
-                        <div>
-                            <div style="font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase;">Distance</div>
-                            <div style="font-weight: 700; color: white;">${run.user_distance}</div>
-                        </div>
-                        <div>
-                            <div style="font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase;">Level</div>
-                            <div style="font-weight: 700; color: white;">${run.user_level ? run.user_level.split(' ')[0] : 'N/A'}</div>
-                        </div>
-                    </div>
-                </div>
-            `).join('');
+                <div class="glass-card" style="padding: 1.5rem; text-align: left;">
+                    <div style="font-weight: 800; font-size: 1.1rem;">${run.date_display}</div>
+                    <div style="color: var(--peach-accent); font-size: 0.85rem;">📍 ${run.location}</div>
+                    <div style="margin-top:0.5rem; font-weight:700;">${run.user_distance}</div>
+                </div>`).join('');
         }
 
         loadProfile();
