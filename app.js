@@ -76,10 +76,26 @@ const AuthService = {
 const AppService = {
     getRuns: async () => {
         const rawRuns = await dbGet('stride_runs');
-        return (rawRuns || []).filter(r => !r.date_label.includes('[EXPORTED]'));
+        const now = new Date();
+        return (rawRuns || []).filter(r => {
+            if (r.date_label.includes('[EXPORTED]')) return false;
+            if (r.date_label.includes('||')) {
+                const parts = r.date_label.split('||');
+                const runDate = new Date(parts[1]);
+                if (runDate < now) return false; // Hide expired
+                r.date_label = parts[0]; // Clean for UI
+            }
+            return true;
+        });
     },
     registerForRun: async (runId, distance, level) => {
         const user = AuthService.getCurrentUser();
+        if (!user) return false;
+
+        // Prevention: Double check if already registered
+        const existing = await dbGet('stride_registrations', `run_id=eq.${runId}&user_id=eq.${user.id}`);
+        if(existing && existing.length > 0) return false;
+
         const newReg = { id: crypto.randomUUID(), run_id: runId, user_id: user.id, distance, level, registered_at: new Date().toISOString() };
         return await dbInsert('stride_registrations', newReg);
     },
