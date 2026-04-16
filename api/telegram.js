@@ -1,3 +1,5 @@
+import crypto from 'crypto';
+
 const SUPABASE_URL = 'https://qcqyyfnsfyuaaaacddsm.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_uXs2e5aPzrIL_M2xsYDmWg_hPOUaG1l';
 const BOT_TOKEN = '8682463984:AAHA2PWT7WtQRskETmOanj0k2b45ZgGfYIs';
@@ -110,9 +112,11 @@ async function checkBirthdays(chatId) {
 
 // ─── MENU ─────────────────────────────────────────────────────────────────────
 async function sendMenu(chatId, msg = "🏠 *Stride Rite Admin Menu*\nWhat would you like to manage today?") {
-    // Check tracking state
-    const tracks = await dbGet('live_tracks', 'id=eq.admin');
-    const isActive = (tracks && tracks.length > 0) ? tracks[0].is_active : false;
+    let isActive = false;
+    try {
+        const tracks = await dbGet('live_tracks', 'id=eq.admin');
+        isActive = (tracks && tracks.length > 0) ? tracks[0].is_active : false;
+    } catch (e) { console.error("Menu state check failed", e); }
     
     const liveButton = isActive 
         ? [{ text: "🛑 Stop Live Run", callback_data: "cmd_stop_live" }]
