@@ -392,65 +392,6 @@ const AppService = {
     }
 };
 
-// ─── LIVE TRACKER SERVICE ──────────────────────────────────────────────────
-const LiveTrackerService = {
-    map: null,
-    marker: null,
-    
-    init: async () => {
-        const container = document.getElementById('liveRunContainer');
-        if (!container || !window.supabaseClient) return;
-
-        // 1. Initial Load
-        const { data } = await window.supabaseClient.from('live_tracks').select('*').eq('id', 'admin').single();
-        if (data && data.is_active) {
-            LiveTrackerService.showTracker(data.lat, data.lng);
-        }
-
-        // 2. Realtime Subscription
-        window.supabaseClient.channel('custom-filter-channel')
-          .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'live_tracks', filter: 'id=eq.admin' }, (payload) => {
-              const state = payload.new;
-              if (state.is_active) {
-                  LiveTrackerService.showTracker(state.lat, state.lng);
-              } else {
-                  LiveTrackerService.hideTracker();
-              }
-          })
-          .subscribe();
-    },
-
-    showTracker: (lat, lng) => {
-        const container = document.getElementById('liveRunContainer');
-        if (container) container.style.display = 'block';
-
-        if (!LiveTrackerService.map && window.L) {
-            LiveTrackerService.map = L.map('liveMap').setView([lat, lng], 16);
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-                attribution: '&copy; OpenStreetMap &copy; CARTO'
-            }).addTo(LiveTrackerService.map);
-
-            LiveTrackerService.marker = L.marker([lat, lng]).addTo(LiveTrackerService.map);
-        } else if (LiveTrackerService.marker) {
-            LiveTrackerService.marker.setLatLng([lat, lng]);
-            LiveTrackerService.map.panTo([lat, lng]);
-        }
-    },
-
-    hideTracker: () => {
-        const container = document.getElementById('liveRunContainer');
-        if (container) container.style.display = 'none';
-        if (LiveTrackerService.map) {
-            LiveTrackerService.map.remove();
-            LiveTrackerService.map = null;
-        }
-    }
-};
-
-// Auto-init dashboard components
-if (document.getElementById('liveRunContainer')) {
-    LiveTrackerService.init();
-}
 
 const Utils = {
     animateNumber: (el, start, end, duration = 1000) => {
@@ -498,4 +439,3 @@ window.Utils = Utils;
 window.SUPABASE_URL = SUPABASE_URL;
 window.SUPABASE_KEY = SUPABASE_KEY;
 window.defaultHeaders = defaultHeaders;
-window.LiveTrackerService = LiveTrackerService;
