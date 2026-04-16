@@ -49,7 +49,7 @@
         <div class="hero-visual animate-up">
             <div class="stat-card stat-1" style="border-bottom: 4px solid var(--neon-accent); min-width: 250px;">
                 <div class="stat-value" id="dayStat">SATURDAY</div>
-                <div class="stat-value"><span id="hourStat">0</span>:00 <span style="font-size:1.2rem;">AM</span></div>
+                <div class="stat-value">7:00 <span style="font-size:1.2rem;">AM</span></div>
                 <div style="width:50px; height:3px; background:var(--peach-accent); margin: 10px 0;"></div>
                 <div class="stat-label">Community run · All welcome</div>
             </div>
@@ -100,23 +100,26 @@
     <script src="app.js?v=21"></script>
     <script>
         window.addEventListener('load', () => {
-            const days = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'];
-            let dayIdx = 0;
+            const targetDay = "SATURDAY";
+            const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
             const dayEl = document.getElementById('dayStat');
-            const dayInterval = setInterval(() => {
-                dayEl.innerText = days[dayIdx % days.length];
-                dayIdx++;
-                if (dayIdx >= days.length) {
-                    clearInterval(dayInterval);
-                    dayEl.innerText = 'SATURDAY';
-                }
-            }, 100);
+            let iterations = 0;
+            
+            const shuffleInterval = setInterval(() => {
+                dayEl.innerText = targetDay.split("")
+                    .map((letter, index) => {
+                        if(index < iterations) return targetDay[index];
+                        return chars[Math.floor(Math.random() * 26)];
+                    }).join("");
+                
+                iterations += 1/3; // Speed of resolving
+                if(iterations >= targetDay.length) clearInterval(shuffleInterval);
+            }, 30);
 
             setTimeout(() => {
                 Utils.animateNumber(document.getElementById('km2'), 0, 2, 800);
                 Utils.animateNumber(document.getElementById('km5'), 0, 5, 1000);
                 Utils.animateNumber(document.getElementById('km8'), 0, 8, 1200);
-                Utils.animateNumber(document.getElementById('hourStat'), 0, 7, 1000);
             }, 500);
         });
         if (AuthService.getCurrentUser()) {
