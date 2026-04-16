@@ -166,12 +166,14 @@
                     if (success) {
                         Swal.fire({
                             icon: 'success',
-                            title: 'Order Sent! 🎉',
-                            html: '<p>Admin will verify your payment and notify you. See you at the next run!</p>',
-                            background: '#141419', color: '#fff', confirmButtonColor: 'var(--neon-accent)'
+                            title: 'Order Received! 🎉',
+                            html: '<p>Our admins will verify your payment and email you a confirmation! See you at the next run!</p>',
+                            background: '#141419', color: '#fff',
+                            confirmButtonColor: 'var(--neon-accent)'
                         });
                     } else {
-                        Swal.fire({ icon: 'error', title: 'Submission failed', text: 'Please try again or contact us on WhatsApp.', background: '#141419', color: '#fff' });
+                        console.error("Order submission failed at AppService level.");
+                        Swal.fire({icon: 'error', title: 'Failed to submit', text: 'Please check your connection and try again.', background: '#141419', color: '#fff'});
                     }
                 }
             });
