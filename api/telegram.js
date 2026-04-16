@@ -320,7 +320,7 @@ async function updateOrderStatusAndEmail(chatId, orderId, newStatus, templateId)
         ]
     };
 
-    let finalMsg = `📦 Order for *${itemName}* marked as *${statusText}* ${statusEmoji}.\n👤 *Runner:* ${userNameFull}\n📏 *Size:* ${order.size}\n💰 *Price:* ${itemPrice} EGP`;
+    let finalMsg = `📦 Order for *${itemName}* marked as *${statusText}* ${statusEmoji}.\n👤 *Runner:* ${userNameFull}\n📏 *Size:* ${order.size}\n💰 *Price:* ${itemPrice} EGP\n💳 *Method:* ${order.payment_method || 'InstaPay/Telda'}`;
     if (!emailSent) finalMsg += `\n\n⚠️ _Note: Email failed to send, but status is updated._`;
     else finalMsg += `\n📧 _Email notification sent!_`;
 
@@ -336,7 +336,7 @@ async function handleShopExportOrders(chatId) {
     for (const o of (orders || [])) {
         const item = (items || []).find(i => i.id === o.item_id) || {};
         const user = (users || []).find(u => u.id === o.user_id) || {};
-        csv += `"${new Date(o.created_at).toLocaleDateString()}","${user.name || 'Unknown'}","${o.phone_number || ''}","${user.email || ''}","${item.name || 'Unknown'}","${o.size}","${item.price || ''}","${o.status}","${o.receipt_ref || ''}"\n`;
+        csv += `"${new Date(o.created_at).toLocaleDateString()}","${user.name || 'Unknown'}","${o.phone_number || ''}","${user.email || ''}","${item.name || 'Unknown'}","${o.size}","${item.price || ''}","${o.status}","${o.receipt_ref || o.reference || ''}","${o.payment_method || 'InstaPay/Telda'}"\n`;
     }
     const formData = new FormData();
     formData.append('chat_id', chatId);
