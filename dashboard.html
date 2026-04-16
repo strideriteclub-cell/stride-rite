@@ -51,6 +51,8 @@
         if (!user) window.location.href = 'index.html';
         document.getElementById('welcomeUser').innerText = `Welcome back, ${user.name}!`;
 
+        let runSelections = {}; // Track selected distance per run card
+
         async function renderRuns() {
             const container = document.getElementById('runsContainer');
             const runs = await AppService.getRuns();
@@ -63,15 +65,45 @@
 
             container.innerHTML = runs.map(run => {
                 const isReg = myRegs.includes(run.id);
+                // Default to 5K if not selected
+                if (!runSelections[run.id]) runSelections[run.id] = '5K';
+                const dist = runSelections[run.id];
+
                 return `
-                <div class="glass-card" style="padding:2rem; border-bottom:4px solid var(--neon-accent);">
+                <div class="glass-card animate-up" style="padding:2rem; border-bottom:4px solid var(--neon-accent);">
                     <div style="font-weight:800; font-size:1.5rem; color:white;">${run.date_label}</div>
-                    <div style="color:var(--peach-accent); margin-bottom:1rem;">📍 ${run.location}</div>
+                    <div style="color:var(--text-muted); margin-bottom:1rem;">📍 ${run.location}</div>
+                    
+                    ${!isReg ? `
+                        <span class="diff-label ${dist === '2K' ? 'easy' : dist === '5K' ? 'med' : 'hard'}" id="diff-${run.id}">
+                            Goal: ${dist === '2K' ? 'Easy' : dist === '5K' ? 'Moderate' : 'Hard'}
+                        </span>
+                        <div class="dist-selector">
+                            <button class="dist-btn easy ${dist === '2K' ? 'active' : ''}" onclick="selectDist('${run.id}', '2K')">2K</button>
+                            <button class="dist-btn med ${dist === '5K' ? 'active' : ''}" onclick="selectDist('${run.id}', '5K')">5K</button>
+                            <button class="dist-btn hard ${dist === '8K' ? 'active' : ''}" onclick="selectDist('${run.id}', '8K')">8K</button>
+                        </div>
+                    ` : ''}
+
                     ${isReg ? `<button class="btn btn-secondary btn-block" disabled>✓ Registered</button>` : `<button class="btn btn-primary btn-block" onclick="joinRun('${run.id}')">Join Run</button>`}
                 </div>`;
             }).join('');
             if(runs.length > 0) loadAIAdvisor(runs[0]);
         }
+
+        window.selectDist = (runId, dist) => {
+            runSelections[runId] = dist;
+            renderRuns(); // Quick re-render to update UI states
+        };
+
+        window.joinRun = async (rId) => {
+            const distance = runSelections[rId] || '5K';
+            const success = await AppService.registerForRun(rId, distance, user.level);
+            if(success) {
+                Swal.fire({ icon: 'success', title: 'See you there! 🏃‍♂️', background: '#141419', color: '#fff' });
+                renderRuns();
+            }
+        };
 
         async function loadAIAdvisor(run) {
             const apiKey = '686edc30f7764d08ada12150261604';
@@ -93,7 +125,6 @@
             } catch (e) {}
         }
 
-        window.joinRun = (rId) => AppService.registerForRun(rId, '5K', user.level).then(()=>renderRuns());
         renderRuns();
     </script>
 </body>
