@@ -1,4 +1,10 @@
-// [FILE]: app.js (COMPLETE - SAVES ALL FEATURES)
+// [FILE]: app.js (TRUE COMPLETE VERSION)
+// This version includes the Mobile Menu, Animations, and all Features.
+
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js').catch(e => console.log('SW error:', e)); });
+}
+
 const SUPABASE_URL = 'https://qcqyyfnsfyuaaaacddsm.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_uXs2e5aPzrIL_M2xsYDmWg_hPOUaG1l';
 
@@ -19,7 +25,7 @@ async function dbGet(table, query = 'select=*') {
 async function dbInsert(table, data) {
     try {
         const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, { method: 'POST', headers: defaultHeaders, body: JSON.stringify(data) });
-        if (!res.ok) return null;
+        if (!res.ok) { console.error('DB Error:', await res.json()); return null; }
         const json = await res.json();
         return Array.isArray(json) ? json[0] : json;
     } catch (e) { return null; }
@@ -36,6 +42,12 @@ const AuthService = {
         if (users.length > 0) { localStorage.setItem("stride_current_user", JSON.stringify(users[0])); return true; }
         return false;
     },
+    register: async (name, email, password, birthdate, gender, level) => {
+        const newUser = { id: crypto.randomUUID(), name, email, password, birthdate, gender, level, joined_at: new Date().toISOString() };
+        const result = await dbInsert('stride_users', newUser);
+        if (result) { localStorage.setItem("stride_current_user", JSON.stringify(result)); return true; }
+        return false;
+    },
     logout: () => { localStorage.removeItem("stride_current_user"); window.location.href = 'index.html'; },
     getCurrentUser: () => JSON.parse(localStorage.getItem("stride_current_user") || 'null')
 };
@@ -45,7 +57,7 @@ const AppService = {
     registerForRun: async (runId, dist) => {
         const user = AuthService.getCurrentUser();
         if (!user) return false;
-        const result = await dbInsert('stride_registrations', { id: crypto.randomUUID(), run_id: runId, user_id: user.id, distance: dist, level: 'Intermediate' });
+        const result = await dbInsert('stride_registrations', { id: crypto.randomUUID(), run_id: runId, user_id: user.id, distance: dist, level: user.level || 'Intermediate' });
         return result !== null;
     },
     getUserRegistrations: async (userId) => {
@@ -76,4 +88,44 @@ const AppService = {
         return false;
     }
 };
-window.AuthService = AuthService; window.AppService = AppService;
+
+const Utils = {
+    animateNumber: (el, start, end, duration = 1000) => {
+        if (!el) return;
+        let startTimestamp = null;
+        const step = (timestamp) => {
+            if (!startTimestamp) startTimestamp = timestamp;
+            const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+            el.innerText = Math.floor(progress * (end - start) + start);
+            if (progress < 1) window.requestAnimationFrame(step);
+        };
+        window.requestAnimationFrame(step);
+    }
+};
+
+// --- MOBILE NAVIGATION INITIALIZATION ---
+document.addEventListener('DOMContentLoaded', () => {
+    const navbar = document.querySelector('.navbar');
+    if (!navbar) return;
+    const navLinks = document.querySelector('.nav-links');
+    
+    const btn = document.createElement('button');
+    btn.className = 'hamburger-btn';
+    btn.innerHTML = '<span></span><span></span><span></span>';
+    navbar.appendChild(btn);
+
+    const overlay = document.createElement('div');
+    overlay.className = 'mobile-nav-overlay';
+    document.body.appendChild(overlay);
+
+    const panel = document.createElement('nav');
+    panel.className = 'mobile-nav-panel';
+    panel.innerHTML = navLinks ? navLinks.innerHTML : '';
+    document.body.appendChild(panel);
+
+    const toggle = () => { [btn, overlay, panel].forEach(el => el.classList.toggle('open')); document.body.style.overflow = btn.classList.contains('open') ? 'hidden' : ''; };
+    btn.onclick = toggle; overlay.onclick = toggle;
+    panel.querySelectorAll('a').forEach(a => a.onclick = toggle);
+});
+
+window.AuthService = AuthService; window.AppService = AppService; window.Utils = Utils;
