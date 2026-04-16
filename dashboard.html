@@ -3,50 +3,212 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard | Stride Rite</title>
+    <title>Member Dashboard | Stride Rite</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=15">
+    <link rel="stylesheet" href="styles.css?v=23">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        .dashboard-header { margin-bottom: 3rem; }
+        .dashboard-header h1 { font-size: 2.5rem; margin-bottom: 0.5rem; }
+        .welcome-text { color: var(--text-muted); font-size: 1.1rem; }
+        .section-title { font-family: 'Outfit'; font-size: 1.8rem; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 12px; }
+        .runs-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1.5rem; }
+        
+        .run-card { 
+            padding: 2.5rem; 
+            border-bottom: 4px solid var(--neon-accent); 
+            transition: transform 0.3s;
+        }
+        .run-card.registered { border-bottom-color: #22c55e; }
+        .run-card:hover { transform: translateY(-5px); }
+        .run-date { font-weight: 800; font-size: 1.6rem; color: white; margin-bottom: 0.5rem; }
+        .run-loc { color: var(--text-muted); font-size: 0.95rem; margin-bottom: 1.5rem; display: flex; align-items: flex-start; gap: 6px; }
+        
+        .registered-badge {
+            background: rgba(34, 197, 94, 0.15);
+            color: #22c55e;
+            padding: 6px 12px;
+            border-radius: 50px;
+            font-size: 0.75rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            display: inline-block;
+            margin-bottom: 1rem;
+        }
+
+        .weather-meta { display: flex; gap: 1.5rem; margin-top: 1rem; }
+        .weather-stat { display: flex; flex-direction: column; }
+        .weather-label { font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
+        .weather-val { font-weight: 700; color: white; }
+    </style>
 </head>
 <body>
     <nav class="navbar">
         <div style="font-family:'Outfit'; font-weight:800; font-size:1.5rem;">S<span style="color:var(--peach-accent);">.</span></div>
-        <div class="nav-links"><a href="index.html">🏠 Home</a><a href="shop.html">🛍 Shop</a><a href="profile.html">👤 Profile</a><a href="#" onclick="AuthService.logout()">Logout</a></div>
+        <div class="nav-links">
+            <a href="shop.html">🛍 VIP Shop</a>
+            <a href="gallery.html">📸 Gallery</a>
+            <a href="profile.html">👤 My Profile</a>
+            <a href="#" onclick="AuthService.logout()">Logout</a>
+        </div>
     </nav>
+
     <div class="main-container">
-        <header class="animate-up" style="margin-bottom: 2rem;">
-            <h1 style="font-size: 2rem;">Community Dashboard</h1>
-            <p id="welcomeUser" style="color: var(--text-muted);"></p>
+        <header class="dashboard-header animate-up">
+            <h1 id="welcomeUser">Welcome, Runner!</h1>
+            <p class="welcome-text">Your central hub for community runs and rewards.</p>
         </header>
+
         <div id="advisorContainer"></div>
-        <section><h2 style="margin-bottom: 1.5rem;">🗓 Upcoming Runs</h2><div class="b-grid" id="runsContainer"></div></section>
+
+        <section class="animate-up" style="animation-delay: 0.2s;">
+            <h2 class="section-title">🗓 Upcoming Community Runs</h2>
+            <div class="runs-grid" id="runsContainer">
+                <p style="color:var(--text-muted); padding:2rem;">Loading runs...</p>
+            </div>
+        </section>
     </div>
-    <script src="app.js?v=21"></script>
+
+    <script src="app.js?v=23"></script>
     <script>
         const user = AuthService.getCurrentUser();
         if (!user) window.location.href = 'index.html';
-        document.getElementById('welcomeUser').innerText = `Welcome back, ${user.name}!`;
+        
+        document.getElementById('welcomeUser').innerText = `Welcome back, ${user.name.split(' ')[0]}!`;
+
         let runSelections = {};
+
+        async function initDashboard() {
+            await renderRuns();
+        }
+
         async function renderRuns() {
             const container = document.getElementById('runsContainer');
-            const runs = await AppService.getRuns();
-            const myRegs = await AppService.getUserRegistrations(user.id);
+            const [runs, myRegs] = await Promise.all([
+                AppService.getRuns(),
+                AppService.getUserRegistrations(user.id)
+            ]);
+
+            if (!runs || runs.length === 0) {
+                container.innerHTML = `<p style="padding:3rem; text-align:center; color:var(--text-muted); grid-column:1/-1;">No community runs scheduled at the moment. Check back soon!</p>`;
+                return;
+            }
+
             container.innerHTML = runs.map(run => {
                 const isReg = myRegs.includes(run.id);
                 if (!runSelections[run.id]) runSelections[run.id] = '5K';
-                const dist = runSelections[run.id];
-                return `<div class="glass-card animate-up" style="padding:2rem; border-bottom:4px solid ${isReg ? '#22c55e' : 'var(--neon-accent)'};"><div style="font-weight:800;font-size:1.5rem;color:white;">${run.date_label}</div><div style="color:var(--text-muted);">📍 ${run.location}</div>${!isReg ? `<div class="dist-selector"><button class="dist-btn ${dist === '2K' ? 'active' : ''}" onclick="selectDist('${run.id}', '2K')">2K</button><button class="dist-btn ${dist === '5K' ? 'active' : ''}" onclick="selectDist('${run.id}', '5K')">5K</button><button class="dist-btn ${dist === '8K' ? 'active' : ''}" onclick="selectDist('${run.id}', '8K')">8K</button></div>` : ''}${isReg ? '<button class="btn btn-secondary btn-block" disabled>✓ Registered</button>' : `<button class="btn btn-primary btn-block" onclick="joinRun('${run.id}')">Join Run</button>`}</div>`;
+                const currentDist = runSelections[run.id];
+
+                return `
+                    <div class="glass-card run-card ${isReg ? 'registered' : ''} animate-up">
+                        ${isReg ? '<span class="registered-badge">✓ Registered</span>' : ''}
+                        <div class="run-date">${run.date_label}</div>
+                        <div class="run-loc">
+                            <span>📍</span>
+                            <a href="${run.location_link}" target="_blank" style="color:var(--neon-accent); text-decoration:underline;">${run.location}</a>
+                        </div>
+                        
+                        ${!isReg ? `
+                            <div style="font-size:0.8rem; color:var(--text-muted); margin-bottom:8px; font-weight:600;">SELECT DISTANCE:</div>
+                            <div class="dist-selector">
+                                <button class="dist-btn ${currentDist === '2K' ? 'active' : ''}" onclick="selectDist('${run.id}', '2K')">2K</button>
+                                <button class="dist-btn ${currentDist === '5K' ? 'active' : ''}" onclick="selectDist('${run.id}', '5K')">5K</button>
+                                <button class="dist-btn ${currentDist === '8K' ? 'active' : ''}" onclick="selectDist('${run.id}', '8K')">8K</button>
+                            </div>
+                            <button class="btn btn-primary btn-block" onclick="joinRun('${run.id}')">Confirm Registration</button>
+                        ` : `
+                            <button class="btn btn-secondary btn-block" disabled style="opacity:0.8; cursor:default; background:rgba(34, 197, 94, 0.1); border-color:#22c55e; color:#22c55e;">
+                                You're all set! See you there.
+                            </button>
+                        `}
+                    </div>
+                `;
             }).join('');
-            if(runs.length > 0) loadAIAdvisor(runs[0]);
+
+            // Load weather advisory for the first run
+            if (runs.length > 0) loadAIAdvisor(runs[0]);
         }
-        window.selectDist = (rId, d) => { runSelections[rId] = d; renderRuns(); };
-        window.joinRun = async (rId) => { const s = await AppService.registerForRun(rId, runSelections[rId]); if(s) { Swal.fire({icon:'success', title:'Joined!', background:'#141419', color:'#fff'}); renderRuns(); } };
+
+        window.selectDist = (rId, dist) => {
+            runSelections[rId] = dist;
+            renderRuns(); // Fast re-render
+        };
+
+        window.joinRun = async (rId) => {
+            Swal.fire({ title: 'Registering...', background:'#141419', didOpen: () => Swal.showLoading() });
+            const success = await AppService.registerForRun(rId, runSelections[rId], user.level || 'Beginner');
+            
+            if (success) {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'See you at the run! 🏃‍♂️',
+                    text: 'We\'ve sent a notification to the community leads.',
+                    background: '#141419',
+                    color: '#fff',
+                    confirmButtonColor: 'var(--neon-accent)'
+                });
+                renderRuns();
+            } else {
+                Swal.fire({
+                    icon: 'info',
+                    title: 'Already Registered',
+                    text: 'You are already on the list for this run!',
+                    background: '#141419',
+                    color: '#fff'
+                });
+            }
+        };
+
         async function loadAIAdvisor(run) {
-            const res = await fetch(`https://api.weatherapi.com/v1/current.json?key=686edc30f7764d08ada12150261604&q=${run.location}`);
-            const data = await res.json();
-            document.getElementById('advisorContainer').innerHTML = `<div class="advisor-card animate-up"><img src="${data.current.condition.icon}" style="width:50px;"><div><div style="font-size:0.7rem; color:var(--neon-accent); font-weight:800;">🌤 AI ADVISOR</div><div style="font-weight:700; color:white;">PR-breaking conditions: ${data.current.temp_c}°C</div></div></div>`;
+            try {
+                const query = run.location.split(',')[0];
+                const res = await fetch(`https://api.weatherapi.com/v1/current.json?key=686edc30f7764d08ada12150261604&q=${encodeURIComponent(query)}`);
+                const data = await res.json();
+                
+                if (data.error) throw new Error('Weather API error');
+
+                const temp = data.current.temp_c;
+                const cond = data.current.condition.text;
+                const humidity = data.current.humidity;
+                const wind = data.current.wind_kph;
+                
+                let advice = "Perfect running weather! Stick to your target pace.";
+                if (temp > 28) advice = "It's a bit warm. Remember to hydrate well before and after! 💧";
+                if (temp < 10) advice = "Chilly morning! Keep those muscles warm with a longer warm-up. 🔥";
+
+                document.getElementById('advisorContainer').innerHTML = `
+                    <div class="advisor-card animate-up">
+                        <img src="${data.current.condition.icon}" style="width:64px; height:64px;">
+                        <div style="flex:1;">
+                            <div style="font-size:0.75rem; color:var(--neon-accent); font-weight:800; letter-spacing:2px; margin-bottom:4px;">🌤 AI WEATHER ADVISOR</div>
+                            <div style="font-weight:700; color:white; font-size:1.1rem; margin-bottom:8px;">${advice}</div>
+                            <div class="weather-meta">
+                                <div class="weather-stat">
+                                    <span class="weather-label">Temp</span>
+                                    <span class="weather-val">${temp}°C</span>
+                                </div>
+                                <div class="weather-stat">
+                                    <span class="weather-label">Condition</span>
+                                    <span class="weather-val">${cond}</span>
+                                </div>
+                                <div class="weather-stat">
+                                    <span class="weather-label">Wind</span>
+                                    <span class="weather-val">${wind} km/h</span>
+                                </div>
+                                <div class="weather-stat">
+                                    <span class="weather-label">Humidity</span>
+                                    <span class="weather-val">${humidity}%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } catch (e) {
+                console.error("Advisor failed", e);
+            }
         }
-        renderRuns();
+
+        initDashboard();
     </script>
 </body>
 </html>
