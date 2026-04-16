@@ -3,161 +3,91 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>How Was Your Run? | Stride Rite</title>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=4">
+    <title>Post-Run Survey | Stride Rite</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css?v=23">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
-        .survey-wrap { max-width: 600px; margin: 120px auto 4rem; padding: 0 1.5rem; }
-        .emoji-btn-group { display: flex; gap: 0.75rem; flex-wrap: wrap; margin-top: 0.75rem; }
-        .emoji-btn {
-            flex: 1; min-width: 60px;
-            padding: 1rem 0.5rem;
-            background: rgba(255,255,255,0.04);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            color: white;
-            font-size: 1.5rem;
-            cursor: pointer;
-            transition: all 0.2s;
-            text-align: center;
-        }
-        .emoji-btn:hover, .emoji-btn.selected {
-            background: rgba(88, 74, 220, 0.2);
-            border-color: var(--neon-accent);
-            transform: translateY(-2px);
-        }
-        .emoji-btn small { display: block; font-size: 0.65rem; color: var(--text-muted); margin-top: 4px; }
-        .survey-q { margin-bottom: 2rem; }
-        .survey-q label { display: block; font-size: 1.1rem; font-weight: 600; margin-bottom: 0.25rem; font-family: 'Outfit'; }
-        .survey-q p { color: var(--text-muted); font-size: 0.9rem; margin-bottom: 0.5rem; }
-        .survey-textarea {
-            width: 100%;
-            background: rgba(0,0,0,0.2);
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            color: white;
-            padding: 1rem;
-            font-size: 1rem;
-            font-family: 'Inter';
-            resize: vertical;
-            min-height: 80px;
-            transition: border-color 0.3s;
-        }
-        .survey-textarea:focus { outline: none; border-color: var(--neon-accent); }
-        .header-logo { font-family: 'Outfit'; font-weight: 800; font-size: 1.4rem; }
+        .survey-box { max-width: 600px; margin: 80px auto; padding: 3rem; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 32px; backdrop-filter: blur(20px); }
+        .rating-group { display: flex; justify-content: space-between; margin: 2rem 0; }
+        .rating-btn { width: 50px; height: 50px; border-radius: 50%; border: 1px solid var(--border-color); background: rgba(255,255,255,0.05); color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: 800; transition: 0.2s; }
+        .rating-btn:hover { border-color: var(--neon-accent); transform: scale(1.1); }
+        .rating-btn.active { background: var(--neon-accent); border-color: var(--neon-accent); box-shadow: 0 0 15px var(--neon-glow); }
+        textarea { width: 100%; padding: 1rem; border-radius: 12px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); color: white; margin-top: 1rem; font-size: 1rem; min-height: 120px; }
     </style>
 </head>
 <body>
-    <nav class="navbar">
-        <div class="logo header-logo">Stride Rite 🏃</div>
-    </nav>
-
-    <div class="survey-wrap" id="mainWrap">
-        <div id="loadingMsg" style="text-align:center; padding: 3rem 0;">
-            <p style="color: var(--text-muted);">Loading survey...</p>
+    <div class="survey-box animate-up">
+        <h1 style="font-family:'Outfit'; font-size:2rem; margin-bottom:1rem;">How was your run?</h1>
+        <p style="color:var(--text-muted);">Tell us how you felt during the <span id="runDateLabel" style="color:var(--peach-accent); font-weight:700;">community run</span>.</p>
+        
+        <div style="margin-top:2rem;">
+            <label style="font-weight:700; color:white;">Rate your effort (1-10):</label>
+            <div class="rating-group" id="ratingGroup">
+                <button class="rating-btn">1</button>
+                <button class="rating-btn">2</button>
+                <button class="rating-btn">3</button>
+                <button class="rating-btn">4</button>
+                <button class="rating-btn" id="defaultRating">5</button>
+                <button class="rating-btn">6</button>
+                <button class="rating-btn">7</button>
+                <button class="rating-btn">8</button>
+                <button class="rating-btn">9</button>
+                <button class="rating-btn">10</button>
+            </div>
         </div>
+
+        <div style="margin-top:2rem;">
+            <label style="font-weight:700; color:white;">Any feedback or shoutouts?</label>
+            <textarea id="feedbackText" placeholder="Great route! Thanks Haleem for the pacing..."></textarea>
+        </div>
+
+        <button onclick="submitSurvey()" class="btn btn-primary btn-block" style="margin-top:2rem;">Submit Feedback</button>
+        <br>
+        <div style="text-align:center;"><a href="index.html" style="color:var(--text-muted); font-size:0.85rem;">Skip & Go Home</a></div>
     </div>
 
-    <script src="app.js?v=2"></script>
     <script>
-        const params = new URLSearchParams(window.location.search);
-        const runLabel = params.get('run') || 'Recent Run';
-        const user = AuthService.getCurrentUser();
-        const wrap = document.getElementById('mainWrap');
+        const urlParams = new URLSearchParams(window.location.search);
+        const runDate = urlParams.get('run');
+        if (runDate) document.getElementById('runDateLabel').innerText = decodeURIComponent(runDate);
 
-        const surveyRedirect = encodeURIComponent(window.location.pathname + window.location.search);
-        if (!user) {
-            wrap.innerHTML = `
-                <div class="glass-panel" style="padding: 2.5rem; text-align: center;">
-                    <div style="font-size: 3rem; margin-bottom: 1rem;">🔒</div>
-                    <h2 style="font-family:'Outfit'; margin-bottom: 0.75rem;">Please Log In First</h2>
-                    <p style="color: var(--text-muted); margin-bottom: 1.5rem;">We need to know who you are to record your feedback!</p>
-                    <a href="index.html?redirect=${surveyRedirect}" class="btn btn-primary">Log In / Sign Up</a>
-                </div>
-            `;
-        } else {
-            let feelingValue = '';
-            wrap.innerHTML = `
-                <div style="text-align:center; margin-bottom: 2.5rem;">
-                    <div style="font-size: 3rem; margin-bottom: 0.75rem;">🏁</div>
-                    <h1 style="font-family:'Outfit'; font-size: 2rem; margin-bottom: 0.5rem;">How Was Your Run?</h1>
-                    <p style="color: var(--text-muted);">Hey ${user.name.split(' ')[0]}! We want to hear from you. This takes less than 30 seconds.</p>
-                    <p style="color: var(--peach-accent); font-size: 0.85rem; margin-top: 0.5rem;">${decodeURIComponent(runLabel)}</p>
-                </div>
+        let selectedRating = 5;
+        document.querySelectorAll('.rating-btn').forEach(btn => {
+            if(btn.innerText == "5") btn.classList.add('active');
+            btn.onclick = () => {
+                document.querySelectorAll('.rating-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                selectedRating = btn.innerText;
+            };
+        });
 
-                <div class="glass-panel" style="padding: 2rem;">
-
-                    <div class="survey-q">
-                        <label>1. How did you feel after the run?</label>
-                        <p>Be honest — this helps us plan future runs better!</p>
-                        <div class="emoji-btn-group" id="feelingGroup">
-                            <button class="emoji-btn" data-val="Terrible" onclick="selectFeeling(this)">😩<small>Terrible</small></button>
-                            <button class="emoji-btn" data-val="Hard" onclick="selectFeeling(this)">😮‍💨<small>Hard</small></button>
-                            <button class="emoji-btn" data-val="Good" onclick="selectFeeling(this)">😊<small>Good</small></button>
-                            <button class="emoji-btn" data-val="Great" onclick="selectFeeling(this)">💪<small>Great</small></button>
-                            <button class="emoji-btn" data-val="Amazing" onclick="selectFeeling(this)">🔥<small>Amazing</small></button>
-                        </div>
-                    </div>
-
-                    <div class="survey-q">
-                        <label>2. What did you enjoy most?</label>
-                        <p>The route? The group energy? The pace? Tell us!</p>
-                        <textarea class="survey-textarea" id="enjoyAnswer" placeholder="e.g. Loved the route, the group was very motivating..."></textarea>
-                    </div>
-
-                    <div class="survey-q">
-                        <label>3. What could we improve?</label>
-                        <p>Any suggestion is welcome, big or small.</p>
-                        <textarea class="survey-textarea" id="improveAnswer" placeholder="e.g. Start time, warmup, distance options..."></textarea>
-                    </div>
-
-                    <button class="btn btn-primary btn-block" id="submitBtn" onclick="submitSurvey()">Submit My Feedback 🚀</button>
-                </div>
-            `;
-        }
-
-        window.selectFeeling = function(btn) {
-            document.querySelectorAll('.emoji-btn').forEach(b => b.classList.remove('selected'));
-            btn.classList.add('selected');
-        };
-
-        window.submitSurvey = async function() {
-            const feeling = document.querySelector('.emoji-btn.selected')?.dataset.val;
-            const enjoy = document.getElementById('enjoyAnswer').value.trim();
-            const improve = document.getElementById('improveAnswer').value.trim();
-
-            if (!feeling) {
-                Swal.fire({ icon: 'warning', title: 'Almost!', text: 'Please pick an emoji for how you felt.', background: '#141419', color: '#fff', confirmButtonColor: 'var(--neon-accent)' });
-                return;
+        async function submitSurvey() {
+            Swal.fire({ title: 'Sending...', background:'#141419', didOpen: () => Swal.showLoading() });
+            
+            const feedback = document.getElementById('feedbackText').value;
+            const botToken = '8682463984:AAHA2PWT7WtQRskETmOanj0k2b45ZgGfYIs';
+            const chatId = '1538316434';
+            
+            const text = `📝 *New Post-Run Feedback*\n\n📅 *Run:* ${runDate || 'Unknown'}\n💪 *Effort:* ${selectedRating}/10\n💬 *Feedback:* ${feedback || '_No text provided_'}`;
+            
+            try {
+                await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ chat_id: chatId, text, parse_mode: 'Markdown' })
+                });
+                
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Thank you!',
+                    text: 'Your feedback helps the community grow.',
+                    background: '#141419', color: '#fff'
+                }).then(() => window.location.href = 'index.html');
+            } catch(e) {
+                Swal.fire({ icon: 'error', title: 'Error', text: 'Could not send feedback. Try again later.', background:'#141419' });
             }
-
-            const btn = document.getElementById('submitBtn');
-            btn.innerText = 'Sending...';
-            btn.disabled = true;
-
-            const BOT_TOKEN = '8682463984:AAHA2PWT7WtQRskETmOanj0k2b45ZgGfYIs';
-            const CHAT_ID = '1538316434';
-            const runName = decodeURIComponent(runLabel);
-
-            const msg = `📋 *Post-Run Survey Response!*\n\n👤 *${user.name}* (${user.age}${user.gender === 'Male' ? 'M' : 'F'}) • ${user.level}\n📧 ${user.email}\n📅 *Run:* ${runName}\n\n1️⃣ *Feeling:* ${feeling}\n\n2️⃣ *Enjoyed Most:*\n"${enjoy || 'No answer'}"\n\n3️⃣ *Improve:*\n"${improve || 'No answer'}"`;
-
-            await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ chat_id: CHAT_ID, text: msg, parse_mode: 'Markdown' })
-            });
-
-            Swal.fire({
-                icon: 'success',
-                title: 'Thank you! 🎉',
-                html: `<p style="color:#a1a1aa;">Your feedback has been sent to the organizers. See you at the next run!</p>`,
-                background: '#141419',
-                color: '#fff',
-                confirmButtonColor: 'var(--peach-accent)',
-                confirmButtonText: 'Back to Home'
-            }).then(() => window.location.href = 'index.html');
-        };
+        }
     </script>
 </body>
 </html>
