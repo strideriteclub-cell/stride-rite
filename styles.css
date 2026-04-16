@@ -39,6 +39,20 @@ a { text-decoration: none; color: inherit; transition: all 0.3s; }
 
 .main-container, .shop-container, .profile-container, .admin-container { padding: 120px 5% 5rem; }
 .hero-visual { flex: 1; position: relative; height: 600px; display: flex; align-items: center; justify-content: center; gap: 40px; }
+
+/* Interactive Run Selector */
+.dist-selector { display: flex; gap: 8px; background: rgba(0,0,0,0.3); padding: 5px; border-radius: 12px; margin: 1.5rem 0; border: 1px solid rgba(255,255,255,0.05); }
+.dist-btn { flex: 1; padding: 10px; border-radius: 8px; border: none; background: transparent; color: var(--text-muted); font-weight: 700; cursor: pointer; transition: 0.3s; font-size: 0.85rem; }
+.dist-btn.active { background: var(--neon-accent); color: white; box-shadow: 0 4px 12px rgba(88, 74, 220, 0.4); }
+.dist-btn.active.easy { background: #22c55e; box-shadow: 0 4px 12px rgba(34, 197, 94, 0.4); }
+.dist-btn.active.med { background: #f59e0b; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4); }
+.dist-btn.active.hard { background: #ef4444; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4); }
+
+.diff-label { font-size: 0.75rem; font-weight: 800; text-transform: uppercase; margin-bottom: 5px; display: block; transition: 0.3s; }
+.diff-label.easy { color: #22c55e; }
+.diff-label.med { color: #f59e0b; }
+.diff-label.hard { color: #ef4444; }
+
 .stat-card { background: rgba(20, 20, 25, 0.7); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.08); border-radius: 20px; padding: 1.5rem; }
 .stat-value { font-size: 2.2rem; font-weight: 800; font-family: 'Outfit'; line-height: 1.1; }
 .stat-label { color: var(--text-muted); font-size: 0.85rem; font-weight: 500; }
