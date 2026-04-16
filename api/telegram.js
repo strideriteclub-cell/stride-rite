@@ -109,20 +109,17 @@ async function checkBirthdays(chatId) {
 }
 
 // ─── MENU ─────────────────────────────────────────────────────────────────────
-async function sendMenu(chatId, msg = "👟 *Stride Rite Admin Bot*\nHey Haleem! What do you want to do?") {
-    await clearSession();
-    await sendMessage(chatId, msg, {
+async function sendMenu(chatId, msg = "🏠 *Stride Rite Admin Menu*\nWhat would you like to manage today?") {
+    const replyMarkup = {
         inline_keyboard: [
-            [{ text: "📊 Run Stats", callback_data: "cmd_stats" }, { text: "📋 List All Runs", callback_data: "cmd_runs" }],
-            [{ text: "📥 Export Excel", callback_data: "cmd_export" }, { text: "📲 WhatsApp Blast", callback_data: "cmd_blast" }],
-            [{ text: "📝 Survey Link", callback_data: "cmd_survey" }, { text: "🎂 Birthdays", callback_data: "cmd_birthdays" }],
-            [{ text: "🔍 Runner Lookup", callback_data: "cmd_lookup_start" }, { text: "📣 Broadcast", callback_data: "cmd_broadcast_start" }],
-            [{ text: "📈 Growth Graph", callback_data: "cmd_growth" }, { text: "✏️ Edit a Run", callback_data: "cmd_edit_list" }],
-            [{ text: "📸 Add to Gallery", callback_data: "cmd_gallery_start" }, { text: "🛍️ VIP Shop Admin", callback_data: "cmd_shop_menu" }],
-            [{ text: "🚫 Cancel a Run", callback_data: "cmd_cancel_list" }, { text: "🗑️ Delete a Run", callback_data: "cmd_delete_list" }],
-            [{ text: "🆕 Create New Run", callback_data: "create_step1" }]
+            [{ text: "🏃‍♂️ Manage Runs", callback_data: "cmd_runs" }, { text: "🛍️ VIP Shop", callback_data: "cmd_shop_menu" }],
+            [{ text: "🚀 Start Live Run", callback_data: "cmd_start_live" }, { text: "🛑 Stop Live Run", callback_data: "cmd_stop_live" }],
+            [{ text: "📊 Stats", callback_data: "cmd_stats" }, { text: "📸 Gallery", callback_data: "cmd_gallery_start" }],
+            [{ text: "📣 Broadcast", callback_data: "cmd_broadcast_start" }, { text: "🎂 Birthdays", callback_data: "cmd_birthdays" }],
+            [{ text: "📥 Export Data", callback_data: "cmd_export" }, { text: "📉 Growth", callback_data: "cmd_growth" }]
         ]
-    });
+    };
+    await sendMessage(chatId, msg, replyMarkup);
 }
 
 // ─── GALLERY ─────────────────────────────────────────────────────────────────
@@ -234,15 +231,46 @@ async function handleGalleryDeleteExecute(chatId, photoId) {
 async function handleShopMenu(chatId) {
     const settings = await dbGet('shop_settings');
     const isShopOpen = (settings && settings.length > 0) ? settings[0].is_open : false;
-    const statusText = isShopOpen ? "🟢 *OPEN* (Visible to everyone)" : "🔴 *CLOSED* (Hidden)";
-    const toggleText = isShopOpen ? "🔴 Hide Shop / Turn Off" : "🟢 Open Shop / Turn On";
-    await sendMessage(chatId, `🛍️ *VIP Shop Admin*\n\nCurrent Status: ${statusText}`, {
+    const items = await dbGet('shop_items');
+    const orders = await dbGet('shop_orders', 'status=eq.pending');
+    
+    const text = `🛍️ *VIP Shop Admin*\n\nStatus: ${isShopOpen ? '🟢 OPEN' : '🔴 CLOSED'}\nPending Orders: ${orders ? orders.length : 0}`;
+    const replyMarkup = {
         inline_keyboard: [
-            [{ text: toggleText, callback_data: `shop_toggle_${!isShopOpen}` }],
-            [{ text: "📦 Export All Orders (Excel)", callback_data: "cmd_shop_export" }],
+            [{ text: isShopOpen ? "🔴 Hide Shop" : "🟢 Open Shop", callback_data: `shop_toggle_${!isShopOpen}` }],
+            [{ text: "📦 Export Data (CSV)", callback_data: "cmd_shop_export" }],
             [{ text: "👕 Manage Products", callback_data: "cmd_shop_prd_menu" }],
             [{ text: "↩️ Back to Menu", callback_data: "cmd_menu" }]
         ]
+    };
+    await sendMessage(chatId, text, replyMarkup);
+}
+
+// ─── LIVE TRACKING ──────────────────────────────────────────────────────────
+async function handleStartLiveRun(chatId) {
+    const text = "🚀 *Stride Rite Live Tracker*\n\nWhen you're ready to start the community run, click the button below to share your **Live Location**. \n\nI will then broadcast your movement to the dashboard for 1 hour!";
+    const replyMarkup = {
+        keyboard: [[{ text: "📍 Share My Live Location", request_location: true }], [{ text: "↩️ Cancel" }]],
+        resize_keyboard: true,
+        one_time_keyboard: true
+    };
+    await sendMessage(chatId, text, replyMarkup);
+}
+
+async function handleStopLiveRun(chatId) {
+    await dbUpsert('live_tracks', { id: 'admin', is_active: false, updated_at: new Date().toISOString() });
+    await sendMessage(chatId, "🛑 *Live Run Ended.*\n\nThe map on the dashboard has been hidden. Great work today, Runner!", { remove_keyboard: true });
+    await sendMenu(chatId);
+}
+
+async function updateLiveLocation(chatId, location) {
+    const { latitude, longitude } = location;
+    await dbUpsert('live_tracks', { 
+        id: 'admin', 
+        is_active: true, 
+        lat: latitude, 
+        lng: longitude, 
+        updated_at: new Date().toISOString() 
     });
 }
 
@@ -917,6 +945,8 @@ export default async function handler(req, res) {
             else if (data.startsWith('shop_appr_')) await handleShopOrderApprove(chatId, data.replace('shop_appr_', ''), cq.message.message_id, !!cq.message.photo);
             else if (data.startsWith('shop_rej_')) await handleShopOrderReject(chatId, data.replace('shop_rej_', ''), cq.message.message_id, !!cq.message.photo);
             else if (data === 'cmd_shop_export') await handleShopExportOrders(chatId);
+            else if (data === 'cmd_start_live') await handleStartLiveRun(chatId);
+            else if (data === 'cmd_stop_live') await handleStopLiveRun(chatId);
             else if (data === 'cmd_shop_prd_menu') await handleShopProductMenu(chatId);
             else if (data === 'cmd_shop_prd_add') await handleShopProductAdd(chatId);
             else if (data.startsWith('shop_prd_edit_mn_')) await handleShopProductEditMenu(chatId, data.replace('shop_prd_edit_mn_', ''));
@@ -982,6 +1012,25 @@ export default async function handler(req, res) {
                 } else {
                     await sendMessage(chatId, "📸 Got a photo! Choose an option from the menus to attach it somewhere.");
                 }
+            }
+            res.status(200).send('ok'); return;
+        }
+
+        // Handle regular location sharing
+        if (body.message && body.message.location) {
+            const chatId = body.message.chat.id.toString();
+            if (chatId === ADMIN_CHAT_ID) {
+                await updateLiveLocation(chatId, body.message.location);
+                await sendMessage(chatId, "📍 *Live Tracking Active!*\n\nI am now broadcasting your location to the Member Dashboard. \n\n🛑 Click */stop\_live* in the menu when finished.", { remove_keyboard: true });
+            }
+            res.status(200).send('ok'); return;
+        }
+
+        // Handle LIVE location updates (these come as edited_message)
+        if (body.edited_message && body.edited_message.location) {
+            const chatId = body.edited_message.chat.id.toString();
+            if (chatId === ADMIN_CHAT_ID) {
+                await updateLiveLocation(chatId, body.edited_message.location);
             }
             res.status(200).send('ok'); return;
         }
@@ -1062,6 +1111,7 @@ export default async function handler(req, res) {
             else if (cmd === '/growth') await handleGrowthGraph(chatId);
             else if (cmd === '/lookup') await handleLookupStart(chatId);
             else if (cmd === '/broadcast') await handleBroadcastStart(chatId);
+            else if (cmd === '/stop_live') await handleStopLiveRun(chatId);
             else if (cmd === '/cancel') await handleCancelList(chatId);
             else if (cmd === '/delete') await handleDeleteList(chatId);
             else if (cmd === '/create') await createStep1(chatId);
