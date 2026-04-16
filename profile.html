@@ -20,7 +20,6 @@
         .stat-value { font-size: 3rem; font-weight: 800; font-family: 'Outfit'; line-height: 1; margin-bottom: 0.5rem; }
         .stat-label { color: var(--text-muted); text-transform: uppercase; letter-spacing: 2px; font-size: 0.75rem; font-weight: 600; }
         .history-title { font-family: 'Outfit'; font-size: 1.8rem; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 12px; color: white; }
-        .strava-connect-btn { background: #FC6100; color: white !important; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 700; font-family: 'Outfit'; display: flex; align-items: center; gap: 10px; cursor: pointer; transition: transform 0.2s, background 0.2s; text-decoration: none; width: fit-content; }
         .story-btn {
             margin-top: 1rem; width: 100%; background: rgba(88, 74, 220, 0.1); border: 1px solid var(--neon-accent);
             color: var(--neon-accent); padding: 12px; border-radius: 12px; font-size: 0.85rem; font-weight: 800;
@@ -38,7 +37,7 @@
         </div>
         <div class="nav-links">
             <a href="dashboard.html" class="btn btn-secondary">📊 Dashboard</a>
-            <button id="mockBtn" class="btn btn-secondary hidden" onclick="createMockRun()" style="border-color: #ff4444; color: #ff4444;">🛠 Mock Run</button>
+            <button id="mockBtn" class="btn btn-secondary hidden" onclick="createMockRun()" style="border-color: #ff4444; color: #ff4444; padding: 0.4rem 1rem;">🛠 Mock Run</button>
             <a href="#" onclick="AuthService.logout()">Log Out</a>
         </div>
     </nav>
@@ -72,7 +71,7 @@
         <canvas id="storyCanvas" width="1080" height="1920" style="display:none;"></canvas>
     </div>
 
-    <script src="app.js?v=9"></script>
+    <script src="app.js?v=10"></script>
     <script>
         const user = AuthService.getCurrentUser();
         if (!user) window.location.href = 'index.html';
@@ -94,42 +93,51 @@
         }
 
         async function createMockRun() {
-            Swal.fire({ title:'Creating Mock...', background:'#141419', didOpen:()=>Swal.showLoading() });
+            Swal.fire({ title:'Syncing Database...', background:'#141419', didOpen:()=>Swal.showLoading() });
             
-            const runId = 'mock-' + Date.now();
-            const pastRun = { 
-                id: runId, 
-                date_label: '[EXPORTED] Monday Community Run || 2026-04-13', 
-                location: 'Zayed Park, Al Rehab City', 
-                location_link: 'https://maps.app.goo.gl/tareg62PBaQJVypk7',
-                created_by: user.id 
-            };
-            const reg = { 
-                id: 'reg-' + Date.now(), 
-                run_id: runId, 
-                user_id: user.id, 
-                distance: '10K', 
-                level: 'Advanced', 
-                registered_at: new Date().toISOString() 
-            };
-
             const headers = { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' };
+            const runId = 'mock-' + Date.now();
 
             try {
-                const r1 = await fetch(`${SUPABASE_URL}/rest/v1/stride_runs`, { method:'POST', headers: headers, body:JSON.stringify(pastRun) });
-                const r2 = await fetch(`${SUPABASE_URL}/rest/v1/stride_registrations`, { method:'POST', headers: headers, body:JSON.stringify(reg) });
-
-                if(r1.ok && r2.ok) {
-                    Swal.fire({ icon:'success', title:'Success!', text:'10K run added to history.', background:'#141419', color:'#fff' })
-                    .then(() => location.reload());
-                } else {
-                    const text1 = await r1.text(); const text2 = await r2.text();
-                    console.error(text1, text2);
-                    throw new Error('Database insertion failed.');
+                // 1. SELF-HEALING: Check if Admin exists in Supabase
+                const userCheck = await fetch(`${SUPABASE_URL}/rest/v1/stride_users?id=eq.${user.id}`, { headers });
+                const userData = await userCheck.json();
+                
+                if (userData.length === 0) {
+                    // Create Admin Record if missing to avoid Foreign Key error
+                    await fetch(`${SUPABASE_URL}/rest/v1/stride_users`, {
+                        method: 'POST', headers,
+                        body: JSON.stringify({ id: user.id, name: user.name, email: user.email, is_admin: true, level: 'Elite' })
+                    });
                 }
+
+                // 2. Insert the Mock Run
+                const runData = {
+                    id: runId,
+                    date_label: '[EXPORTED] Friday Afternoon Run || 2026-04-10',
+                    location: 'Zayed Park, New Zayed',
+                    location_link: 'https://maps.app.goo.gl/tareg62PBaQJVypk7',
+                    created_by: user.id
+                };
+                await fetch(`${SUPABASE_URL}/rest/v1/stride_runs`, { method: 'POST', headers, body: JSON.stringify(runData) });
+
+                // 3. Insert the Registration
+                const regData = {
+                    id: 'reg-' + Date.now(),
+                    run_id: runId,
+                    user_id: user.id,
+                    distance: '8.5K',
+                    level: user.level || 'Intermediate',
+                    registered_at: new Date().toISOString()
+                };
+                await fetch(`${SUPABASE_URL}/rest/v1/stride_registrations`, { method: 'POST', headers, body: JSON.stringify(regData) });
+
+                Swal.fire({ icon:'success', title:'Mock Created!', text:'Your history is now updated.', background:'#141419', color:'#fff' })
+                .then(() => location.reload());
+
             } catch (e) {
                 console.error(e);
-                Swal.fire({ icon:'error', title:'Error', text: e.message, background:'#141419', color:'#fff' });
+                Swal.fire({ icon:'error', title:'Error', text: 'Could not update history. Check console.', background:'#141419', color:'#fff' });
             }
         }
 
@@ -141,7 +149,7 @@
 
             const container = document.getElementById('historyContainer');
             if (stats.pastRuns.length === 0) {
-                container.innerHTML = `<p style="grid-column:1/-1; text-align:center; padding:3rem; color: #a1a1aa;">No community runs yet.</p>`;
+                container.innerHTML = `<p style="grid-column:1/-1; text-align:center; padding:3rem; color:#a1a1aa;">No community runs yet.</p>`;
                 return;
             }
 
@@ -168,7 +176,7 @@
                     <input id="s-time" class="swal2-input" type="text" placeholder="00:25:00" style="width:100%; background:#0d0c11; color:white;">
                     <p id="p-prev" style="color:var(--peach-accent); font-weight:800; margin-top:1rem; font-size: 1.1rem;">Pace: --:--</p>
                 </div>`,
-                background:'#141419', color:'#fff', confirmButtonText:'Create Image',
+                background:'#141419', color:'#fff', confirmButtonText:'Create Image', confirmButtonColor: 'var(--peach-accent)',
                 didOpen: () => {
                     const di = document.getElementById('s-dist'); const ti = document.getElementById('s-time');
                     const up = () => {
@@ -184,6 +192,7 @@
         }
 
         async function processStory(date, loc, dist, time) {
+            Swal.fire({ title: 'Rendering...', background: '#141419', didOpen: () => Swal.showLoading() });
             const canvas = document.getElementById('storyCanvas');
             const ctx = canvas.getContext('2d');
             const W = 1080, H = 1920; ctx.clearRect(0,0,W,H);
