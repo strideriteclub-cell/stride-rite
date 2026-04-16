@@ -304,7 +304,7 @@ async function updateOrderStatusAndEmail(chatId, orderId, newStatus, templateId,
     const waPhone = formatWhatsAppPhone(order.phone_number);
     const waUrl = `https://wa.me/${waPhone}?text=${encodeURIComponent(`Hey ${user.name}! Your order for ${item.name} has been ${newStatus} ${statusEmoji}`)}`;
 
-    const text = `${statusEmoji} *Order ${newStatus.toUpperCase()}*\n\n*Customer:* ${user.name}\n*Item:* ${item.name}\n*Ref:* ${order.payment_detail || order.receipt_ref || order.reference || 'N/A'}`;
+    const text = `${statusEmoji} *ORDER ${newStatus.toUpperCase()}*\n\n👤 *Customer:* ${user.name}\n📧 *Email:* ${user.email}\n📞 *Phone:* ${order.phone_number}\n\n🛍️ *Item:* ${item.name}\n📏 *Size:* ${order.size}\n💰 *Price:* ${item.price} EGP\n\n💳 *Payment Prop:* ${order.payment_method || 'N/A'}\n🔢 *Ref:* \`${order.payment_detail || order.receipt_ref || order.reference || 'N/A'}\`\n\n📅 *Order Date:* ${new Date(order.created_at).toLocaleString()}`;
     
     // Detect if we need to edit a CAPTION (photo message) or TEXT (normal message)
     const method = isPhoto ? 'editMessageCaption' : 'editMessageText';
