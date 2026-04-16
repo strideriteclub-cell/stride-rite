@@ -1,3 +1,5 @@
+// [FILE]: app.js (FINAL VERSION - Fixes Login and Telegram Messages)
+
 const SUPABASE_URL = 'https://qcqyyfnsfyuaaaacddsm.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_uXs2e5aPzrIL_M2xsYDmWg_hPOUaG1l';
 
@@ -50,35 +52,71 @@ const AppService = {
     },
     getUserRegistrations: async (userId) => (await dbGet('stride_registrations', `user_id=eq.${userId}`)).map(r => r.run_id),
     getShopItems: async () => await dbGet('shop_items', 'is_active=eq.true'),
+    
+    // --- THIS FUNCTION HAS THE TELEGRAM FIX ---
     submitOrder: async (itemId, size, phone, method, detail, photoFile) => {
         const user = AuthService.getCurrentUser();
         if (!user) return false;
+        
         const orderId = crypto.randomUUID();
-        const res = await dbInsert('shop_orders', { id: orderId, user_id: user.id, item_id: itemId, size, payment_method: method, payment_detail: detail, phone_number: phone, status: 'pending' });
-        if (res) {
+        const result = await dbInsert('shop_orders', { 
+            id: orderId, user_id: user.id, item_id: itemId, size, 
+            payment_method: method, payment_detail: detail, 
+            phone_number: phone, status: 'pending' 
+        });
+        
+        if (result) {
             (async () => {
                 const botToken = '8682463984:AAHA2PWT7WtQRskETmOanj0k2b45ZgGfYIs';
                 const chatId = '1538316434';
+                
                 const items = await dbGet('shop_items', `id=eq.${itemId}`);
-                const itemName = items.length > 0 ? items[0].name : "Item";
+                const itemName = items.length > 0 ? items[0].name : "Stride Rite Item";
                 const itemPrice = items.length > 0 ? items[0].price : "---";
-                const cap = `🛍️ *New VIP Shop Order!*\n\n` +
-                            `👤 *Runner:* ${user.name}\n` +
-                            `💳 *Method:* ${method}\n` +
-                            `📝 *${method} Username:* ${detail}\n` +
-                            `📞 *WhatsApp Phone:* ${phone}\n\n` +
-                            `👟 *Item:* ${itemName}\n` +
-                            `📏 *Size:* ${size}\n` +
-                            `💰 *Price:* ${itemPrice} EGP\n\n` +
-                            `✅ *Approve or Reject below:*`;
+                
+                // Using HTML instead of Markdown to prevent Bot crashes
+                const cap = `🛍️ <b>New VIP Shop Order!</b>\n\n` +
+                            `👤 <b>Runner:</b> ${user.name}\n` +
+                            `💳 <b>Method:</b> ${method.toUpperCase()}\n` +
+                            `📝 <b>${method} Username:</b> ${detail}\n` +
+                            `📞 <b>WhatsApp Phone:</b> ${phone}\n\n` +
+                            `👟 <b>Item:</b> ${itemName}\n` +
+                            `📏 <b>Size:</b> ${size}\n` +
+                            `💰 <b>Price:</b> ${itemPrice} EGP\n\n` +
+                            `✅ <b>Approve or Reject below:</b>`;
 
-                const markup = { inline_keyboard: [[{ text: "✅ Approve", callback_data: `shop_appr_${orderId}` }, { text: "❌ Reject", callback_data: `shop_rej_${orderId}` }]] };
+                const markup = { 
+                    inline_keyboard: [[
+                        { text: "✅ Approve", callback_data: `shop_appr_${orderId}` }, 
+                        { text: "❌ Reject", callback_data: `shop_rej_${orderId}` }
+                    ]] 
+                };
                 
                 try {
-                    const fd = new FormData(); fd.append('chat_id', chatId); fd.append('caption', cap); fd.append('parse_mode', 'Markdown'); fd.append('reply_markup', JSON.stringify(markup));
-                    if (photoFile) { fd.append('photo', photoFile); await fetch(`https://api.telegram.org/bot${botToken}/sendPhoto`, { method: 'POST', body: fd }); }
-                    else { await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chat_id: chatId, text: cap, parse_mode: 'Markdown', reply_markup: markup }) }); }
-                } catch (e) {}
+                    const fd = new FormData();
+                    fd.append('chat_id', chatId);
+                    fd.append('caption', cap);
+                    fd.append('parse_mode', 'HTML'); // Changed to HTML to fix crashes
+                    fd.append('reply_markup', JSON.stringify(markup));
+                    
+                    if (photoFile) {
+                        fd.append('photo', photoFile);
+                        await fetch(`https://api.telegram.org/bot${botToken}/sendPhoto`, { method: 'POST', body: fd });
+                    } else {
+                        await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, { 
+                            method: 'POST', 
+                            headers: { 'Content-Type': 'application/json' }, 
+                            body: JSON.stringify({ 
+                                chat_id: chatId, 
+                                text: cap, 
+                                parse_mode: 'HTML', // Changed to HTML to fix crashes
+                                reply_markup: markup 
+                            }) 
+                        });
+                    }
+                } catch (e) {
+                    console.error("Telegram error:", e);
+                }
             })();
             return true;
         }
