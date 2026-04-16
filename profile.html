@@ -8,120 +8,28 @@
     <link rel="stylesheet" href="styles.css?v=5">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
-        .profile-container {
-            max-width: 900px;
-            margin: 0 auto;
-            padding: 2rem;
-            margin-top: 100px;
-        }
-        .profile-header {
-            display: flex;
-            align-items: center;
-            gap: 2rem;
-            margin-bottom: 2rem;
-            flex-wrap: wrap;
-        }
-        .avatar-circle {
-            width: 100px;
-            height: 100px;
-            background: linear-gradient(135deg, var(--neon-accent), var(--peach-accent));
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 2.5rem;
-            font-weight: 800;
-            color: white;
-            box-shadow: 0 10px 30px rgba(88, 74, 220, 0.3);
-        }
-        .profile-info h1 {
-            font-family: 'Outfit';
-            font-size: 2.5rem;
-            margin-bottom: 0.5rem;
-        }
-        .badge {
-            display: inline-block;
-            padding: 4px 12px;
-            background: rgba(255, 180, 100, 0.15);
-            color: var(--peach-accent);
-            border-radius: 50px;
-            font-size: 0.8rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            border: 1px solid var(--peach-accent);
-        }
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1.5rem;
-            margin-bottom: 4rem;
-        }
-        .profile-stat-card {
-            text-align: center;
-            padding: 2.5rem 1rem;
-            background: rgba(255,255,255,0.03);
-            border-bottom: 4px solid var(--neon-accent);
-            border-radius: 24px;
-            border: 1px solid var(--border-color);
-        }
+        .profile-container { max-width: 900px; margin: 0 auto; padding: 2rem; margin-top: 100px; }
+        .profile-header { display: flex; align-items: center; gap: 2rem; margin-bottom: 2rem; flex-wrap: wrap; }
+        .avatar-circle { width: 100px; height: 100px; background: linear-gradient(135deg, var(--neon-accent), var(--peach-accent)); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2.5rem; font-weight: 800; color: white; box-shadow: 0 10px 30px rgba(88, 74, 220, 0.3); }
+        .profile-info h1 { font-family: 'Outfit'; font-size: 2.5rem; margin-bottom: 0.5rem; }
+        .badge { display: inline-block; padding: 4px 12px; background: rgba(255, 180, 100, 0.15); color: var(--peach-accent); border-radius: 50px; font-size: 0.8rem; font-weight: 700; text-transform: uppercase; border: 1px solid var(--peach-accent); }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-bottom: 4rem; }
+        .profile-stat-card { text-align: center; padding: 2.5rem 1rem; background: rgba(255,255,255,0.03); border-bottom: 4px solid var(--neon-accent); border-radius: 24px; border: 1px solid var(--border-color); }
         .profile-stat-card.peach { border-bottom-color: var(--peach-accent); }
-        .stat-value {
-            font-size: 3rem;
-            font-weight: 800;
-            font-family: 'Outfit';
-            line-height: 1;
-            margin-bottom: 0.5rem;
-        }
-        .stat-label {
-            color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            font-size: 0.75rem;
-            font-weight: 600;
-        }
-        .history-title {
-            font-family: 'Outfit';
-            font-size: 1.8rem;
-            margin-bottom: 1.5rem;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        .strava-connect-btn {
-            background: #FC6100;
-            color: white !important;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 8px;
-            font-weight: 700;
-            font-family: 'Outfit';
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            cursor: pointer;
-            transition: transform 0.2s, background 0.2s;
-            text-decoration: none;
-            width: fit-content;
-        }
+        .stat-value { font-size: 3rem; font-weight: 800; font-family: 'Outfit'; line-height: 1; margin-bottom: 0.5rem; }
+        .stat-label { color: var(--text-muted); text-transform: uppercase; letter-spacing: 2px; font-size: 0.75rem; font-weight: 600; }
+        .history-title { font-family: 'Outfit'; font-size: 1.8rem; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 10px; }
+        .strava-connect-btn { background: #FC6100; color: white !important; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 700; font-family: 'Outfit'; display: flex; align-items: center; gap: 10px; cursor: pointer; transition: transform 0.2s, background 0.2s; text-decoration: none; width: fit-content; }
         .strava-connect-btn:hover { background: #E55600; transform: translateY(-2px); }
-        .strava-section {
-            margin-top: 3rem;
-            padding-top: 3rem;
-            border-top: 1px solid rgba(255,255,255,0.05);
+        .strava-section { margin-top: 3rem; padding-top: 3rem; border-top: 1px solid rgba(255,255,255,0.05); }
+        .strava-run-card { background: rgba(252, 97, 0, 0.05); border: 1px solid rgba(252, 97, 0, 0.1); }
+        
+        .story-btn {
+            margin-top: 1rem; width: 100%; background: rgba(88, 74, 220, 0.1); border: 1px solid var(--neon-accent);
+            color: var(--neon-accent); padding: 12px; border-radius: 12px; font-size: 0.85rem; font-weight: 800;
+            cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px; text-transform: uppercase;
         }
-        .strava-run-card {
-            background: rgba(252, 97, 0, 0.05);
-            border: 1px solid rgba(252, 97, 0, 0.1);
-        }
-        .strava-badge {
-            background: #FC6100;
-            color: white;
-            padding: 2px 8px;
-            border-radius: 4px;
-            font-size: 0.6rem;
-            font-weight: 800;
-            text-transform: uppercase;
-        }
+        .story-btn:hover { background: var(--neon-accent); color: white; transform: scale(1.02); }
     </style>
 </head>
 <body>
@@ -142,32 +50,18 @@
             <div class="avatar-circle" id="userInitial">S</div>
             <div class="profile-info">
                 <h1 id="userName">Runner Name</h1>
-                <div style="margin-bottom: 1rem;">
-                    <span class="badge" id="userLevelBadge">Intermediate</span>
-                </div>
-                <div style="color: var(--text-muted); font-size: 0.95rem;">
-                    📧 <span id="userEmail">email@example.com</span>
-                </div>
+                <div style="margin-bottom: 1rem;"><span class="badge" id="userLevelBadge">Intermediate</span></div>
+                <div style="color: var(--text-muted); font-size: 0.95rem;">📧 <span id="userEmail">email@example.com</span></div>
             </div>
         </header>
 
         <div class="stats-grid animate-up delay-1">
-            <div class="profile-stat-card">
-                <div class="stat-value" id="totalRuns">0</div>
-                <div class="stat-label">Total Runs</div>
-            </div>
-            <div class="profile-stat-card peach">
-                <div class="stat-value" id="totalKms">0.0</div>
-                <div class="stat-label">Total Kilometers</div>
-            </div>
-            <div class="profile-stat-card">
-                <div class="stat-value" id="avgDistance">0.0</div>
-                <div class="stat-label">Avg Range</div>
-            </div>
+            <div class="profile-stat-card"><div class="stat-value" id="totalRuns">0</div><div class="stat-label">Total Runs</div></div>
+            <div class="profile-stat-card peach"><div class="stat-value" id="totalKms">0.0</div><div class="stat-label">Total Kilometers</div></div>
+            <div class="profile-stat-card"><div class="stat-value" id="avgDistance">0.0</div><div class="stat-label">Avg Range</div></div>
         </div>
 
-        <!-- Strava Section (Only Admin Sees This) -->
-        <div id="stravaSection" class="strava-section animate-up delay-2" style="display: none;">
+        <div id="stravaSection" class="strava-section" style="display: none;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
                 <h2 class="history-title" style="margin: 0;">🔥 Strava Feed</h2>
                 <div id="stravaStatus"></div>
@@ -175,8 +69,10 @@
             <div class="b-grid" id="stravaContainer"></div>
         </div>
 
-        <h2 class="history-title animate-up delay-3">👟 Recent Activity</h2>
+        <h2 class="history-title" style="margin-top: 3rem;">👟 Community Activity</h2>
         <div class="b-grid" id="historyContainer"></div>
+
+        <canvas id="storyCanvas" width="1080" height="1920" style="display:none;"></canvas>
     </div>
 
     <script src="app.js?v=7"></script>
@@ -189,63 +85,113 @@
         document.getElementById('userInitial').innerText = user.name.charAt(0).toUpperCase();
         document.getElementById('userLevelBadge').innerText = user.level || 'Beginner';
 
-        // Strava Alerts
-        const urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.has('strava')) {
-            const status = urlParams.get('strava');
-            if (status === 'success') {
-                Swal.fire({ title: 'Connected!', text: 'Your account is linked.', icon: 'success', background: '#1a1a1e', color: '#fff' });
-            } else {
-                Swal.fire({ title: 'Error', text: urlParams.get('msg') || 'Failed.', icon: 'error', background: '#1a1a1e', color: '#fff' });
-            }
-            window.history.replaceState({}, document.title, window.location.pathname);
-        }
-
-        async function loadStrava() {
-            // 🛡️ ONLY ADMIN
-            if (!user.is_admin) return;
-
-            const stravaSection = document.getElementById('stravaSection');
-            const stravaStatus = document.getElementById('stravaStatus');
-            const stravaContainer = document.getElementById('stravaContainer');
-
-            // Use global variables from app.js
-            const dbUserRes = await fetch(`${SUPABASE_URL}/rest/v1/stride_users?id=eq.${user.id}`, { headers: defaultHeaders });
-            const dbUserData = await dbUserRes.json();
-            const dbUser = dbUserData[0];
-
-            stravaSection.style.display = 'block';
-
-            if (!dbUser || !dbUser.strava_access_token) {
-                stravaStatus.innerHTML = `<a href="https://www.strava.com/oauth/authorize?client_id=203804&redirect_uri=https://stride-rite.vercel.app/api/strava-callback&response_type=code&scope=activity:read_all&state=${user.id}" class="strava-connect-btn">Connect Strava</a>`;
-                stravaContainer.innerHTML = `<p style="grid-column:1/-1; text-align:center; color:var(--text-muted);">Admin Strava links appear here.</p>`;
-                return;
-            }
-
-            stravaStatus.innerHTML = `<span style="color:var(--text-muted); font-size:0.8rem;">✅ Connected</span>`;
-            try {
-                const res = await fetch(`/api/strava-activities?userId=${user.id}`);
-                const activities = await res.json();
-                stravaContainer.innerHTML = activities.map(a => `<div class="glass-card strava-run-card" style="padding:1.2rem; border-radius:12px;"><div style="font-weight:800;">${a.name}</div><div style="font-size:0.8rem; color:var(--text-muted);">📅 ${new Date(a.start_date_local).toLocaleDateString()}</div><div style="font-weight:700;">${(a.distance/1000).toFixed(2)}km</div></div>`).join('');
-            } catch (e) { stravaContainer.innerHTML = `<p>Error.</p>`; }
-        }
-
         async function loadProfile() {
             const stats = await AppService.getUserStats(user.id);
             document.getElementById('totalRuns').innerText = stats.totalRuns;
             document.getElementById('totalKms').innerText = stats.totalKms;
-            const avg = stats.totalRuns > 0 ? (stats.totalKms / stats.totalRuns).toFixed(1) : 0.0;
-            document.getElementById('avgDistance').innerText = avg;
+            document.getElementById('avgDistance').innerText = stats.totalRuns > 0 ? (stats.totalKms / stats.totalRuns).toFixed(1) : 0.0;
+
             const container = document.getElementById('historyContainer');
             if (!stats.pastRuns || stats.pastRuns.length === 0) {
                 container.innerHTML = `<p style="grid-column:1/-1; text-align:center; padding:3rem;">No community runs yet.</p>`;
                 return;
             }
-            container.innerHTML = stats.pastRuns.map(run => `<div class="glass-card" style="padding:1.5rem;"><div style="font-weight:800;">${run.date_display}</div><div style="color:var(--peach-accent);">${run.location}</div><div style="font-weight:700;">${run.user_distance}</div></div>`).join('');
+
+            container.innerHTML = stats.pastRuns.map(run => `
+                <div class="glass-card" style="padding:1.5rem;">
+                    <div style="font-weight:800; font-size:1.2rem;">${run.date_display}</div>
+                    <div style="color:var(--peach-accent); font-size:0.85rem; margin-bottom:1rem;">📍 ${run.location}</div>
+                    <div style="display:flex; justify-content:space-between; border-top:1px solid rgba(255,255,255,0.05); padding-top:1rem;">
+                        <div><div style="font-size:0.6rem; color:var(--text-muted);">DIST</div><div style="font-weight:700;">${run.user_distance}</div></div>
+                        <div><div style="font-size:0.6rem; color:var(--text-muted);">LVL</div><div style="font-weight:700;">${run.user_level ? run.user_level.split(' ')[0] : 'N/A'}</div></div>
+                    </div>
+                    <button class="story-btn" onclick="openStoryGenerator('${run.date_display}', '${run.location}', '${run.user_distance}')">🤳 Generate Story</button>
+                </div>`).join('');
         }
 
-        loadProfile();
-        loadStrava();
+        window.openStoryGenerator = function(date, loc, defDist) {
+            const cleanD = defDist.replace(/[^\d.]/g, '');
+            Swal.fire({
+                title: 'Create Your Story',
+                html: `<div style="text-align:left;">
+                    <label style="font-size:0.7rem; color:var(--text-muted);">DISTANCE (KM)</label>
+                    <input id="s-dist" class="swal2-input" type="number" value="${cleanD}" style="width:100%; background:#0d0c11; color:white;">
+                    <label style="font-size:0.7rem; color:var(--text-muted); margin-top:1rem; display:block;">TIME (HH:MM:SS)</label>
+                    <input id="s-time" class="swal2-input" type="text" placeholder="00:25:00" style="width:100%; background:#0d0c11; color:white;">
+                    <p id="p-prev" style="color:var(--peach-accent); font-weight:700; margin-top:0.5rem;">Pace: --:--</p>
+                </div>`,
+                background:'#141419', color:'#fff', confirmButtonText:'Create PNG',
+                didOpen: () => {
+                    const di = document.getElementById('s-dist'); const ti = document.getElementById('s-time');
+                    const up = () => {
+                        const d = parseFloat(di.value); const tp = ti.value.split(':');
+                        if(d > 0 && tp.length === 3) {
+                            const s = (parseInt(tp[0])*3600)+(parseInt(tp[1])*60)+parseInt(tp[2]);
+                            if(s>0) document.getElementById('p-prev').innerText = `Pace: ${formatPace(s, d*1000)} /km`;
+                        }
+                    };
+                    di.oninput = up; ti.oninput = up;
+                }
+            }).then(r => r.isConfirmed && processStory(date, loc, document.getElementById('s-dist').value, document.getElementById('s-time').value));
+        }
+
+        async function processStory(date, loc, dist, time) {
+            const canvas = document.getElementById('storyCanvas');
+            const ctx = canvas.getContext('2d');
+            const W = 1080, H = 1920;
+            
+            // Background
+            const g = ctx.createRadialGradient(W/2, H/2, 0, W/2, H/2, H);
+            g.addColorStop(0, '#1a1a24'); g.addColorStop(1, '#0d0c11');
+            ctx.fillStyle = g; ctx.fillRect(0,0,W,H);
+
+            // Branding
+            ctx.textAlign = 'center'; ctx.fillStyle = '#584adc';
+            ctx.beginPath(); ctx.arc(W/2, 250, 80, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = 'white'; ctx.font = '800 80px Outfit'; ctx.fillText('S.', W/2+5, 275);
+            ctx.font = '700 40px Outfit'; ctx.letterSpacing = '10px'; ctx.fillText('STRIDE RITE', W/2, 400);
+
+            // Text
+            ctx.letterSpacing = '0px'; ctx.font = '800 95px Outfit'; ctx.fillText(user.name.toUpperCase(), W/2, 750);
+            ctx.fillStyle = '#ff8b6a'; ctx.font = '600 45px Outfit'; ctx.fillText(`FINISHER · ${date.toUpperCase()}`, W/2, 830);
+
+            // Stats
+            ctx.fillStyle = '#a1a1aa'; ctx.font = '600 40px Outfit'; ctx.fillText('DISTANCE', W/2, 1150);
+            ctx.fillStyle = 'white'; ctx.font = '800 200px Outfit'; ctx.fillText(`${dist} KM`, W/2, 1330);
+            
+            const tp = time.split(':'); const s = (parseInt(tp[0])*3600)+(parseInt(tp[1])*60)+parseInt(tp[2]);
+            const pace = formatPace(s, parseFloat(dist)*1000);
+            
+            ctx.fillStyle = '#a1a1aa'; ctx.font = '600 40px Outfit';
+            ctx.fillText('PACE', W/4+50, 1500); ctx.fillText('TIME', (W/4*3)-50, 1500);
+            ctx.fillStyle = 'white'; ctx.font = '800 110px Outfit';
+            ctx.fillText(pace, W/4+50, 1630); ctx.fillText(time, (W/4*3)-50, 1630);
+
+            const png = canvas.toDataURL('image/png');
+            Swal.fire({ title:'Ready to Share!', imageUrl:png, imageWidth:250, background:'#141419', confirmButtonText:'💾 Download PNG' })
+            .then(s => { if(s.isConfirmed){ const l = document.createElement('a'); l.download=`StrideRite_${date}.png`; l.href=png; l.click(); }});
+        }
+
+        function formatPace(s, m) {
+            const km = m/1000; const p = (s/60)/km;
+            const mi = Math.floor(p); const se = Math.round((p-mi)*60);
+            return `${mi}:${se.toString().padStart(2,'0')}`;
+        }
+
+        async function loadStrava() {
+            if(!user.is_admin) return;
+            const sRes = await fetch(`${SUPABASE_URL}/rest/v1/stride_users?id=eq.${user.id}`, { headers: defaultHeaders });
+            const sData = await sRes.json();
+            if(sData[0]?.strava_access_token) {
+                document.getElementById('stravaSection').style.display = 'block';
+                document.getElementById('stravaStatus').innerHTML = '✅ Admin Linked';
+                const aRes = await fetch(`/api/strava-activities?userId=${user.id}`);
+                const acts = await aRes.json();
+                document.getElementById('stravaContainer').innerHTML = acts.map(a => `<div class="glass-card" style="padding:1.2rem;"><div style="font-weight:800;">${a.name}</div><div style="font-size:0.8rem; color:var(--text-muted);">${(a.distance/1000).toFixed(2)}km</div></div>`).join('');
+            }
+        }
+
+        loadProfile(); loadStrava();
     </script>
 </body>
 </html>
