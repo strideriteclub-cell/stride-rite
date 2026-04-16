@@ -260,11 +260,11 @@ async function handleShopToggle(chatId, newStateStr) {
     await handleShopMenu(chatId);
 }
 
-async function handleShopOrderApprove(chatId, orderId) {
-    await updateOrderStatusAndEmail(chatId, orderId, 'approved', 'template_qgow76l');
+async function handleShopOrderApprove(chatId, orderId, messageId) {
+    await updateOrderStatusAndEmail(chatId, orderId, 'approved', 'template_qgow76l', messageId);
 }
-async function handleShopOrderReject(chatId, orderId) {
-    await updateOrderStatusAndEmail(chatId, orderId, 'rejected', 'template_59dgsfw');
+async function handleShopOrderReject(chatId, orderId, messageId) {
+    await updateOrderStatusAndEmail(chatId, orderId, 'rejected', 'template_59dgsfw', messageId);
 }
 
 function formatWhatsAppPhone(phone) {
@@ -274,26 +274,20 @@ function formatWhatsAppPhone(phone) {
     return p;
 }
 
-async function updateOrderStatusAndEmail(chatId, orderId, newStatus, templateId) {
-    await sendMessage(chatId, `⏳ Processing ${newStatus} for order...`);
+async function updateOrderStatusAndEmail(chatId, orderId, newStatus, templateId, messageId) {
     const orders = await dbGet('shop_orders', `id=eq.${orderId}`);
-    if (!orders || orders.length === 0) { await sendMessage(chatId, "❌ Order not found."); return; }
+    if (!orders || orders.length === 0) return;
     const order = orders[0];
     const items = await dbGet('shop_items', `id=eq.${order.item_id}`);
-    const itemName = (items && items.length > 0) ? items[0].name : 'Item';
-    const itemPrice = (items && items.length > 0) ? items[0].price : '0';
+    const item = items[0] || { name: 'Item', price: '0' };
     const users = await dbGet('stride_users', `id=eq.${order.user_id}`);
-    const userEmail = (users && users.length > 0) ? users[0].email : '';
-    const userNameFull = (users && users.length > 0) ? users[0].name : 'Runner';
-    const userName = userNameFull.split(' ')[0];
+    const user = users[0] || { name: 'Runner', email: '' };
 
-    await fetch(`${SUPABASE_URL}/rest/v1/shop_orders?id=eq.${orderId}`, {
-        method: 'PATCH', headers: dbHeaders, body: JSON.stringify({ status: newStatus })
-    });
+    await dbPatch('shop_orders', 'id', orderId, { status: newStatus });
 
-    let emailSent = false;
+    // Send Email notification
     try {
-        const emailRes = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
+        await fetch('https://api.emailjs.com/api/v1.0/email/send', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -301,30 +295,28 @@ async function updateOrderStatusAndEmail(chatId, orderId, newStatus, templateId)
                 template_id: templateId,
                 user_id: 'GBTxpiwg_SF7bN2tH',
                 accessToken: '9yAc3NjCBB5wATwThsv6U',
-                template_params: { to_name: userName, to_email: userEmail, price: itemPrice, item_name: itemName, item_size: order.size }
+                template_params: { to_name: user.name, to_email: user.email, price: item.price, item_name: item.name, item_size: order.size }
             })
         });
-        emailSent = emailRes.ok;
-    } catch (e) { console.error("EmailJS fail", e); }
+    } catch (e) { console.error("Email fail", e); }
 
     const statusEmoji = newStatus === 'approved' ? '✅' : '❌';
-    const statusText = newStatus.toUpperCase();
     const waPhone = formatWhatsAppPhone(order.phone_number);
-    const waMsg = encodeURIComponent(`Hey ${userName}! 👋 Your Stride Rite order for the ${itemName} has been ${statusText} ${statusEmoji}.\n\nSee you at the next run! 🏃‍♂️💨`);
-    const waUrl = `https://wa.me/${waPhone}?text=${waMsg}`;
+    const waUrl = `https://wa.me/${waPhone}?text=${encodeURIComponent(`Hey ${user.name}! Your order for ${item.name} has been ${newStatus} ${statusEmoji}`)}`;
 
-    const replyMarkup = {
-        inline_keyboard: [
-            [{ text: `📲 Notify ${userName} via WhatsApp`, url: waUrl }],
-            [{ text: "↩️ Back to Menu", callback_data: "cmd_menu" }]
-        ]
-    };
-
-    let finalMsg = `📦 Order for *${itemName}* marked as *${statusText}* ${statusEmoji}.\n👤 *Runner:* ${userNameFull}\n📏 *Size:* ${order.size}\n💰 *Price:* ${itemPrice} EGP\n💳 *Method:* ${order.payment_method || 'InstaPay/Telda'}`;
-    if (!emailSent) finalMsg += `\n\n⚠️ _Note: Email failed to send, but status is updated._`;
-    else finalMsg += `\n📧 _Email notification sent!_`;
-
-    await sendMessage(chatId, finalMsg, replyMarkup);
+    const text = `${statusEmoji} *Order ${newStatus.toUpperCase()}*\n\n*Customer:* ${user.name}\n*Item:* ${item.name}\n*Ref:* ${order.receipt_ref || order.reference || 'N/A'}`;
+    
+    await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/editMessageText`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            chat_id: chatId,
+            message_id: messageId,
+            text: text,
+            parse_mode: 'Markdown',
+            reply_markup: { inline_keyboard: [[{ text: "📲 WhatsApp Customer", url: waUrl }], [{ text: "↩️ Back to Menu", callback_data: "cmd_menu" }]] }
+        })
+    });
 }
 
 async function handleShopExportOrders(chatId) {
@@ -917,8 +909,8 @@ export default async function handler(req, res) {
             else if (data.startsWith('gallery_del_')) await handleGalleryDeleteConfirm(chatId, data.replace('gallery_del_', ''));
             else if (data === 'cmd_shop_menu') await handleShopMenu(chatId);
             else if (data.startsWith('shop_toggle_')) await handleShopToggle(chatId, data.replace('shop_toggle_', ''));
-            else if (data.startsWith('shop_appr_')) await handleShopOrderApprove(chatId, data.replace('shop_appr_', ''));
-            else if (data.startsWith('shop_rej_')) await handleShopOrderReject(chatId, data.replace('shop_rej_', ''));
+            else if (data.startsWith('shop_appr_')) await handleShopOrderApprove(chatId, data.replace('shop_appr_', ''), cq.message.message_id);
+            else if (data.startsWith('shop_rej_')) await handleShopOrderReject(chatId, data.replace('shop_rej_', ''), cq.message.message_id);
             else if (data === 'cmd_shop_export') await handleShopExportOrders(chatId);
             else if (data === 'cmd_shop_prd_menu') await handleShopProductMenu(chatId);
             else if (data === 'cmd_shop_prd_add') await handleShopProductAdd(chatId);
