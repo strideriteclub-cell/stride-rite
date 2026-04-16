@@ -189,14 +189,27 @@
         document.getElementById('userInitial').innerText = user.name.charAt(0).toUpperCase();
         document.getElementById('userLevelBadge').innerText = user.level || 'Beginner';
 
+        // Strava Alerts
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.has('strava')) {
+            const status = urlParams.get('strava');
+            if (status === 'success') {
+                Swal.fire({ title: 'Connected!', text: 'Your account is linked.', icon: 'success', background: '#1a1a1e', color: '#fff' });
+            } else {
+                Swal.fire({ title: 'Error', text: urlParams.get('msg') || 'Failed.', icon: 'error', background: '#1a1a1e', color: '#fff' });
+            }
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
+
         async function loadStrava() {
-            // 🛡️ SECURITY: Only allow Admin to see Strava
+            // 🛡️ ONLY ADMIN
             if (!user.is_admin) return;
 
             const stravaSection = document.getElementById('stravaSection');
             const stravaStatus = document.getElementById('stravaStatus');
             const stravaContainer = document.getElementById('stravaContainer');
 
+            // Use global variables from app.js
             const dbUserRes = await fetch(`${SUPABASE_URL}/rest/v1/stride_users?id=eq.${user.id}`, { headers: defaultHeaders });
             const dbUserData = await dbUserRes.json();
             const dbUser = dbUserData[0];
@@ -205,7 +218,7 @@
 
             if (!dbUser || !dbUser.strava_access_token) {
                 stravaStatus.innerHTML = `<a href="https://www.strava.com/oauth/authorize?client_id=203804&redirect_uri=https://stride-rite.vercel.app/api/strava-callback&response_type=code&scope=activity:read_all&state=${user.id}" class="strava-connect-btn">Connect Strava</a>`;
-                stravaContainer.innerHTML = `<p style="grid-column:1/-1; text-align:center; color:var(--text-muted);">Admin Strava will appear here.</p>`;
+                stravaContainer.innerHTML = `<p style="grid-column:1/-1; text-align:center; color:var(--text-muted);">Admin Strava links appear here.</p>`;
                 return;
             }
 
@@ -214,7 +227,7 @@
                 const res = await fetch(`/api/strava-activities?userId=${user.id}`);
                 const activities = await res.json();
                 stravaContainer.innerHTML = activities.map(a => `<div class="glass-card strava-run-card" style="padding:1.2rem; border-radius:12px;"><div style="font-weight:800;">${a.name}</div><div style="font-size:0.8rem; color:var(--text-muted);">📅 ${new Date(a.start_date_local).toLocaleDateString()}</div><div style="font-weight:700;">${(a.distance/1000).toFixed(2)}km</div></div>`).join('');
-            } catch (e) { stravaContainer.innerHTML = `<p>Error loading.</p>`; }
+            } catch (e) { stravaContainer.innerHTML = `<p>Error.</p>`; }
         }
 
         async function loadProfile() {
