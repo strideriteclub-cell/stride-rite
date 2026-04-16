@@ -9,6 +9,10 @@ const defaultHeaders = {
     'Prefer': 'return=representation'
 };
 
+// --- INITIALIZE SUPABASE CLIENT ---
+const supabase = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
+window.supabaseClient = supabase; // Standardize for dashboard.html
+
 function generateUUID() {
     if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
@@ -249,68 +253,7 @@ const AppService = {
                 body: JSON.stringify({ chat_id: chatId, text, parse_mode: 'Markdown' })
             });
         } catch (e) { console.error("Notification failed", e); }
-    }
-};
-
-// ─── LIVE TRACKER SERVICE ──────────────────────────────────────────────────
-const LiveTrackerService = {
-    map: null,
-    marker: null,
-    
-    init: async () => {
-        const container = document.getElementById('liveRunContainer');
-        if (!container) return;
-
-        // 1. Initial Load
-        const { data } = await supabase.from('live_tracks').select('*').eq('id', 'admin').single();
-        if (data && data.is_active) {
-            LiveTrackerService.showTracker(data.lat, data.lng);
-        }
-
-        // 2. Realtime Subscription
-        supabase.channel('custom-filter-channel')
-          .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'live_tracks', filter: 'id=eq.admin' }, (payload) => {
-              const state = payload.new;
-              if (state.is_active) {
-                  LiveTrackerService.showTracker(state.lat, state.lng);
-              } else {
-                  LiveTrackerService.hideTracker();
-              }
-          })
-          .subscribe();
     },
-
-    showTracker: (lat, lng) => {
-        const container = document.getElementById('liveRunContainer');
-        container.style.display = 'block';
-
-        if (!LiveTrackerService.map) {
-            LiveTrackerService.map = L.map('liveMap').setView([lat, lng], 16);
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-                attribution: '&copy; OpenStreetMap &copy; CARTO'
-            }).addTo(LiveTrackerService.map);
-
-            LiveTrackerService.marker = L.marker([lat, lng]).addTo(LiveTrackerService.map);
-        } else {
-            LiveTrackerService.marker.setLatLng([lat, lng]);
-            LiveTrackerService.map.panTo([lat, lng]);
-        }
-    },
-
-    hideTracker: () => {
-        const container = document.getElementById('liveRunContainer');
-        if (container) container.style.display = 'none';
-        if (LiveTrackerService.map) {
-            LiveTrackerService.map.remove();
-            LiveTrackerService.map = null;
-        }
-    }
-};
-
-// Auto-init dashboard components
-if (document.getElementById('liveRunContainer')) {
-    LiveTrackerService.init();
-}
 
     getUserRegistrations: async (userId) => {
         const regs = await dbGet('stride_registrations', `user_id=eq.${userId}`);
@@ -378,6 +321,7 @@ if (document.getElementById('liveRunContainer')) {
         const items = await dbGet('shop_items', 'is_active=eq.true');
         return items || [];
     },
+
     submitOrder: async (itemId, size, refNumber, phone, paymentMethod, screenshotFile) => {
         const currentUser = AuthService.getCurrentUser();
         if (!currentUser) return false;
@@ -446,6 +390,66 @@ if (document.getElementById('liveRunContainer')) {
         return false;
     }
 };
+
+// ─── LIVE TRACKER SERVICE ──────────────────────────────────────────────────
+const LiveTrackerService = {
+    map: null,
+    marker: null,
+    
+    init: async () => {
+        const container = document.getElementById('liveRunContainer');
+        if (!container || !window.supabaseClient) return;
+
+        // 1. Initial Load
+        const { data } = await window.supabaseClient.from('live_tracks').select('*').eq('id', 'admin').single();
+        if (data && data.is_active) {
+            LiveTrackerService.showTracker(data.lat, data.lng);
+        }
+
+        // 2. Realtime Subscription
+        window.supabaseClient.channel('custom-filter-channel')
+          .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'live_tracks', filter: 'id=eq.admin' }, (payload) => {
+              const state = payload.new;
+              if (state.is_active) {
+                  LiveTrackerService.showTracker(state.lat, state.lng);
+              } else {
+                  LiveTrackerService.hideTracker();
+              }
+          })
+          .subscribe();
+    },
+
+    showTracker: (lat, lng) => {
+        const container = document.getElementById('liveRunContainer');
+        if (container) container.style.display = 'block';
+
+        if (!LiveTrackerService.map && window.L) {
+            LiveTrackerService.map = L.map('liveMap').setView([lat, lng], 16);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                attribution: '&copy; OpenStreetMap &copy; CARTO'
+            }).addTo(LiveTrackerService.map);
+
+            LiveTrackerService.marker = L.marker([lat, lng]).addTo(LiveTrackerService.map);
+        } else if (LiveTrackerService.marker) {
+            LiveTrackerService.marker.setLatLng([lat, lng]);
+            LiveTrackerService.map.panTo([lat, lng]);
+        }
+    },
+
+    hideTracker: () => {
+        const container = document.getElementById('liveRunContainer');
+        if (container) container.style.display = 'none';
+        if (LiveTrackerService.map) {
+            LiveTrackerService.map.remove();
+            LiveTrackerService.map = null;
+        }
+    }
+};
+
+// Auto-init dashboard components
+if (document.getElementById('liveRunContainer')) {
+    LiveTrackerService.init();
+}
 
 const Utils = {
     animateNumber: (el, start, end, duration = 1000) => {
