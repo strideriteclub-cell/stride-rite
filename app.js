@@ -315,12 +315,21 @@ const AppService = {
             item_id: itemId,
             size: size,
             receipt_ref: refNumber,
-            phone_number: phone,
+            phone_number: phone, 
             status: 'pending'
         };
 
         console.log("Submitting order...", newOrder);
-        const result = await dbInsert('shop_orders', newOrder);
+        let result = await dbInsert('shop_orders', newOrder);
+        
+        // If it fails due to column name mismatch, try fallback
+        if (result === null && window.lastDbError && window.lastDbError.includes('receipt_ref')) {
+            console.log("Retrying with fallback column name 'reference'...");
+            const fallbackOrder = { ...newOrder };
+            delete fallbackOrder.receipt_ref;
+            fallbackOrder.reference = refNumber;
+            result = await dbInsert('shop_orders', fallbackOrder);
+        }
         if (result !== null) {
             const items = await dbGet('shop_items', `id=eq.${itemId}`);
             const itemName = (items && items.length > 0) ? items[0].name : 'Unknown Item';
