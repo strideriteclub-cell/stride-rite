@@ -1,7 +1,7 @@
-const crypto = require('crypto');
 
 const SUPABASE_URL = 'https://qcqyyfnsfyuaaaacddsm.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_uXs2e5aPzrIL_M2xsYDmWg_hPOUaG1l';
+function generateUUID() { return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15); }
 const BOT_TOKEN = '8682463984:AAHA2PWT7WtQRskETmOanj0k2b45ZgGfYIs';
 const ADMIN_CHAT_ID = '1538316434';
 const SITE_URL = 'https://stride-rite.vercel.app';
@@ -111,7 +111,7 @@ async function checkBirthdays(chatId) {
 }
 
 // ─── MENU ─────────────────────────────────────────────────────────────────────
-async function sendMenu(chatId, msg = "🏠 *Stride Rite Admin V3*\nWhat would you like to manage today?") {
+async function sendMenu(chatId, msg = "🏠 *Stride Rite Admin V4*\nWhat would you like to manage today?") {
     let isActive = false;
     try {
         const tracks = await dbGet('live_tracks', 'id=eq.admin');
@@ -298,7 +298,7 @@ async function handleShopToggle(chatId, newStateStr) {
             method: 'PATCH', headers: dbHeaders, body: JSON.stringify({ is_open: newState })
         });
     } else {
-        await dbInsert('shop_settings', { id: crypto.randomUUID(), is_open: newState });
+        await dbInsert('shop_settings', { id: generateUUID(), is_open: newState });
     }
     await sendMessage(chatId, newState ? "✅ Shop is now *LIVE* to the community!" : "🚫 Shop is now *HIDDEN*.");
     await handleShopMenu(chatId);
@@ -905,7 +905,7 @@ async function createExecute(chatId) {
         const fd = dateObj.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
         const ft = formatTime(d.time);
         await dbInsert('stride_runs', {
-            id: crypto.randomUUID(), date_label: `${fd} - ${ft}||${dateObj.toISOString()}`,
+            id: generateUUID(), date_label: `${fd} - ${ft}||${dateObj.toISOString()}`,
             location: d.locationName, location_link: d.mapsLink,
             description: 'Every pace is welcome!', created_by: 'admin-1'
         });
@@ -918,7 +918,7 @@ async function createExecute(chatId) {
 }
 
 // ─── MAIN HANDLER ─────────────────────────────────────────────────────────────
-module.exports = async function handler(req, res) {
+export default async function handler(req, res) {
     if (req.method !== 'POST') { res.status(200).send('Alive'); return; }
     try {
         const body = req.body;
@@ -1006,7 +1006,7 @@ module.exports = async function handler(req, res) {
                     const imgUrl = await uploadShopPhoto(chatId, body.message);
                     if (!imgUrl) { await sendMessage(chatId, "❌ Failed to upload photo."); res.status(200).send('ok'); return; }
                     await dbInsert('shop_items', {
-                        id: crypto.randomUUID(),
+                        id: generateUUID(),
                         name: session.data.name,
                         price: parseInt(session.data.price),
                         sizes: session.data.sizes,
