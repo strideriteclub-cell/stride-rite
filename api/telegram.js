@@ -304,7 +304,7 @@ async function updateOrderStatusAndEmail(chatId, orderId, newStatus, templateId,
     const waPhone = formatWhatsAppPhone(order.phone_number);
     const waUrl = `https://wa.me/${waPhone}?text=${encodeURIComponent(`Hey ${user.name}! Your order for ${item.name} has been ${newStatus} ${statusEmoji}`)}`;
 
-    const text = `${statusEmoji} *Order ${newStatus.toUpperCase()}*\n\n*Customer:* ${user.name}\n*Item:* ${item.name}\n*Ref:* ${order.receipt_ref || order.reference || 'N/A'}`;
+    const text = `${statusEmoji} *Order ${newStatus.toUpperCase()}*\n\n*Customer:* ${user.name}\n*Item:* ${item.name}\n*Ref:* ${order.payment_detail || order.receipt_ref || order.reference || 'N/A'}`;
     
     await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/editMessageText`, {
         method: 'POST',
