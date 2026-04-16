@@ -49,7 +49,7 @@
         <div class="hero-visual animate-up">
             <div class="stat-card stat-1" style="border-bottom: 4px solid var(--neon-accent); min-width: 250px;">
                 <div class="stat-value">SATURDAY</div>
-                <div class="stat-value">7:00 <span style="font-size:1.2rem;">AM</span></div>
+                <div class="stat-value"><span id="hourStat">0</span>:00 <span style="font-size:1.2rem;">AM</span></div>
                 <div style="width:50px; height:3px; background:var(--peach-accent); margin: 10px 0;"></div>
                 <div class="stat-label">Community run · All welcome</div>
             </div>
@@ -104,6 +104,7 @@
                 Utils.animateNumber(document.getElementById('km2'), 0, 2, 800);
                 Utils.animateNumber(document.getElementById('km5'), 0, 5, 1000);
                 Utils.animateNumber(document.getElementById('km8'), 0, 8, 1200);
+                Utils.animateNumber(document.getElementById('hourStat'), 0, 7, 1000);
             }, 500);
         });
         if (AuthService.getCurrentUser()) {
