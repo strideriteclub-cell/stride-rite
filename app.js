@@ -498,3 +498,4 @@ window.Utils = Utils;
 window.SUPABASE_URL = SUPABASE_URL;
 window.SUPABASE_KEY = SUPABASE_KEY;
 window.defaultHeaders = defaultHeaders;
+window.LiveTrackerService = LiveTrackerService;
