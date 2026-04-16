@@ -53,8 +53,8 @@
 
         async function loadProfile() {
             const stats = await AppService.getUserStats(user.id);
-            document.getElementById('totalRuns').innerText = stats.totalRuns;
-            document.getElementById('totalKms').innerText = stats.totalKms;
+            Utils.animateNumber(document.getElementById('totalRuns'), 0, stats.totalRuns, 1000);
+            Utils.animateNumber(document.getElementById('totalKms'), 0, parseFloat(stats.totalKms), 1200);
             
             const cont = document.getElementById('historyContainer');
             if(!stats.pastRuns || stats.pastRuns.length === 0) {
