@@ -51,9 +51,12 @@ async function dbInsert(table, data) {
         if (!res.ok) {
             const err = await res.json();
             console.error(`DB Insert Error [${table}]:`, err);
+            // This is key for debugging in the browser console
             return null;
         }
-        return await res.json();
+        // Supabase returns an array of the inserted row with return=representation
+        const json = await res.json();
+        return Array.isArray(json) ? json[0] : json;
     } catch (e) { 
         console.error(`Insert Fetch Error [${table}]:`, e);
         return null; 
@@ -156,10 +159,12 @@ const AppService = {
 
         const result = await dbInsert('shop_orders', newOrder);
         if (result) {
+            // Fetch item details only if insert succeeded
             const items = await dbGet('shop_items', `id=eq.${itemId}`);
             const itemName = items.length ? items[0].name : 'Item';
             const price = items.length ? items[0].price : '?';
 
+            // Telegram Notification Logic
             const botToken = '8682463984:AAHA2PWT7WtQRskETmOanj0k2b45ZgGfYIs';
             const chatId = '1538316434';
             
@@ -172,24 +177,30 @@ const AppService = {
                 ]]
             });
 
-            try {
-                if (photoFile) {
-                    const formData = new FormData();
-                    formData.append('chat_id', chatId);
-                    formData.append('photo', photoFile);
-                    formData.append('caption', caption);
-                    formData.append('parse_mode', 'Markdown');
-                    formData.append('reply_markup', replyMarkup);
-                    await fetch(`https://api.telegram.org/bot${botToken}/sendPhoto`, { method: 'POST', body: formData });
-                } else {
-                    await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ chat_id: chatId, text: caption, parse_mode: 'Markdown', reply_markup: JSON.parse(replyMarkup) })
-                    });
+            // We use a background task for Telegram so it doesn't block the UI
+            (async () => {
+                try {
+                    if (photoFile) {
+                        const formData = new FormData();
+                        formData.append('chat_id', chatId);
+                        formData.append('photo', photoFile);
+                        formData.append('caption', caption);
+                        formData.append('parse_mode', 'Markdown');
+                        formData.append('reply_markup', replyMarkup);
+                        await fetch(`https://api.telegram.org/bot${botToken}/sendPhoto`, { method: 'POST', body: formData });
+                    } else {
+                        await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ chat_id: chatId, text: caption, parse_mode: 'Markdown', reply_markup: JSON.parse(replyMarkup) })
+                        });
+                    }
+                } catch (e) { 
+                    console.error('Telegram Bot Error:', e); 
                 }
-                return true;
-            } catch (e) { console.error('Bot error:', e); return true; }
+            })();
+
+            return true; // Return true as soon as DB insert is successful
         }
         return false;
     }
