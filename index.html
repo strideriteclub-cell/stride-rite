@@ -132,26 +132,35 @@
                 </div>`;
         }
         function switchAuth(type) {
-            document.getElementById('loginForm').classList.toggle('hidden', type !== 'login');
-            document.getElementById('registerForm').classList.toggle('hidden', type !== 'register');
+            const lf = document.getElementById('loginForm');
+            const rf = document.getElementById('registerForm');
+            if (!lf || !rf) return;
+            lf.classList.toggle('hidden', type !== 'login');
+            rf.classList.toggle('hidden', type !== 'register');
             document.getElementById('tabLogin').classList.toggle('active', type === 'login');
             document.getElementById('tabRegister').classList.toggle('active', type === 'register');
         }
-        document.getElementById('loginForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const success = await AuthService.login(document.getElementById('loginEmail').value, document.getElementById('loginPassword').value);
-            if (success) window.location.href = 'dashboard.html';
-            else Swal.fire({icon:'error', title:'Invalid Login', background:'#141419', color:'#fff'});
-        });
-        document.getElementById('registerForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const success = await AuthService.register(
-                document.getElementById('regName').value, document.getElementById('regEmail').value,
-                document.getElementById('regPassword').value, document.getElementById('regBirthdate').value,
-                document.getElementById('regGender').value, document.getElementById('regLevel').value
-            );
-            if (success) Swal.fire({icon:'success', title:'Welcome!', background:'#141419', color:'#fff'}).then(()=>window.location.href='dashboard.html');
-        });
+        const loginForm = document.getElementById('loginForm');
+        const registerForm = document.getElementById('registerForm');
+        if (loginForm) {
+            loginForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const success = await AuthService.login(document.getElementById('loginEmail').value, document.getElementById('loginPassword').value);
+                if (success) window.location.href = 'dashboard.html';
+                else Swal.fire({icon:'error', title:'Invalid Login', background:'#141419', color:'#fff'});
+            });
+        }
+        if (registerForm) {
+            registerForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const success = await AuthService.register(
+                    document.getElementById('regName').value, document.getElementById('regEmail').value,
+                    document.getElementById('regPassword').value, document.getElementById('regBirthdate').value,
+                    document.getElementById('regGender').value, document.getElementById('regLevel').value
+                );
+                if (success) Swal.fire({icon:'success', title:'Welcome!', background:'#141419', color:'#fff'}).then(()=>window.location.href='dashboard.html');
+            });
+        }
     </script>
 </body>
 </html>
