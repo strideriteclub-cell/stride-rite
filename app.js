@@ -1,243 +1,101 @@
-// --- PWA SERVICE WORKER ---
-if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js').catch(e => console.log('SW error:', e));
-    });
+:root {
+    --bg-dark: #0d0c11;
+    --bg-card: rgba(255, 255, 255, 0.03);
+    --text-main: #ffffff;
+    --text-muted: #a1a1aa;
+    --neon-accent: #584adc;
+    --neon-glow: rgba(88, 74, 220, 0.2);
+    --peach-accent: #ff8b6a;
+    --border-color: rgba(255, 255, 255, 0.1);
 }
 
-// --- SUPABASE CONFIGURATION ---
-const SUPABASE_URL = 'https://qcqyyfnsfyuaaaacddsm.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_uXs2e5aPzrIL_M2xsYDmWg_hPOUaG1l';
+* { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+body { background-color: var(--bg-dark); color: var(--text-main); line-height: 1.6; overflow-x: hidden; }
+h1, h2, h3, .logo { font-family: 'Outfit', sans-serif; }
 
-const defaultHeaders = {
-    'apikey': SUPABASE_KEY,
-    'Authorization': `Bearer ${SUPABASE_KEY}`,
-    'Content-Type': 'application/json',
-    'Prefer': 'return=representation'
-};
+/* Global Link Reset - Prevents "Blue Links" */
+a { text-decoration: none; color: inherit; transition: all 0.3s; }
 
-async function dbGet(table, query = 'select=*') {
-    try {
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${query}`, { headers: defaultHeaders });
-        if (!res.ok) {
-            const err = await res.json();
-            console.error(`DB Get Error [${table}]:`, err);
-            return [];
-        }
-        return await res.json();
-    } catch (e) { 
-        console.error(`Fetch Error [${table}]:`, e);
-        return []; 
-    }
+.navbar {
+    display: flex; justify-content: space-between; align-items: center; padding: 1.5rem 5%;
+    position: fixed; top: 0; width: 100%; z-index: 100;
+    background: rgba(10, 10, 12, 0.85); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border-color);
 }
 
-async function dbInsert(table, data) {
-    try {
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
-            method: 'POST',
-            headers: defaultHeaders,
-            body: JSON.stringify(data)
-        });
-        if (!res.ok) {
-            const err = await res.json();
-            console.error(`DB Insert Error [${table}]:`, err);
-            return null;
-        }
-        return await res.json();
-    } catch (e) { 
-        console.error(`Insert Fetch Error [${table}]:`, e);
-        return null; 
-    }
+.nav-links { display: flex; gap: 2rem; align-items: center; }
+.nav-links a:hover { color: var(--neon-accent); }
+
+.hero { min-height: 100vh; display: flex; align-items: center; padding: 0 5%; position: relative; overflow: hidden; }
+.hero-content { flex: 1; max-width: 600px; z-index: 2; }
+.hero h1 { font-size: 5rem; line-height: 1.1; margin-bottom: 1.5rem; font-weight: 800; }
+.peach-text { color: var(--peach-accent); }
+
+.button-group { display: flex; gap: 1.5rem; align-items: center; }
+
+.btn { padding: 1rem 2rem; border-radius: 50px; font-weight: 700; cursor: pointer; border: none; font-size: 0.95rem; text-align: center; }
+.btn-primary { background: var(--neon-accent); color: white; box-shadow: 0 4px 15px var(--neon-glow); }
+.btn-secondary { background: rgba(255,255,255,0.05); color: white; border: 1px solid var(--border-color); }
+.btn-block { width: 100%; margin-top: 1rem; display: block; }
+
+.main-container, .shop-container, .profile-container, .admin-container { padding: 120px 5% 5rem; }
+.hero-visual { flex: 1; position: relative; height: 600px; display: flex; align-items: center; justify-content: center; gap: 40px; }
+
+/* Interactive Run Selector */
+.dist-selector { display: flex; gap: 8px; background: rgba(0,0,0,0.3); padding: 5px; border-radius: 12px; margin: 1.5rem 0; border: 1px solid rgba(255,255,255,0.05); }
+.dist-btn { flex: 1; padding: 10px; border-radius: 8px; border: none; background: transparent; color: var(--text-muted); font-weight: 700; cursor: pointer; transition: 0.3s; font-size: 0.85rem; }
+.dist-btn.active { background: var(--neon-accent); color: white; box-shadow: 0 4px 12px rgba(88, 74, 220, 0.4); }
+.dist-btn.active.easy { background: #22c55e; box-shadow: 0 4px 12px rgba(34, 197, 94, 0.4); }
+.dist-btn.active.med { background: #f59e0b; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4); }
+.dist-btn.active.hard { background: #ef4444; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4); }
+
+.diff-label { font-size: 0.75rem; font-weight: 800; text-transform: uppercase; margin-bottom: 5px; display: block; transition: 0.3s; }
+.diff-label.easy { color: #22c55e; }
+.diff-label.med { color: #f59e0b; }
+.diff-label.hard { color: #ef4444; }
+
+.stat-card { background: rgba(20, 20, 25, 0.7); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.08); border-radius: 20px; padding: 1.5rem; }
+.stat-value { font-size: 2.2rem; font-weight: 800; font-family: 'Outfit'; line-height: 1.1; }
+.stat-label { color: var(--text-muted); font-size: 0.85rem; font-weight: 500; }
+
+.km-cards-container { display: flex; gap: 18px; margin-top: 2.5rem; }
+.glass-card { background: var(--bg-card); backdrop-filter: blur(16px); border: 1px solid var(--border-color); border-radius: 20px; transition: all 0.3s; }
+
+.pricing { padding: 5rem 5% 8rem; display: flex; justify-content: center; }
+.pricing-container { max-width: 500px; width: 100%; padding: 3rem; position: relative; }
+.glass-panel { background: var(--bg-card); backdrop-filter: blur(20px); border: 1px solid var(--border-color); border-radius: 32px; }
+
+.input-group { margin-bottom: 1.5rem; }
+.input-group label { display: block; margin-bottom: 0.5rem; color: var(--text-muted); font-size: 0.85rem; }
+.input-group input, .input-group select { width: 100%; padding: 1rem; background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); border-radius: 12px; color: white; font-size: 1rem; }
+
+footer { text-align: center; padding: 4rem 2rem; border-top: 1px solid var(--border-color); color: var(--text-muted); font-size: 0.9rem; }
+
+.advisor-card { 
+    background: linear-gradient(135deg, rgba(88, 74, 220, 0.1), rgba(255, 139, 106, 0.05));
+    border: 1px solid rgba(88, 74, 220, 0.3); border-radius: 24px; padding: 2rem; margin-bottom: 4rem;
+    display: flex; gap: 1.5rem; align-items: center;
 }
 
-const KEYS = { SESSION: "stride_current_user" };
+@media (max-width: 768px) {
+    .navbar { padding: 1rem 5%; }
+    .hero { flex-direction: column; padding-top: 120px; text-align: center; }
+    .hero h1 { font-size: 3.5rem; }
+    .hero-content { max-width: 100%; }
+    .button-group { flex-direction: column; width: 100%; gap: 10px; }
+    .btn { width: 100%; }
+    .hero-visual { height: auto; margin-top: 3rem; width: 100%; flex-direction: column; }
+    .km-cards-container { position: relative; flex-wrap: wrap; justify-content: center; width: 100%; }
+    .stat-card.stat-1 { position: relative; width: 100%; margin-bottom: 1rem; }
+    .stat-value { font-size: 1.8rem; }
+}
 
-const AuthService = {
-    login: async (email, password) => {
-        // Use a real UUID for admin to avoid DB type issues
-        const ADMIN_ID = '00000000-0000-0000-0000-000000000001';
-        if (email === 'tsmhaleem@gmail.com' && password === 'haleem@147') {
-            const adminUser = { id: ADMIN_ID, name: 'Admin Haleem', email: 'tsmhaleem@gmail.com', is_admin: true };
-            localStorage.setItem(KEYS.SESSION, JSON.stringify(adminUser));
-            return true;
-        }
-        const users = await dbGet('stride_users', `email=eq.${encodeURIComponent(email)}&password=eq.${encodeURIComponent(password)}`);
-        if (users && users.length > 0) {
-            localStorage.setItem(KEYS.SESSION, JSON.stringify(users[0]));
-            return true;
-        }
-        return false;
-    },
-    // ... rest of AuthService
-    register: async (name, email, password, birthdate, gender, level) => {
-        const newUser = { id: crypto.randomUUID(), name, email, password, birthdate, age: calculateAge(birthdate || '2000-01-01'), gender, level, is_admin: false };
-        const inserted = await dbInsert('stride_users', newUser);
-        if (inserted) {
-            localStorage.setItem(KEYS.SESSION, JSON.stringify(newUser));
-            return true;
-        }
-        return false;
-    },
-    logout: () => { localStorage.removeItem(KEYS.SESSION); window.location.href = 'index.html'; },
-    getCurrentUser: () => localStorage.getItem(KEYS.SESSION) ? JSON.parse(localStorage.getItem(KEYS.SESSION)) : null
-};
+@media (max-width: 480px) {
+    .pricing-container { padding: 1.5rem; }
+    .advisor-card { flex-direction: column; text-align: center; }
+    .weather-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; text-align: left; }
+}
 
-const AppService = {
-    getRuns: async () => {
-        const rawRuns = await dbGet('stride_runs');
-        const now = new Date();
-        return (rawRuns || []).filter(r => {
-            if (r.date_label.includes('[EXPORTED]')) return false;
-            if (r.date_label.includes('||')) {
-                const parts = r.date_label.split('||');
-                const runDate = new Date(parts[1]);
-                if (runDate < now) return false;
-                r.date_label = parts[0].trim(); // CLEANED FOR UI
-            }
-            return true;
-        });
-    },
-    registerForRun: async (runId, distance, level) => {
-        const user = AuthService.getCurrentUser();
-        if (!user) return false;
+.hidden { display: none; }
+.animate-up { animation: fadeInUp 0.8s ease-out forwards; }
+@keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
 
-        // CRITICAL CHECK: Check if already registered
-        const existing = await dbGet('stride_registrations', `run_id=eq.${runId}&user_id=eq.${user.id}`);
-        if(existing && existing.length > 0) return true; // Pretend success if already there
-
-        const newReg = { 
-            id: crypto.randomUUID(), 
-            run_id: runId, 
-            user_id: user.id, 
-            distance: distance || '5K', 
-            level: level || 'Intermediate', 
-            registered_at: new Date().toISOString() 
-        };
-        const result = await dbInsert('stride_registrations', newReg);
-        return result !== null;
-    },
-    getUserRegistrations: async (userId) => {
-        if (!userId) return [];
-        const regs = await dbGet('stride_registrations', `user_id=eq.${userId}`);
-        return (regs || []).map(r => r.run_id);
-    },
-    getUserStats: async (userId) => {
-        const regs = await dbGet('stride_registrations', `user_id=eq.${userId}`);
-        return { totalRuns: regs.length, totalKms: (regs.length * 5).toFixed(1), pastRuns: [] };
-    },
-    getShopItems: async () => await dbGet('shop_items', 'is_active=eq.true'),
-    
-    // --- ADVANCED ORDER SUBMISSION ---
-    submitOrder: async (itemId, size, phone, method, detail, photoFile) => {
-        const user = AuthService.getCurrentUser();
-        if (!user) return false;
-
-        const orderId = crypto.randomUUID();
-        const newOrder = {
-            id: orderId,
-            user_id: user.id,
-            item_id: itemId,
-            size: size,
-            payment_method: method,
-            payment_detail: detail,
-            phone_number: phone,
-            status: 'pending'
-        };
-
-        const result = await dbInsert('shop_orders', newOrder);
-        if (result) {
-            const items = await dbGet('shop_items', `id=eq.${itemId}`);
-            const itemName = items.length ? items[0].name : 'Item';
-            const price = items.length ? items[0].price : '?';
-
-            const botToken = '8682463984:AAHA2PWT7WtQRskETmOanj0k2b45ZgGfYIs';
-            const chatId = '1538316434';
-            
-            const caption = `🛍️ *New VIP Shop Order!*\n\n*Runner:* ${user.name}\n*Method:* ${method}\n${method === 'telda' ? `*telda Username:* @${detail.replace('@','')}` : `*instapay Phone:* ${detail}`}\n*whatsapp Phone:* ${phone}\n\n*Item:* ${itemName}\n*Size:* ${size}\n*Price:* ${price} EGP`;
-            
-            const replyMarkup = JSON.stringify({
-                inline_keyboard: [[
-                    { text: "✅ Approve", callback_data: `shop_appr_${orderId}` },
-                    { text: "❌ Reject", callback_data: `shop_rej_${orderId}` }
-                ]]
-            });
-
-            try {
-                if (photoFile) {
-                    const formData = new FormData();
-                    formData.append('chat_id', chatId);
-                    formData.append('photo', photoFile);
-                    formData.append('caption', caption);
-                    formData.append('parse_mode', 'Markdown');
-                    formData.append('reply_markup', replyMarkup);
-                    await fetch(`https://api.telegram.org/bot${botToken}/sendPhoto`, { method: 'POST', body: formData });
-                } else {
-                    await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ chat_id: chatId, text: caption, parse_mode: 'Markdown', reply_markup: JSON.parse(replyMarkup) })
-                    });
-                }
-                return true;
-            } catch (e) { console.error('Bot error:', e); return true; }
-        }
-        return false;
-    }
-};
-
-// --- UTILS ---
-const Utils = {
-    animateNumber: (el, start, end, duration = 1000) => {
-        if (!el) return;
-        let startTimestamp = null;
-        const step = (timestamp) => {
-            if (!startTimestamp) startTimestamp = timestamp;
-            const progress = Math.min((timestamp - startTimestamp) / duration, 1);
-            const value = progress * (end - start) + start;
-            el.innerText = end % 1 === 0 ? Math.floor(value) : value.toFixed(1);
-            if (progress < 1) window.requestAnimationFrame(step);
-        };
-        window.requestAnimationFrame(step);
-    }
-};
-
-window.AuthService = AuthService;
-window.AppService = AppService;
-window.Utils = Utils;
-
-// --- PAGE TRANSITION ENGINE ---
-const PageTransition = {
-    init: () => {
-        const overlay = document.getElementById('page-transition');
-        if (!overlay) return;
-
-        // Play the ENTER animation (shrink from fullscreen to dot)
-        overlay.classList.add('pt-enter');
-        overlay.addEventListener('animationend', () => {
-            overlay.classList.remove('pt-enter');
-        }, { once: true });
-
-        // Intercept all internal link clicks
-        document.addEventListener('click', (e) => {
-            const link = e.target.closest('a[href]');
-            if (!link) return;
-            const href = link.getAttribute('href');
-            // Skip anchors, external links, javascript:, and mailto:
-            if (!href || href.startsWith('#') || href.startsWith('http') || 
-                href.startsWith('mailto') || href.startsWith('javascript')) return;
-            e.preventDefault();
-            PageTransition.exit(href);
-        });
-    },
-    exit: (url) => {
-        const overlay = document.getElementById('page-transition');
-        if (!overlay) { window.location.href = url; return; }
-        overlay.classList.remove('pt-enter');
-        overlay.classList.add('pt-exit');
-        overlay.addEventListener('animationend', () => {
-            window.location.href = url;
-        }, { once: true });
-    }
-};
-window.navigateTo = PageTransition.exit;
-document.addEventListener('DOMContentLoaded', PageTransition.init);
