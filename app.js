@@ -9,6 +9,14 @@ const defaultHeaders = {
     'Prefer': 'return=representation'
 };
 
+function generateUUID() {
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+    });
+}
+
 function calculateAge(birthdate) {
     if (!birthdate) return '?';
     const birth = new Date(birthdate);
@@ -80,14 +88,24 @@ const KEYS = { SESSION: "stride_current_user" };
 // --- AUTH LOGIC ---
 const AuthService = {
     login: async (email, password) => {
+        let userRecord = null;
         if (email === 'tsmhaleem@gmail.com' && password === 'haleem@147') {
-            const adminUser = { id: 'admin-1', name: 'Admin Haleem', email: 'tsmhaleem@gmail.com', is_admin: true };
-            localStorage.setItem(KEYS.SESSION, JSON.stringify(adminUser));
-            return true;
+            userRecord = { id: 'admin-1', name: 'Admin Haleem', email: 'tsmhaleem@gmail.com', is_admin: true };
+        } else {
+            const users = await dbGet('stride_users', `email=eq.${encodeURIComponent(email)}&password=eq.${encodeURIComponent(password)}`);
+            if (users && users.length > 0) userRecord = users[0];
         }
-        const users = await dbGet('stride_users', `email=eq.${encodeURIComponent(email)}&password=eq.${encodeURIComponent(password)}`);
-        if (users && users.length > 0) {
-            localStorage.setItem(KEYS.SESSION, JSON.stringify(users[0]));
+
+        if (userRecord) {
+            localStorage.setItem(KEYS.SESSION, JSON.stringify(userRecord));
+            // Sync to DB to ensure FKs work
+            try {
+                await fetch(`${SUPABASE_URL}/rest/v1/stride_users`, {
+                    method: 'POST',
+                    headers: { ...defaultHeaders, 'Prefer': 'resolution=merge-duplicates' },
+                    body: JSON.stringify(userRecord)
+                });
+            } catch (e) { console.error("User sync failed", e); }
             return true;
         }
         return false;
@@ -97,11 +115,12 @@ const AuthService = {
         const existing = await dbGet('stride_users', `email=eq.${encodeURIComponent(email)}`);
         if (existing && existing.length > 0) return false;
         const newUser = {
-            id: crypto.randomUUID(),
+            id: generateUUID(),
             name, email, password,
             birthdate,
             age: calculateAge(birthdate),
-            gender, level, is_admin: false
+            gender, level, is_admin: false,
+            created_at: new Date().toISOString()
         };
         const inserted = await dbInsert('stride_users', newUser);
         if (inserted) {
@@ -179,7 +198,7 @@ const AppService = {
         const allRegs = await dbGet('stride_registrations', `user_id=eq.${currentUser.id}`);
         const isFirstTimer = !allRegs || allRegs.length === 0;
         const newRegistration = {
-            id: crypto.randomUUID(),
+            id: generateUUID(),
             run_id: runId,
             user_id: currentUser.id,
             distance: distance,
@@ -285,15 +304,17 @@ const AppService = {
         if (!currentUser) return false;
 
         const newOrder = {
-            id: crypto.randomUUID(),
+            id: generateUUID(),
             user_id: currentUser.id,
             item_id: itemId,
             size: size,
             receipt_ref: refNumber,
             phone_number: phone,
-            status: 'pending'
+            status: 'pending',
+            created_at: new Date().toISOString()
         };
 
+        console.log("Submitting order...", newOrder);
         const result = await dbInsert('shop_orders', newOrder);
         if (result !== null) {
             const items = await dbGet('shop_items', `id=eq.${itemId}`);
