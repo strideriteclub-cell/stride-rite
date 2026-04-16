@@ -5,20 +5,26 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>VIP Shop | Stride Rite</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=15">
+    <link rel="stylesheet" href="styles.css?v=21">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
         .hero-banner {
             background: linear-gradient(135deg, rgba(88,74,220,0.1), rgba(255,139,106,0.05));
             border: 1px solid var(--border-color);
             border-radius: 24px; padding: 4rem 2rem; text-align: center; margin-bottom: 3rem;
-            margin-top: 1rem; /* Added extra space as requested */
+            margin-top: 1.5rem;
         }
         .products-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 2rem; }
         .product-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 20px; overflow: hidden; transition: 0.3s; display: flex; flex-direction: column; }
         .product-image { width: 100%; height: 280px; object-fit: cover; }
-        .product-info { padding: 1.5rem; flex: 1; }
-        .buy-btn { background: var(--peach-accent); color: black; border: none; padding: 1rem; border-radius: 12px; font-weight: 700; width: 100%; cursor: pointer; }
+        .product-info { padding: 1.5rem; flex: 1; display: flex; flex-direction: column; }
+        .buy-btn { background: var(--peach-accent); color: black; border: none; padding: 1rem; border-radius: 12px; font-weight: 700; width: 100%; cursor: pointer; margin-top: auto; }
+        
+        /* Checkout Modal Styles */
+        .checkout-step { background: rgba(0,0,0,0.2); border: 1px solid var(--border-color); border-radius: 12px; padding: 1rem; margin-bottom: 1rem; text-align: left; }
+        .size-selector { display: flex; gap: 0.5rem; flex-wrap: wrap; margin: 10px 0; }
+        .size-btn { background: transparent; border: 1px solid var(--border-color); color: white; padding: 0.5rem 1rem; border-radius: 8px; cursor: pointer; }
+        .size-btn.selected { background: var(--neon-accent); border-color: var(--neon-accent); }
     </style>
 </head>
 <body>
@@ -44,6 +50,9 @@
 
     <script src="app.js?v=21"></script>
     <script>
+        let selectedItem = null;
+        let selectedSize = '';
+
         async function loadShop() {
             const items = await AppService.getShopItems();
             const grid = document.getElementById('productsGrid');
@@ -56,11 +65,65 @@
                     <img src="${item.image_url}" class="product-image">
                     <div class="product-info">
                         <div style="font-weight:800; font-size:1.3rem; margin-bottom:0.5rem;">${item.name}</div>
-                        <div style="color:var(--neon-accent); font-weight:700; margin-bottom:1rem;">${item.price} EGP</div>
-                        <button class="buy-btn">In Person Only</button>
+                        <div style="color:var(--neon-accent); font-weight:700; margin-bottom:1.5rem;">${item.price} EGP</div>
+                        <button class="buy-btn" onclick='openCheckout(${JSON.stringify(item)})'>Purchase Now</button>
                     </div>
                 </div>`).join('');
         }
+
+        window.openCheckout = function(item) {
+            selectedItem = item;
+            selectedSize = '';
+            const sizes = (item.sizes || 'S,M,L,XL,XXL').split(',');
+            const sizeHtml = sizes.map(s => `<button class="size-btn" onclick="selectSize(this, '${s.trim()}')">${s.trim()}</button>`).join('');
+
+            Swal.fire({
+                title: 'Complete Order',
+                html: `
+                    <div class="checkout-step">
+                        <div style="font-weight:700; margin-bottom:10px;">👕 Select Size:</div>
+                        <div class="size-selector">${sizeHtml}</div>
+                    </div>
+                    <div class="checkout-step">
+                        <div style="font-weight:700; margin-bottom:5px;">💳 Payment Details:</div>
+                        <div style="font-size:0.85rem; color:#a1a1aa; margin-bottom:10px;">Transfer <b>${item.price} EGP</b> to easily secure your item.</div>
+                        <div style="background:#1a1827; padding:8px; border-radius:8px; font-size:0.9rem;">
+                            🟣 InstaPay: <b>striderite</b><br>
+                            🔴 Vodafone Cash: <b>01010069008</b>
+                        </div>
+                    </div>
+                    <div class="checkout-step">
+                        <div style="font-weight:700; margin-bottom:10px;">📋 Confirmation:</div>
+                        <input type="tel" id="checkoutPhone" placeholder="WhatsApp Number" style="width:100%; padding:10px; border-radius:8px; background:rgba(0,0,0,0.3); border:1px solid #333; color:white; margin-bottom:8px;">
+                        <input type="text" id="checkoutRef" placeholder="12-digit Ref Number" style="width:100%; padding:10px; border-radius:8px; background:rgba(0,0,0,0.3); border:1px solid #333; color:white;">
+                    </div>
+                `,
+                background: '#141419', color: '#fff',
+                showCancelButton: true, confirmButtonText: 'Submit Order', confirmButtonColor: 'var(--peach-accent)',
+                preConfirm: () => {
+                    const phone = document.getElementById('checkoutPhone').value.trim();
+                    const ref = document.getElementById('checkoutRef').value.trim();
+                    if(!selectedSize) return Swal.showValidationMessage('Please select a size!');
+                    if(!phone) return Swal.showValidationMessage('Phone number required!');
+                    if(!ref) return Swal.showValidationMessage('Transaction Ref required!');
+                    return { phone, ref };
+                }
+            }).then(async (res) => {
+                if(res.isConfirmed) {
+                    Swal.fire({ title: 'Submitting...', didOpen: () => Swal.showLoading(), background:'#141419', color:'#fff'});
+                    const success = await AppService.submitOrder(item.id, selectedSize, res.value.ref, res.value.phone);
+                    if(success) Swal.fire({ icon: 'success', title: 'Order Submitted!', background: '#141419', color: '#fff' });
+                    else Swal.fire({ icon: 'error', title: 'Failed to submit', background: '#141419', color: '#fff' });
+                }
+            });
+        };
+
+        window.selectSize = (btn, size) => {
+            document.querySelectorAll('.size-btn').forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
+            selectedSize = size;
+        };
+
         loadShop();
     </script>
 </body>
