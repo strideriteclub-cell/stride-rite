@@ -3,323 +3,91 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Member Dashboard | Stride Rite</title>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=23">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <title>Dashboard | Stride Rite</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
-        .dashboard-header { margin-bottom: 3rem; }
-        .dashboard-header h1 { font-size: 2.5rem; margin-bottom: 0.5rem; }
-        .welcome-text { color: var(--text-muted); font-size: 1.1rem; }
-        .section-title { font-family: 'Outfit'; font-size: 1.8rem; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 12px; }
-        .runs-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1.5rem; }
-        
-        .run-card { 
-            padding: 2.5rem; 
-            border-bottom: 4px solid var(--neon-accent); 
-            transition: transform 0.3s;
-        }
-        .run-card.registered { border-bottom-color: #22c55e; }
-        .run-card:hover { transform: translateY(-5px); }
-        .run-date { font-weight: 800; font-size: 1.6rem; color: white; margin-bottom: 0.5rem; }
-        .run-loc { color: var(--text-muted); font-size: 0.95rem; margin-bottom: 1.5rem; display: flex; align-items: flex-start; gap: 6px; }
-        
-        .registered-badge {
-            background: rgba(34, 197, 94, 0.15);
-            color: #22c55e;
-            padding: 6px 12px;
-            border-radius: 50px;
-            font-size: 0.75rem;
-            font-weight: 800;
-            text-transform: uppercase;
-            display: inline-block;
-            margin-bottom: 1rem;
-        }
-
-        .weather-meta { display: flex; gap: 1.5rem; margin-top: 1rem; }
-        .weather-stat { display: flex; flex-direction: column; }
-        .weather-label { font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
-        .weather-val { font-weight: 700; color: white; }
-
-        /* LIVE TRACKER STYLES */
-        #liveRunContainer { display: none; margin-bottom: 3rem; animation: fadeIn 0.5s ease-out; }
-        .live-banner {
-            background: rgba(239, 68, 68, 0.1);
-            border: 1px solid rgba(239, 68, 68, 0.3);
-            border-radius: 16px;
-            padding: 1.5rem;
-            margin-bottom: 2rem;
-            align-items: center;
-            gap: 1.5rem;
-            animation: pulse-border 2s infinite;
-        }
-        @keyframes pulse-border {
-            0% { border-color: #ef4444; box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
-            70% { border-color: #f87171; box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
-            100% { border-color: #ef4444; box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
-        }
-        .live-dot {
-            width: 12px; height: 12px;
-            background: #ef4444;
-            border-radius: 50%;
-            display: inline-block;
-            animation: blink 1s infinite;
-        }
-        @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
-        #liveMap {
-            height: 350px;
-            width: 100%;
-            border-radius: 12px;
-            margin-top: 1rem;
-            background: #111;
-            border: 1px solid #333;
-        }
+        :root { --primary: #FF6B00; --bg: #0A0A0A; --card: #141414; }
+        body { background: var(--bg); color: white; font-family: 'Outfit', sans-serif; margin: 0; padding-top: 20px; }
+        .dashboard-container { max-width: 1200px; margin: 0 auto; padding: 20px; display: grid; grid-template-columns: 280px 1fr; gap: 30px; }
+        .card { background: var(--card); border: 1px solid rgba(255,255,255,0.05); border-radius: 20px; padding: 20px; }
+        .sidebar { display: flex; flex-direction: column; gap: 20px; }
+        .main-content { display: flex; flex-direction: column; gap: 30px; }
+        .user-header { display: flex; justify-content: space-between; align-items: center; }
+        .btn { padding: 12px 25px; border-radius: 10px; font-weight: bold; cursor: pointer; border: none; transition: 0.3s; }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-logout { background: rgba(255,0,0,0.1); color: #ff4444; border: 1px solid rgba(255,0,0,0.2); }
+        .stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+        .stat-card { text-align: center; }
+        .stat-val { font-size: 2.5rem; font-weight: 900; color: var(--primary); }
+        .stat-label { font-size: 0.8rem; color: #888; text-transform: uppercase; letter-spacing: 1px; }
     </style>
 </head>
 <body>
-    <nav class="navbar">
-        <div style="font-family:'Outfit'; font-weight:800; font-size:1.5rem;">S<span style="color:var(--peach-accent);">.</span></div>
-        <div class="nav-links">
-            <a href="shop.html">🛍 VIP Shop</a>
-            <a href="gallery.html">📸 Gallery</a>
-            <a href="profile.html">👤 My Profile</a>
-            <a href="#" onclick="AuthService.logout()">Logout</a>
+
+<div class="dashboard-container">
+    <aside class="sidebar">
+        <div class="card" style="text-align: center;">
+            <div id="user-avatar" style="width: 80px; height: 80px; background: var(--primary); border-radius: 50%; margin: 0 auto 15px; display: flex; align-items: center; justify-content: center; font-size: 2rem; font-weight: 900;">S</div>
+            <h3 id="user-name-sidebar">Member</h3>
+            <p id="user-level-sidebar" style="color: #888; font-size: 0.9rem;">Level: —</p>
+            <button onclick="AuthService.logout()" class="btn btn-logout" style="width: 100%; margin-top: 10px;">Log Out</button>
         </div>
-    </nav>
-
-    <div class="main-container">
-        <header class="dashboard-header animate-up">
-            <h1 id="welcomeUser">Welcome, Runner!</h1>
-            <p class="welcome-text">Your central hub for community runs and rewards.</p>
-        </header>
-
-        <div id="advisorContainer"></div>
-
-        <!-- NEW LIVE TRACKER SECTION -->
-        <div id="liveRunContainer">
-            <div class="live-banner">
-                <div class="live-dot"></div>
-                <div class="live-label">Stride Rite Live Run Active</div>
-                <div style="flex-grow: 1;"></div>
-                <div style="font-size: 0.9rem; color: var(--text-muted);">Admin is currently running in Al Rehab!</div>
+        <div class="card">
+            <h4>Menu</h4>
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+                <button onclick="window.location.href='index.html#runs'" class="btn" style="background: transparent; color: white; text-align: left; padding-left: 0;">🏠 My Runs</button>
+                <button onclick="window.location.href='shop.html'" class="btn" style="background: transparent; color: white; text-align: left; padding-left: 0;">🛍️ VIP Shop</button>
+                <button onclick="window.location.href='gallery.html'" class="btn" style="background: transparent; color: white; text-align: left; padding-left: 0;">📸 Gallery</button>
             </div>
-            <div id="liveMap"></div>
+        </div>
+    </aside>
+
+    <main class="main-content">
+        <div class="user-header">
+            <h2 style="font-size: 2rem;">Welcome Back, <span id="user-name-header" style="color: var(--primary);">Strider</span>! 👋</h2>
         </div>
 
-        <!-- LIVE RUN TRACKER -->
-        <div id="liveRunSection" class="live-run-banner animate-up">
-            <div style="flex: 1;">
-                <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
-                    <span class="live-dot"></span>
-                    <span style="color:#ef4444; font-family:'Outfit'; font-weight:800; letter-spacing:1px; font-size:0.9rem;">STRIDE RITE LIVE</span>
-                </div>
-                <h2 style="font-family:'Outfit'; font-size:1.4rem; margin:0; color:white;">Run in Progress! 🏃‍♂️</h2>
-                <p style="color:var(--text-muted); font-size:0.9rem; margin:4px 0 0 0;">Check the live map below to see exactly where we are right now!</p>
-                <div id="liveMap"></div>
+        <div class="stat-grid">
+            <div class="card stat-card">
+                <div class="stat-val" id="stat-total-runs">0</div>
+                <div class="stat-label">Runs Completed</div>
+            </div>
+            <div class="card stat-card">
+                <div class="stat-val" id="stat-total-kms">0.0</div>
+                <div class="stat-label">Total Kilometers</div>
+            </div>
+            <div class="card stat-card">
+                <div class="stat-val" id="stat-rank">#—</div>
+                <div class="stat-label">Global Rank</div>
             </div>
         </div>
 
-        <section class="animate-up" style="animation-delay: 0.2s;">
-            <h2 class="section-title">🗓 Upcoming Community Runs</h2>
-            <div class="runs-grid" id="runsContainer">
-                <p style="color:var(--text-muted); padding:2rem;">Loading runs...</p>
+        <div class="card">
+            <h3>Upcoming Commmunity <span>Runs</span></h3>
+            <div id="upcoming-runs-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px;">
+                <p style="color: #888;">Checking the streets...</p>
             </div>
-        </section>
-    </div>
+        </div>
+    </main>
+</div>
 
-    <script src="app.js?v=23"></script>
-    <script>
+<script src="app.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', async () => {
         const user = AuthService.getCurrentUser();
-        if (!user) window.location.href = 'index.html';
+        if (!user) { window.location.href = 'index.html'; return; }
         
-        document.getElementById('welcomeUser').innerText = `Welcome back, ${user.name.split(' ')[0]}!`;
+        document.getElementById('user-name-header').innerText = user.name.split(' ')[0];
+        document.getElementById('user-name-sidebar').innerText = user.name;
+        document.getElementById('user-level-sidebar').innerText = `Level: ${user.level || 'Beginner'}`;
+        document.getElementById('user-avatar').innerText = user.name.charAt(0).toUpperCase();
 
-        let runSelections = {};
-
-        async function initDashboard() {
-            await renderRuns();
-            initLiveTracker();
+        const stats = await AppService.getUserStats(user.id);
+        if (stats) {
+            document.getElementById('stat-total-runs').innerText = stats.totalRuns || 0;
+            document.getElementById('stat-total-kms').innerText = stats.totalKms || '0.0';
         }
-
-        let map = null;
-        let marker = null;
-        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-        async function initLiveTracker() {
-            // Initial Check
-            const res = await fetch(`${SUPABASE_URL}/rest/v1/live_tracks?id=eq.admin`, { headers: defaultHeaders });
-            const data = await res.json();
-            if (data && data.length > 0 && data[0].is_active) {
-                updateMap(data[0].lat, data[0].lng);
-            }
-
-            // Realtime Subscription
-            const channel = supabaseClient.channel('live_tracking')
-                .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'live_tracks' }, payload => {
-                    const row = payload.new;
-                    if (row.id === 'admin') {
-                        if (row.is_active) {
-                            updateMap(row.lat, row.lng);
-                        } else {
-                            document.getElementById('liveRunSection').style.display = 'none';
-                        }
-                    }
-                })
-                .subscribe();
-        }
-
-        function updateMap(lat, lng) {
-            document.getElementById('liveRunSection').style.display = 'flex';
-            
-            if (!map) {
-                map = L.map('liveMap').setView([lat, lng], 15);
-                L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-                    attribution: '&copy; OpenStreetMap'
-                }).addTo(map);
-                
-                const customIcon = L.divIcon({
-                    className: 'live-marker',
-                    html: '<div style="background:var(--neon-accent); width:16px; height:16px; border-radius:50%; border:3px solid white; box-shadow:0 0 10px var(--neon-accent);"></div>',
-                    iconSize: [22, 22]
-                });
-                marker = L.marker([lat, lng], { icon: customIcon }).addTo(map);
-            } else {
-                const newLatLng = new L.LatLng(lat, lng);
-                marker.setLatLng(newLatLng);
-                map.panTo(newLatLng);
-            }
-        }
-
-        async function renderRuns() {
-            const container = document.getElementById('runsContainer');
-            const [runs, myRegs] = await Promise.all([
-                AppService.getRuns(),
-                AppService.getUserRegistrations(user.id)
-            ]);
-
-            if (!runs || runs.length === 0) {
-                container.innerHTML = `<p style="padding:3rem; text-align:center; color:var(--text-muted); grid-column:1/-1;">No community runs scheduled at the moment. Check back soon!</p>`;
-                return;
-            }
-
-            container.innerHTML = runs.map(run => {
-                const isReg = myRegs.includes(run.id);
-                if (!runSelections[run.id]) runSelections[run.id] = '5K';
-                const currentDist = runSelections[run.id];
-
-                return `
-                    <div class="glass-card run-card ${isReg ? 'registered' : ''} animate-up">
-                        ${isReg ? '<span class="registered-badge">✓ Registered</span>' : ''}
-                        <div class="run-date">${run.date_label}</div>
-                        <div class="run-loc">
-                            <span>📍</span>
-                            <a href="${run.location_link}" target="_blank" style="color:var(--neon-accent); text-decoration:underline;">${run.location}</a>
-                        </div>
-                        
-                        ${!isReg ? `
-                            <div style="font-size:0.8rem; color:var(--text-muted); margin-bottom:8px; font-weight:600;">SELECT DISTANCE:</div>
-                            <div class="dist-selector">
-                                <button class="dist-btn ${currentDist === '2K' ? 'active' : ''}" onclick="selectDist('${run.id}', '2K')">2K</button>
-                                <button class="dist-btn ${currentDist === '5K' ? 'active' : ''}" onclick="selectDist('${run.id}', '5K')">5K</button>
-                                <button class="dist-btn ${currentDist === '8K' ? 'active' : ''}" onclick="selectDist('${run.id}', '8K')">8K</button>
-                            </div>
-                            <button class="btn btn-primary btn-block" onclick="joinRun('${run.id}')">Confirm Registration</button>
-                        ` : `
-                            <button class="btn btn-secondary btn-block" disabled style="opacity:0.8; cursor:default; background:rgba(34, 197, 94, 0.1); border-color:#22c55e; color:#22c55e;">
-                                You're all set! See you there.
-                            </button>
-                        `}
-                    </div>
-                `;
-            }).join('');
-
-            // Load weather advisory for the first run
-            if (runs.length > 0) loadAIAdvisor(runs[0]);
-        }
-
-        window.selectDist = (rId, dist) => {
-            runSelections[rId] = dist;
-            renderRuns(); // Fast re-render
-        };
-
-        window.joinRun = async (rId) => {
-            Swal.fire({ title: 'Registering...', background:'#141419', didOpen: () => Swal.showLoading() });
-            const success = await AppService.registerForRun(rId, runSelections[rId], user.level || 'Beginner');
-            
-            if (success) {
-                Swal.fire({
-                    icon: 'success',
-                    title: 'See you at the run! 🏃‍♂️',
-                    text: 'We\'ve sent a notification to the community leads.',
-                    background: '#141419',
-                    color: '#fff',
-                    confirmButtonColor: 'var(--neon-accent)'
-                });
-                renderRuns();
-            } else {
-                Swal.fire({
-                    icon: 'info',
-                    title: 'Already Registered',
-                    text: 'You are already on the list for this run!',
-                    background: '#141419',
-                    color: '#fff'
-                });
-            }
-        };
-
-        async function loadAIAdvisor(run) {
-            try {
-                const query = run.location.split(',')[0];
-                const res = await fetch(`https://api.weatherapi.com/v1/current.json?key=686edc30f7764d08ada12150261604&q=${encodeURIComponent(query)}`);
-                const data = await res.json();
-                
-                if (data.error) throw new Error('Weather API error');
-
-                const temp = data.current.temp_c;
-                const cond = data.current.condition.text;
-                const humidity = data.current.humidity;
-                const wind = data.current.wind_kph;
-                
-                let advice = "Perfect running weather! Stick to your target pace.";
-                if (temp > 28) advice = "It's a bit warm. Remember to hydrate well before and after! 💧";
-                if (temp < 10) advice = "Chilly morning! Keep those muscles warm with a longer warm-up. 🔥";
-
-                document.getElementById('advisorContainer').innerHTML = `
-                    <div class="advisor-card animate-up">
-                        <img src="${data.current.condition.icon}" style="width:64px; height:64px;">
-                        <div style="flex:1;">
-                            <div style="font-size:0.75rem; color:var(--neon-accent); font-weight:800; letter-spacing:2px; margin-bottom:4px;">🌤 AI WEATHER ADVISOR</div>
-                            <div style="font-weight:700; color:white; font-size:1.1rem; margin-bottom:8px;">${advice}</div>
-                            <div class="weather-meta">
-                                <div class="weather-stat">
-                                    <span class="weather-label">Temp</span>
-                                    <span class="weather-val">${temp}°C</span>
-                                </div>
-                                <div class="weather-stat">
-                                    <span class="weather-label">Condition</span>
-                                    <span class="weather-val">${cond}</span>
-                                </div>
-                                <div class="weather-stat">
-                                    <span class="weather-label">Wind</span>
-                                    <span class="weather-val">${wind} km/h</span>
-                                </div>
-                                <div class="weather-stat">
-                                    <span class="weather-label">Humidity</span>
-                                    <span class="weather-val">${humidity}%</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            } catch (e) {
-                console.error("Advisor failed", e);
-            }
-        }
-
-        initDashboard();
-    </script>
+    });
+</script>
 </body>
 </html>
