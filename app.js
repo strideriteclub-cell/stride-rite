@@ -1,5 +1,5 @@
 // --- SUPABASE CONFIGURATION ---
-// Deployment Heartbeat: 2026-04-16T18:18:00Z (V4.1)
+// Deployment Heartbeat: 2026-04-16T18:41:00Z (Clean V4)
 const SUPABASE_URL = 'https://qcqyyfnsfyuaaaacddsm.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_uXs2e5aPzrIL_M2xsYDmWg_hPOUaG1l';
 
@@ -54,7 +54,7 @@ async function dbInsert(table, data) {
         if (!res.ok) {
             const errBody = await res.text();
             console.error(`DB Insert Error (${table}):`, errBody);
-            window.lastDbError = errBody; // Expose for UI
+            window.lastDbError = errBody; 
             throw new Error(errBody);
         }
         if (res.status === 201) {
@@ -111,7 +111,6 @@ const AuthService = {
 
         if (userRecord) {
             localStorage.setItem(KEYS.SESSION, JSON.stringify(userRecord));
-            // Sync to DB to ensure FKs work
             try {
                 await fetch(`${SUPABASE_URL}/rest/v1/stride_users`, {
                     method: 'POST',
@@ -311,7 +310,6 @@ const AppService = {
         };
     },
 
-    // --- SHOP ---
     getShopStatus: async () => {
         const settings = await dbGet('shop_settings');
         if (settings && settings.length > 0) return settings[0].is_open;
@@ -338,10 +336,8 @@ const AppService = {
             status: 'pending'
         };
 
-        console.log("Saving order to database...", newOrder);
         let result = await dbInsert('shop_orders', newOrder);
 
-        // Handle common schema fallback
         if (result === null && window.lastDbError && window.lastDbError.includes('receipt_ref')) {
             const fallbackOrder = { ...newOrder, receipt_ref: refNumber };
             result = await dbInsert('shop_orders', fallbackOrder);
@@ -372,10 +368,7 @@ const AppService = {
                     formData.append('parse_mode', 'Markdown');
                     formData.append('reply_markup', replyMarkup);
 
-                    await fetch(`https://api.telegram.org/bot${botToken}/sendPhoto`, {
-                        method: 'POST',
-                        body: formData
-                    });
+                    await fetch(`https://api.telegram.org/bot${botToken}/sendPhoto`, { method: 'POST', body: formData });
                 } else {
                     await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
                         method: 'POST',
@@ -383,15 +376,12 @@ const AppService = {
                         body: JSON.stringify({ chat_id: chatId, text: caption, parse_mode: 'Markdown', reply_markup: JSON.parse(replyMarkup) })
                     });
                 }
-            } catch (e) {
-                console.error("Telegram alert failed", e);
-            }
+            } catch (e) { console.error("Telegram alert failed", e); }
             return true;
         }
         return false;
     }
 };
-
 
 const Utils = {
     animateNumber: (el, start, end, duration = 1000) => {
@@ -432,7 +422,7 @@ document.addEventListener('DOMContentLoaded', () => {
     panel.querySelectorAll('a').forEach(a => a.onclick = toggle);
 });
 
-// Global Exposure
+// --- GLOBAL EXPOSURE ---
 window.AuthService = AuthService;
 window.AppService = AppService;
 window.Utils = Utils;
