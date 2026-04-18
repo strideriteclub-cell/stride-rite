@@ -249,41 +249,80 @@ async function handleGalleryPhoto(chatId, message, session) {
     );
 }
 
-async function handleGalleryDeleteList(chatId) {
-    const photos = await dbGet('gallery_photos', 'order=uploaded_at.desc&limit=10');
-    if (!photos || photos.length === 0) { await sendMessage(chatId, "❌ No photos in the gallery yet."); return; }
+async function handleGalleryDeleteList(chatId, messageId = null) {
+    const session = await getSession();
+    let selected = [];
+    if (session.state === 'gallery_multi_del') {
+        selected = session.data.selected || [];
+    } else {
+        await setSession('gallery_multi_del', { selected: [] });
+    }
+
+    const photos = await dbGet('gallery_photos', 'order=uploaded_at.desc&limit=15');
+    if (!photos || photos.length === 0) { 
+        if (messageId) await sendMessage(chatId, "❌ No photos in the gallery yet."); 
+        else await sendMessage(chatId, "❌ No photos in the gallery yet."); 
+        return; 
+    }
+    
     const buttons = photos.map((p, i) => {
+        const isSelected = selected.includes(p.id);
+        const icon = isSelected ? '✅' : '⬜️';
         const label = p.caption || (p.run_label ? `🏃 ${p.run_label}` : `Photo ${i+1}`);
-        return [{ text: `🗑️ ${i+1}. ${label.slice(0,40)}`, callback_data: `gallery_del_${p.id}` }];
+        return [{ text: `${icon} ${i+1}. ${label.slice(0,35)}`, callback_data: `gal_tgl_del_${p.id}` }];
     });
-    buttons.push([{ text: "↩️ Back", callback_data: "cmd_gallery_start" }]);
-    await sendMessage(chatId, `🗑️ *Delete a Photo*\n\nThese are the last ${photos.length} photos:`, { inline_keyboard: buttons });
+    
+    if (selected.length > 0) {
+        buttons.push([{ text: `🗑️ Delete Selected (${selected.length})`, callback_data: `gal_del_bulk_conf` }]);
+    }
+    
+    buttons.push([{ text: "↩️ Back Menu", callback_data: "cmd_gallery_start" }]);
+    
+    const text = `🗑️ *Bulk Delete Photos*\n\nTap to select the photos you want to permanently delete:`;
+    
+    if (messageId) {
+        await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/editMessageText`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ chat_id: chatId, message_id: messageId, text: text, parse_mode: 'Markdown', reply_markup: { inline_keyboard: buttons } })
+        });
+    } else {
+        await sendMessage(chatId, text, { inline_keyboard: buttons });
+    }
 }
 
-async function handleGalleryDeleteConfirm(chatId, photoId) {
-    const photos = await dbGet('gallery_photos', `id=eq.${photoId}`);
-    if (!photos || photos.length === 0) { await sendMessage(chatId, "❌ Photo not found."); return; }
-    const p = photos[0];
-    const label = p.caption || p.run_label || 'this photo';
-    await sendMessage(chatId, `⚠️ *Delete "${label}"?*\nThis cannot be undone.`, {
+async function handleGalleryBulkConfirm(chatId) {
+    const session = await getSession();
+    const sel = session.data.selected || [];
+    if (sel.length === 0) return;
+    await sendMessage(chatId, `⚠️ *Delete ${sel.length} photos?*\nThis cannot be undone.`, {
         inline_keyboard: [
-            [{ text: "✅ Yes, Delete", callback_data: `gallery_del_yes_${photoId}` }],
-            [{ text: "❌ Cancel", callback_data: "cmd_menu" }]
+            [{ text: `✅ Yes, Delete ${sel.length} Photos`, callback_data: `gal_del_bulk_yes` }],
+            [{ text: "❌ Cancel", callback_data: "cmd_gallery_delete" }]
         ]
     });
 }
 
-async function handleGalleryDeleteExecute(chatId, photoId) {
-    const photos = await dbGet('gallery_photos', `id=eq.${photoId}`);
-    if (photos && photos.length > 0) {
-        const photoUrl = photos[0].photo_url;
-        const fileName = photoUrl.split('/public/gallery/')[1];
-        if (fileName) {
-            await fetch(`${SUPABASE_URL}/storage/v1/object/gallery/${fileName}`, { method: 'DELETE', headers: dbHeaders });
+async function handleGalleryBulkExecute(chatId) {
+    const session = await getSession();
+    const sel = session.data.selected || [];
+    if (sel.length === 0) { await sendMessage(chatId, "❌ Nothing selected."); return; }
+
+    await sendMessage(chatId, `⏳ Deleting ${sel.length} photos...`);
+    
+    for (const photoId of sel) {
+        const photos = await dbGet('gallery_photos', `id=eq.${photoId}`);
+        if (photos && photos.length > 0) {
+            const photoUrl = photos[0].photo_url;
+            const fileName = photoUrl.split('/public/gallery/')[1];
+            if (fileName) {
+                await fetch(`${SUPABASE_URL}/storage/v1/object/gallery/${fileName}`, { method: 'DELETE', headers: dbHeaders });
+            }
+            await fetch(`${SUPABASE_URL}/rest/v1/gallery_photos?id=eq.${photoId}`, { method: 'DELETE', headers: dbHeaders });
         }
-        await fetch(`${SUPABASE_URL}/rest/v1/gallery_photos?id=eq.${photoId}`, { method: 'DELETE', headers: dbHeaders });
     }
-    await sendMessage(chatId, "✅ *Photo deleted from gallery!*");
+    await clearSession();
+    await sendMessage(chatId, `✅ *Successfully deleted ${sel.length} photos!*`);
     await sendMenu(chatId, "What else?");
 }
 
@@ -1027,8 +1066,17 @@ export default async function handler(req, res) {
             else if (data === 'cmd_gallery_start') await handleGalleryStart(chatId);
             else if (data.startsWith('gal_r_')) await handleGalleryRunPicked(chatId, data.replace('gal_r_', ''));
             else if (data === 'cmd_gallery_delete') await handleGalleryDeleteList(chatId);
-            else if (data.startsWith('gallery_del_yes_')) await handleGalleryDeleteExecute(chatId, data.replace('gallery_del_yes_', ''));
-            else if (data.startsWith('gallery_del_')) await handleGalleryDeleteConfirm(chatId, data.replace('gallery_del_', ''));
+            else if (data.startsWith('gal_tgl_del_')) {
+                const photoId = data.replace('gal_tgl_del_', '');
+                const session = await getSession();
+                let selected = session.data.selected || [];
+                if (selected.includes(photoId)) selected = selected.filter(id => id !== photoId);
+                else selected.push(photoId);
+                await setSession('gallery_multi_del', { selected });
+                await handleGalleryDeleteList(chatId, cq.message.message_id);
+            }
+            else if (data === 'gal_del_bulk_conf') await handleGalleryBulkConfirm(chatId);
+            else if (data === 'gal_del_bulk_yes') await handleGalleryBulkExecute(chatId);
             else if (data === 'cmd_shop_menu') await handleShopMenu(chatId);
             else if (data.startsWith('shop_toggle_')) await handleShopToggle(chatId, data.replace('shop_toggle_', ''));
             else if (data.startsWith('shop_appr_')) await handleShopOrderApprove(chatId, data.replace('shop_appr_', ''), cq.message.message_id, !!cq.message.photo);
