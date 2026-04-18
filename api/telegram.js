@@ -432,6 +432,29 @@ async function uploadShopPhoto(chatId, message) {
     return `${SUPABASE_URL}/storage/v1/object/public/gallery/${fileName}`;
 }
 
+async function uploadRouteDocument(chatId, document) {
+    const fileId = document.file_id;
+    await sendMessage(chatId, "⏳ Uploading GPX route file to Cloud...");
+    const fileRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getFile?file_id=${fileId}`);
+    const fileData = await fileRes.json();
+    const filePath = fileData.result?.file_path;
+    if (!filePath) return null;
+    const docRes = await fetch(`https://api.telegram.org/file/bot${BOT_TOKEN}/${filePath}`);
+    if (!docRes.ok) return null;
+    const docBuffer = await docRes.arrayBuffer();
+    const fileName = `route_${Date.now()}.gpx`;
+    const uploadRes = await fetch(`${SUPABASE_URL}/storage/v1/object/gallery/${fileName}`, {
+        method: 'POST',
+        headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/gpx+xml' },
+        body: docBuffer
+    });
+    if (!uploadRes.ok) {
+        console.error("Storage upload failed", await uploadRes.text());
+        return null;
+    }
+    return `${SUPABASE_URL}/storage/v1/object/public/gallery/${fileName}`;
+}
+
 async function handleShopProductAdd(chatId) {
     await setSession('shop_add_item', { step: 'name' });
     await sendMessage(chatId, "🛍️ *Add New Product (Step 1/4)*\n\nWhat is the name of this product?");
@@ -1080,6 +1103,30 @@ export default async function handler(req, res) {
                 } else {
                     await sendMessage(chatId, "📸 Got a photo! Choose an option from the menus to attach it somewhere.");
                 }
+            }
+            res.status(200).send('ok'); return;
+        }
+
+        // Handle Document Uploads (e.g. GPX files)
+        if (body.message && body.message.document) {
+            const chatId = body.message.chat.id.toString();
+            if (chatId !== ADMIN_CHAT_ID) { res.status(200).send('ok'); return; }
+            const session = await getSession();
+            
+            if (session.state === 'waiting_route_map') {
+                const doc = body.message.document;
+                if (!doc.file_name || !doc.file_name.toLowerCase().endsWith('.gpx')) {
+                    await sendMessage(chatId, "❌ Please send a valid `.gpx` file, or type 'Skip'.");
+                    res.status(200).send('ok'); return;
+                }
+                const fileUrl = await uploadRouteDocument(chatId, doc);
+                if (!fileUrl) { 
+                    await sendMessage(chatId, "❌ Failed to upload GPX file. Try again or type 'Skip'."); 
+                    res.status(200).send('ok'); return; 
+                }
+                await createConfirm(chatId, session.data.locationName, fileUrl, 'gpx', session.data);
+            } else {
+                await sendMessage(chatId, "📁 Received a document, but I'm not waiting for one right now.");
             }
             res.status(200).send('ok'); return;
         }
