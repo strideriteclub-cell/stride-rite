@@ -718,9 +718,14 @@ async function handleSurveyHub(chatId) {
 }
 
 async function handleSurvey(chatId) {
-    const runs = await dbGet('stride_runs', 'select=*&order=created_at.desc');
-    if (!runs || runs.length === 0) { await sendMessage(chatId, "❌ No runs found."); return; }
-    const dt = runs[0].date_label.includes('||') ? runs[0].date_label.split('||')[0] : runs[0].date_label;
+    const runs = await dbGet('stride_runs');
+    if (!Array.isArray(runs) || runs.length === 0) { 
+        await sendMessage(chatId, "❌ No runs found or database error."); 
+        return; 
+    }
+    // Safely get the last inserted run
+    const lastRun = runs[runs.length - 1];
+    const dt = lastRun.date_label.includes('||') ? lastRun.date_label.split('||')[0] : lastRun.date_label;
     const url = `${SITE_URL}/survey.html?run=${encodeURIComponent(dt)}`;
     await sendMessage(chatId, `📝 *Post-Run Survey:*\n\n🏃 Hey Striders!\n\nHow did today's run feel? Tell us in 30 seconds 👇\n\n${url}\n\nThank you! See you next time 🙌`);
 }
