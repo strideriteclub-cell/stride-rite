@@ -147,7 +147,7 @@ async function sendMenu(chatId, msg = "👟 *Stride Rite Admin Bot*\nHey Haleem!
         inline_keyboard: [
             [{ text: "📊 Run Stats", callback_data: "cmd_stats" }, { text: "📋 List All Runs", callback_data: "cmd_runs" }],
             [{ text: "📥 Export Excel", callback_data: "cmd_export" }, { text: "📲 WhatsApp Blast", callback_data: "cmd_blast" }],
-            [{ text: "📝 Survey Link", callback_data: "cmd_survey" }, { text: "🎂 Birthdays", callback_data: "cmd_birthdays" }],
+            [{ text: "📝 Feedbacks", callback_data: "cmd_survey_menu" }, { text: "🎂 Birthdays", callback_data: "cmd_birthdays" }],
             [{ text: "🔍 Runner Lookup", callback_data: "cmd_lookup_start" }, { text: "📣 Broadcast", callback_data: "cmd_broadcast_start" }],
             [{ text: "📈 Growth Graph", callback_data: "cmd_growth" }, { text: "✏️ Edit a Run", callback_data: "cmd_edit_list" }],
             [{ text: "📸 Add to Gallery", callback_data: "cmd_gallery_start" }, { text: "🛍️ VIP Shop Admin", callback_data: "cmd_shop_menu" }],
@@ -702,7 +702,21 @@ async function handleBlast(chatId) {
     await sendMessage(chatId, `📲 *Copy & paste into WhatsApp for the upcoming run:*\n\n🏃‍♂️ Stride Rite Community Run 🏃‍♀️\n\n📅 ${dt}\n📍 ${r.location}\n🗺️ ${r.location_link}\n\n${registered}\n\nDon't miss it! Register 👇\n${SITE_URL}\n\n_Every pace is welcome. See you there!_ 💪`);
 }
 
-// ─── SURVEY ───────────────────────────────────────────────────────────────────
+// ─── SURVEY & FEEDBACK ────────────────────────────────────────────────────────
+async function handleSurveyMenu(chatId) {
+    await sendMessage(chatId, "📝 *Feedback Management*\n\nWhat would you like to do?", {
+        inline_keyboard: [
+            [{ text: "🔗 Share Survey Link", callback_data: "cmd_survey_link" }],
+            [{ text: "📊 View Feedback Hub", callback_data: "cmd_survey_hub" }],
+            [{ text: "↩️ Back to Menu", callback_data: "cmd_menu" }]
+        ]
+    });
+}
+
+async function handleSurveyHub(chatId) {
+    await sendMessage(chatId, `📊 *Feedback Hub*\n\nView community ratings and feedback here:\n${SITE_URL}/admin-feedback.html`);
+}
+
 async function handleSurvey(chatId) {
     const runs = await dbGet('stride_runs');
     if (!runs || runs.length === 0) { await sendMessage(chatId, "❌ No runs found."); return; }
@@ -963,7 +977,10 @@ export default async function handler(req, res) {
             else if (data === 'cmd_runs') await handleListRuns(chatId);
             else if (data === 'cmd_export') await handleExport(chatId);
             else if (data === 'cmd_blast') await handleBlast(chatId);
-            else if (data === 'cmd_survey') await handleSurvey(chatId);
+            else if (data === 'cmd_survey_menu') await handleSurveyMenu(chatId);
+            else if (data === 'cmd_survey_link') await handleSurvey(chatId);
+            else if (data === 'cmd_survey_hub') await handleSurveyHub(chatId);
+            else if (data === 'cmd_survey') await handleSurvey(chatId); // legacy
             else if (data === 'cmd_birthdays') await checkBirthdays(chatId);
             else if (data === 'cmd_growth') await handleGrowthGraph(chatId);
             else if (data === 'cmd_lookup_start') await handleLookupStart(chatId);
