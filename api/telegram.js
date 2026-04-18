@@ -141,10 +141,11 @@ async function sendMenu(chatId, msg = "👟 *Stride Rite Admin Bot*\nHey Haleem!
             [{ text: "📥 Export Excel", callback_data: "cmd_export" }, { text: "📲 WhatsApp Blast", callback_data: "cmd_blast" }],
             [{ text: "📝 Survey Link", callback_data: "cmd_survey" }, { text: "🎂 Birthdays", callback_data: "cmd_birthdays" }],
             [{ text: "🔍 Runner Lookup", callback_data: "cmd_lookup_start" }, { text: "📢 RSVP Reminders", callback_data: "cmd_reminder" }],
+            [{ text: "📸 Add to Gallery", callback_data: "cmd_gallery_start" }],
             [{ text: "📣 Broadcast", callback_data: "cmd_broadcast_start" }, { text: "📈 Growth Graph", callback_data: "cmd_growth" }],
-            [{ text: "📸 Add to Gallery", callback_data: "cmd_gallery_start" }, { text: "✏️ Edit a Run", callback_data: "cmd_edit_list" }],
-            [{ text: "🛍️ VIP Shop Admin", callback_data: "cmd_shop_menu" }, { text: "🚫 Cancel a Run", callback_data: "cmd_cancel_list" }],
-            [{ text: "🗑️ Delete a Run", callback_data: "cmd_delete_list" }, { text: "🆕 Create New Run", callback_data: "create_step1" }]
+            [{ text: "✏️ Edit a Run", callback_data: "cmd_edit_list" }, { text: "🛍️ VIP Shop Admin", callback_data: "cmd_shop_menu" }],
+            [{ text: "🚫 Cancel a Run", callback_data: "cmd_cancel_list" }, { text: "🗑️ Delete a Run", callback_data: "cmd_delete_list" }],
+            [{ text: "🆕 Create New Run", callback_data: "create_step1" }]
         ]
     });
 }
@@ -965,7 +966,10 @@ export default async function handler(req, res) {
                 await sendMessage(chatId, "✅ *Run deleted!*");
                 await sendMenu(chatId, "What else?");
             }
-            else if (data === 'cmd_gallery_start') await handleGalleryStart(chatId);
+             else if (data === 'cmd_gallery_start') {
+                console.log("Triggering handleGalleryStart...");
+                await handleGalleryStart(chatId);
+            }
             else if (data.startsWith('gallery_run_')) await handleGalleryRunPicked(chatId, data.replace('gallery_run_', ''));
             else if (data === 'cmd_gallery_delete') await handleGalleryDeleteList(chatId);
             else if (data.startsWith('gallery_del_yes_')) await handleGalleryDeleteExecute(chatId, data.replace('gallery_del_yes_', ''));
