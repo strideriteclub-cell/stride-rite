@@ -718,7 +718,7 @@ async function handleSurveyHub(chatId) {
 }
 
 async function handleSurvey(chatId) {
-    const runs = await dbGet('stride_runs');
+    const runs = await dbGet('stride_runs', 'select=*&order=created_at.desc');
     if (!runs || runs.length === 0) { await sendMessage(chatId, "❌ No runs found."); return; }
     const dt = runs[0].date_label.includes('||') ? runs[0].date_label.split('||')[0] : runs[0].date_label;
     const url = `${SITE_URL}/survey.html?run=${encodeURIComponent(dt)}`;
