@@ -154,6 +154,7 @@ const AppService = {
         if (!rawRuns || rawRuns.length === 0) return [];
         const now = new Date();
         const validRuns = [];
+        
         for (const run of rawRuns) {
             if (run.date_label.includes('[EXPORTED]')) continue;
             if (run.date_label && run.date_label.includes('||')) {
@@ -164,10 +165,15 @@ const AppService = {
                     continue;
                 }
                 run.date_label = parts[0];
+                run.iso_date = parts[1]; // Store for sorting
+            } else {
+                continue; // Skip runs without a valid ISO part
             }
             validRuns.push(run);
         }
-        return validRuns;
+
+        // Sort chronologically ascending
+        return validRuns.sort((a, b) => new Date(a.iso_date) - new Date(b.iso_date));
     },
 
     handleExpiredRun: async (runId, displayLabel) => {
