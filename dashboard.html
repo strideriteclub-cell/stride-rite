@@ -109,6 +109,7 @@
                         </div>
                         
                         ${!isReg ? `
+                            ${run.route_preview_url ? `<button class="btn btn-secondary btn-block" style="margin-bottom: 12px; border-style: dashed; opacity: 0.9;" onclick="viewRouteMap('${run.route_preview_url}', '${run.route_type}')">🗺️ View Route Preview</button>` : ''}
                             <div style="font-size:0.8rem; color:var(--text-muted); margin-bottom:8px; font-weight:600;">SELECT DISTANCE:</div>
                             <div class="dist-selector">
                                 <button class="dist-btn ${currentDist === '2K' ? 'active' : ''}" onclick="selectDist('${run.id}', '2K')">2K</button>
@@ -117,6 +118,7 @@
                             </div>
                             <button class="btn btn-primary btn-block" onclick="joinRun('${run.id}')">Confirm Registration</button>
                         ` : `
+                            ${run.route_preview_url ? `<button class="btn btn-secondary btn-block" style="margin-bottom: 12px; border-style: dashed; opacity: 0.9;" onclick="viewRouteMap('${run.route_preview_url}', '${run.route_type}')">🗺️ View Route Preview</button>` : ''}
                             <button class="btn btn-secondary btn-block" disabled style="opacity:0.8; cursor:default; background:rgba(34, 197, 94, 0.1); border-color:#22c55e; color:#22c55e;">
                                 You're all set! See you there.
                             </button>
@@ -128,6 +130,11 @@
             // Load weather advisory for the first run
             if (runs.length > 0) loadAIAdvisor(runs[0]);
         }
+
+        window.viewRouteMap = (url, type) => {
+            if (type === 'link') window.open(url, '_blank');
+            else Swal.fire({ title: 'Route Map', imageUrl: url, imageAlt: 'Route Preview', background: '#141419', color: '#fff', confirmButtonColor: 'var(--neon-accent)' });
+        };
 
         window.selectDist = (rId, dist) => {
             runSelections[rId] = dist;
