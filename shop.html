@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VIP Shop | Stride Rite</title>
+    <title>Shop | Stride Rite</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css?v=22">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -78,14 +78,14 @@
 
             let adminBanner = '';
             if (user.is_admin && !isOpen) {
-                adminBanner = `<div class="admin-notice">⚠️ Admin Notice: The shop is currently <strong>hidden</strong> from regular users. Toggle it on via the Telegram Bot → 🛍️ VIP Shop Admin.</div>`;
+                adminBanner = `<div class="admin-notice">⚠️ Admin Notice: The shop is currently <strong>hidden</strong> from regular users. Toggle it on via the Telegram Bot → 🛍️ Shop Admin.</div>`;
             }
 
             if (!items || items.length === 0) {
                 contentDiv.innerHTML = adminBanner + `
-                    <div class="hero-banner">
-                        <h1 style="font-size:3rem; margin-bottom:1rem;">Stride Rite Gear</h1>
-                        <p style="color:var(--text-muted);">Grab official community gear before it sells out.</p>
+                    <div class="hero-banner animate-up">
+                        <h1 style="font-family:'Outfit'; font-size:3rem; margin-bottom:1rem;">Stride Rite <span style="color:var(--peach-accent);">Shop</span></h1>
+                        <p style="color:var(--text-muted); font-size:1.1rem; max-width:600px; margin:0 auto;">Exclusive community gear and essentials for the Stride Rite family.</p>
                     </div>
                     <p style="text-align:center; color:var(--text-muted); padding:3rem;">No items currently in stock.</p>`;
                 return;
