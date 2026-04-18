@@ -151,15 +151,30 @@ async function sendMenu(chatId, msg = "👟 *Stride Rite Admin Bot*\nHey Haleem!
 
 // ─── GALLERY ─────────────────────────────────────────────────────────────────
 async function handleGalleryStart(chatId) {
-    const runs = await dbGet('stride_runs');
-    const buttons = (runs || []).map(r => {
-        const label = r.date_label.includes('||') ? r.date_label.split('||')[0] : r.date_label;
-        return [{ text: `🏃 ${label}`, callback_data: `gallery_run_${encodeURIComponent(label)}` }];
-    });
-    buttons.unshift([{ text: "📸 General / No specific run", callback_data: "gallery_run_general" }]);
-    buttons.push([{ text: "🗑️ Delete a Photo", callback_data: "cmd_gallery_delete" }]);
-    buttons.push([{ text: "↩️ Back", callback_data: "cmd_menu" }]);
-    await sendMessage(chatId, "📸 *Gallery*\n\nAdd photos — pick which run they're from:", { inline_keyboard: buttons });
+    try {
+        const runs = await dbGet('stride_runs');
+        
+        // SAFE-GATE: If the database returns an error object instead of an array, handle it gracefully
+        if (!Array.isArray(runs)) {
+            console.error("Supabase Error:", runs);
+            throw new Error(runs?.message || "Database returned non-array result");
+        }
+
+        // Limit to last 15 runs to prevent Telegram keyboard size errors
+        const recentRuns = runs.slice(-15);
+        
+        const buttons = recentRuns.map(r => {
+            const label = r.date_label.includes('||') ? r.date_label.split('||')[0] : r.date_label;
+            return [{ text: `🏃 ${label}`, callback_data: `gallery_run_${encodeURIComponent(label)}` }];
+        });
+        buttons.unshift([{ text: "📸 General / No specific run", callback_data: "gallery_run_general" }]);
+        buttons.push([{ text: "🗑️ Delete a Photo", callback_data: "cmd_gallery_delete" }]);
+        buttons.push([{ text: "↩️ Back", callback_data: "cmd_menu" }]);
+        await sendMessage(chatId, "📸 *Gallery*\n\nAdd photos — pick which run they're from:", { inline_keyboard: buttons });
+    } catch (e) {
+        console.error("Gallery Fail:", e);
+        await sendMessage(chatId, "❌ *Gallery Error:* Failed to load runs. Check your database connection.");
+    }
 }
 
 async function handleGalleryRunPicked(chatId, runLabel) {
@@ -1076,11 +1091,14 @@ export default async function handler(req, res) {
         } else if (session.state === 'edit_waiting_maps') {
             await handleEditSaveMaps(chatId, text);
         } else {
-            if (cmd === '/start' || cmd === '/help' || cmd === '/menu') await sendMenu(chatId);
+            if (cmd === '/start' || cmd === '/help' || cmd === '/menu') {
+                await sendMenu(chatId, `👟 *Stride Rite Admin Bot*\n\nHey Haleem! Your Chat ID is \`${chatId}\`.\nWhat do you want to do?`);
+            }
             else if (cmd === '/stats') await handleStats(chatId);
             else if (cmd === '/runs') await handleListRuns(chatId);
             else if (cmd === '/export') await handleExport(chatId);
             else if (cmd === '/blast') await handleBlast(chatId);
+            else if (cmd === '/gallery') await handleGalleryStart(chatId);
             else if (cmd === '/survey') await handleSurvey(chatId);
             else if (cmd === '/birthdays') await checkBirthdays(chatId);
             else if (cmd === '/growth') await handleGrowthGraph(chatId);
@@ -1095,6 +1113,10 @@ export default async function handler(req, res) {
         res.status(200).send('ok');
     } catch (e) {
         console.error(e);
+        // CRITICAL: Notify the admin of the error so we can stop guessing
+        try {
+            await sendMessage(ADMIN_CHAT_ID, `🚨 *Bot Error Reported:*\n\n\`\`\`\n${e.message}\n\`\`\`\n_Check Vercel logs for full stack trace._`);
+        } catch (inner) { console.error("Double Fail:", inner); }
         res.status(500).send('Error');
     }
 }
