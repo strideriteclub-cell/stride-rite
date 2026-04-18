@@ -3,91 +3,212 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard | Stride Rite</title>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&display=swap" rel="stylesheet">
+    <title>Member Dashboard | Stride Rite</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css?v=23">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
-        :root { --primary: #FF6B00; --bg: #0A0A0A; --card: #141414; }
-        body { background: var(--bg); color: white; font-family: 'Outfit', sans-serif; margin: 0; padding-top: 20px; }
-        .dashboard-container { max-width: 1200px; margin: 0 auto; padding: 20px; display: grid; grid-template-columns: 280px 1fr; gap: 30px; }
-        .card { background: var(--card); border: 1px solid rgba(255,255,255,0.05); border-radius: 20px; padding: 20px; }
-        .sidebar { display: flex; flex-direction: column; gap: 20px; }
-        .main-content { display: flex; flex-direction: column; gap: 30px; }
-        .user-header { display: flex; justify-content: space-between; align-items: center; }
-        .btn { padding: 12px 25px; border-radius: 10px; font-weight: bold; cursor: pointer; border: none; transition: 0.3s; }
-        .btn-primary { background: var(--primary); color: white; }
-        .btn-logout { background: rgba(255,0,0,0.1); color: #ff4444; border: 1px solid rgba(255,0,0,0.2); }
-        .stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
-        .stat-card { text-align: center; }
-        .stat-val { font-size: 2.5rem; font-weight: 900; color: var(--primary); }
-        .stat-label { font-size: 0.8rem; color: #888; text-transform: uppercase; letter-spacing: 1px; }
+        .dashboard-header { margin-bottom: 3rem; }
+        .dashboard-header h1 { font-size: 2.5rem; margin-bottom: 0.5rem; }
+        .welcome-text { color: var(--text-muted); font-size: 1.1rem; }
+        .section-title { font-family: 'Outfit'; font-size: 1.8rem; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 12px; }
+        .runs-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1.5rem; }
+        
+        .run-card { 
+            padding: 2.5rem; 
+            border-bottom: 4px solid var(--neon-accent); 
+            transition: transform 0.3s;
+        }
+        .run-card.registered { border-bottom-color: #22c55e; }
+        .run-card:hover { transform: translateY(-5px); }
+        .run-date { font-weight: 800; font-size: 1.6rem; color: white; margin-bottom: 0.5rem; }
+        .run-loc { color: var(--text-muted); font-size: 0.95rem; margin-bottom: 1.5rem; display: flex; align-items: flex-start; gap: 6px; }
+        
+        .registered-badge {
+            background: rgba(34, 197, 94, 0.15);
+            color: #22c55e;
+            padding: 6px 12px;
+            border-radius: 50px;
+            font-size: 0.75rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            display: inline-block;
+            margin-bottom: 1rem;
+        }
+
+        .weather-meta { display: flex; gap: 1.5rem; margin-top: 1rem; }
+        .weather-stat { display: flex; flex-direction: column; }
+        .weather-label { font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
+        .weather-val { font-weight: 700; color: white; }
     </style>
 </head>
 <body>
-
-<div class="dashboard-container">
-    <aside class="sidebar">
-        <div class="card" style="text-align: center;">
-            <div id="user-avatar" style="width: 80px; height: 80px; background: var(--primary); border-radius: 50%; margin: 0 auto 15px; display: flex; align-items: center; justify-content: center; font-size: 2rem; font-weight: 900;">S</div>
-            <h3 id="user-name-sidebar">Member</h3>
-            <p id="user-level-sidebar" style="color: #888; font-size: 0.9rem;">Level: —</p>
-            <button onclick="AuthService.logout()" class="btn btn-logout" style="width: 100%; margin-top: 10px;">Log Out</button>
+    <nav class="navbar">
+        <div style="font-family:'Outfit'; font-weight:800; font-size:1.5rem;">S<span style="color:var(--peach-accent);">.</span></div>
+        <div class="nav-links">
+            <a href="shop.html">🛍 VIP Shop</a>
+            <a href="gallery.html">📸 Gallery</a>
+            <a href="profile.html">👤 My Profile</a>
+            <a href="#" onclick="AuthService.logout()">Logout</a>
         </div>
-        <div class="card">
-            <h4>Menu</h4>
-            <div style="display: flex; flex-direction: column; gap: 10px;">
-                <button onclick="window.location.href='index.html#runs'" class="btn" style="background: transparent; color: white; text-align: left; padding-left: 0;">🏠 My Runs</button>
-                <button onclick="window.location.href='shop.html'" class="btn" style="background: transparent; color: white; text-align: left; padding-left: 0;">🛍️ VIP Shop</button>
-                <button onclick="window.location.href='gallery.html'" class="btn" style="background: transparent; color: white; text-align: left; padding-left: 0;">📸 Gallery</button>
-            </div>
-        </div>
-    </aside>
+    </nav>
 
-    <main class="main-content">
-        <div class="user-header">
-            <h2 style="font-size: 2rem;">Welcome Back, <span id="user-name-header" style="color: var(--primary);">Strider</span>! 👋</h2>
-        </div>
+    <div class="main-container">
+        <header class="dashboard-header animate-up">
+            <h1 id="welcomeUser">Welcome, Runner!</h1>
+            <p class="welcome-text">Your central hub for community runs and rewards.</p>
+        </header>
 
-        <div class="stat-grid">
-            <div class="card stat-card">
-                <div class="stat-val" id="stat-total-runs">0</div>
-                <div class="stat-label">Runs Completed</div>
-            </div>
-            <div class="card stat-card">
-                <div class="stat-val" id="stat-total-kms">0.0</div>
-                <div class="stat-label">Total Kilometers</div>
-            </div>
-            <div class="card stat-card">
-                <div class="stat-val" id="stat-rank">#—</div>
-                <div class="stat-label">Global Rank</div>
-            </div>
-        </div>
+        <div id="advisorContainer"></div>
 
-        <div class="card">
-            <h3>Upcoming Commmunity <span>Runs</span></h3>
-            <div id="upcoming-runs-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px;">
-                <p style="color: #888;">Checking the streets...</p>
+        <section class="animate-up" style="animation-delay: 0.2s;">
+            <h2 class="section-title">🗓 Upcoming Community Runs</h2>
+            <div class="runs-grid" id="runsContainer">
+                <p style="color:var(--text-muted); padding:2rem;">Loading runs...</p>
             </div>
-        </div>
-    </main>
-</div>
+        </section>
+    </div>
 
-<script src="app.js"></script>
-<script>
-    document.addEventListener('DOMContentLoaded', async () => {
+    <script src="app.js?v=23"></script>
+    <script>
         const user = AuthService.getCurrentUser();
-        if (!user) { window.location.href = 'index.html'; return; }
+        if (!user) window.location.href = 'index.html';
         
-        document.getElementById('user-name-header').innerText = user.name.split(' ')[0];
-        document.getElementById('user-name-sidebar').innerText = user.name;
-        document.getElementById('user-level-sidebar').innerText = `Level: ${user.level || 'Beginner'}`;
-        document.getElementById('user-avatar').innerText = user.name.charAt(0).toUpperCase();
+        document.getElementById('welcomeUser').innerText = `Welcome back, ${user.name.split(' ')[0]}!`;
 
-        const stats = await AppService.getUserStats(user.id);
-        if (stats) {
-            document.getElementById('stat-total-runs').innerText = stats.totalRuns || 0;
-            document.getElementById('stat-total-kms').innerText = stats.totalKms || '0.0';
+        let runSelections = {};
+
+        async function initDashboard() {
+            await renderRuns();
         }
-    });
-</script>
+
+        async function renderRuns() {
+            const container = document.getElementById('runsContainer');
+            const [runs, myRegs] = await Promise.all([
+                AppService.getRuns(),
+                AppService.getUserRegistrations(user.id)
+            ]);
+
+            if (!runs || runs.length === 0) {
+                container.innerHTML = `<p style="padding:3rem; text-align:center; color:var(--text-muted); grid-column:1/-1;">No community runs scheduled at the moment. Check back soon!</p>`;
+                return;
+            }
+
+            container.innerHTML = runs.map(run => {
+                const isReg = myRegs.includes(run.id);
+                if (!runSelections[run.id]) runSelections[run.id] = '5K';
+                const currentDist = runSelections[run.id];
+
+                return `
+                    <div class="glass-card run-card ${isReg ? 'registered' : ''} animate-up">
+                        ${isReg ? '<span class="registered-badge">✓ Registered</span>' : ''}
+                        <div class="run-date">${run.date_label}</div>
+                        <div class="run-loc">
+                            <span>📍</span>
+                            <a href="${run.location_link}" target="_blank" style="color:var(--neon-accent); text-decoration:underline;">${run.location}</a>
+                        </div>
+                        
+                        ${!isReg ? `
+                            <div style="font-size:0.8rem; color:var(--text-muted); margin-bottom:8px; font-weight:600;">SELECT DISTANCE:</div>
+                            <div class="dist-selector">
+                                <button class="dist-btn ${currentDist === '2K' ? 'active' : ''}" onclick="selectDist('${run.id}', '2K')">2K</button>
+                                <button class="dist-btn ${currentDist === '5K' ? 'active' : ''}" onclick="selectDist('${run.id}', '5K')">5K</button>
+                                <button class="dist-btn ${currentDist === '8K' ? 'active' : ''}" onclick="selectDist('${run.id}', '8K')">8K</button>
+                            </div>
+                            <button class="btn btn-primary btn-block" onclick="joinRun('${run.id}')">Confirm Registration</button>
+                        ` : `
+                            <button class="btn btn-secondary btn-block" disabled style="opacity:0.8; cursor:default; background:rgba(34, 197, 94, 0.1); border-color:#22c55e; color:#22c55e;">
+                                You're all set! See you there.
+                            </button>
+                        `}
+                    </div>
+                `;
+            }).join('');
+
+            // Load weather advisory for the first run
+            if (runs.length > 0) loadAIAdvisor(runs[0]);
+        }
+
+        window.selectDist = (rId, dist) => {
+            runSelections[rId] = dist;
+            renderRuns(); // Fast re-render
+        };
+
+        window.joinRun = async (rId) => {
+            Swal.fire({ title: 'Registering...', background:'#141419', didOpen: () => Swal.showLoading() });
+            const success = await AppService.registerForRun(rId, runSelections[rId], user.level || 'Beginner');
+            
+            if (success) {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'See you at the run! 🏃‍♂️',
+                    text: 'We\'ve sent a notification to the community leads.',
+                    background: '#141419',
+                    color: '#fff',
+                    confirmButtonColor: 'var(--neon-accent)'
+                });
+                renderRuns();
+            } else {
+                Swal.fire({
+                    icon: 'info',
+                    title: 'Already Registered',
+                    text: 'You are already on the list for this run!',
+                    background: '#141419',
+                    color: '#fff'
+                });
+            }
+        };
+
+        async function loadAIAdvisor(run) {
+            try {
+                const query = run.location.split(',')[0];
+                const res = await fetch(`https://api.weatherapi.com/v1/current.json?key=686edc30f7764d08ada12150261604&q=${encodeURIComponent(query)}`);
+                const data = await res.json();
+                
+                if (data.error) throw new Error('Weather API error');
+
+                const temp = data.current.temp_c;
+                const cond = data.current.condition.text;
+                const humidity = data.current.humidity;
+                const wind = data.current.wind_kph;
+                
+                let advice = "Perfect running weather! Stick to your target pace.";
+                if (temp > 28) advice = "It's a bit warm. Remember to hydrate well before and after! 💧";
+                if (temp < 10) advice = "Chilly morning! Keep those muscles warm with a longer warm-up. 🔥";
+
+                document.getElementById('advisorContainer').innerHTML = `
+                    <div class="advisor-card animate-up">
+                        <img src="${data.current.condition.icon}" style="width:64px; height:64px;">
+                        <div style="flex:1;">
+                            <div style="font-size:0.75rem; color:var(--neon-accent); font-weight:800; letter-spacing:2px; margin-bottom:4px;">🌤 AI WEATHER ADVISOR</div>
+                            <div style="font-weight:700; color:white; font-size:1.1rem; margin-bottom:8px;">${advice}</div>
+                            <div class="weather-meta">
+                                <div class="weather-stat">
+                                    <span class="weather-label">Temp</span>
+                                    <span class="weather-val">${temp}°C</span>
+                                </div>
+                                <div class="weather-stat">
+                                    <span class="weather-label">Condition</span>
+                                    <span class="weather-val">${cond}</span>
+                                </div>
+                                <div class="weather-stat">
+                                    <span class="weather-label">Wind</span>
+                                    <span class="weather-val">${wind} km/h</span>
+                                </div>
+                                <div class="weather-stat">
+                                    <span class="weather-label">Humidity</span>
+                                    <span class="weather-val">${humidity}%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } catch (e) {
+                console.error("Advisor failed", e);
+            }
+        }
+
+        initDashboard();
+    </script>
 </body>
 </html>
