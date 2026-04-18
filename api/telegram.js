@@ -896,16 +896,22 @@ async function createStep3(chatId, date, sessionData) {
 
 async function createStep4(chatId, mapsLink, sessionData) {
     await setSession('waiting_location_name', { ...sessionData, mapsLink });
-    await sendMessage(chatId, `✅ Maps link saved!\n\n*Step 4/5* — 🏷️ What's the *location name?*\nExample: _Gateway Mall, Al Rehab City_`);
+    await sendMessage(chatId, `✅ Maps link saved!\n\n*Step 4/6* — 🏷️ What's the *location name?*\nExample: _Gateway Mall, Al Rehab City_`);
 }
 
-async function createConfirm(chatId, locationName, sessionData) {
-    const fullData = { ...sessionData, locationName };
+async function createStep5(chatId, locationName, sessionData) {
+    await setSession('waiting_route_map', { ...sessionData, locationName });
+    await sendMessage(chatId, `✅ Location Name saved!\n\n*Step 5/6* — 🗺️ Send the *Route Map*.\n\nYou can upload an *Image* now, or paste a *Link* (like Strava/GPX url).\nIf you don't have one right now, just type "Skip".`);
+}
+
+async function createConfirm(chatId, locationName, routeMap, routeType, sessionData) {
+    // routeMap comes from text or photo upload. routeType is 'link' or 'image'
+    const fullData = { ...sessionData, locationName, routeMap, routeType };
     await setSession('confirming', fullData);
     const dateObj = new Date(`${fullData.date}T${fullData.time}`);
     const fd = dateObj.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
     await sendMessage(chatId,
-        `📋 *Step 5/5 — Confirm New Run*\n\n📅 *${fd}*\n⏰ *${formatTime(fullData.time)}*\n📍 *${fullData.locationName}*\n🗺️ ${fullData.mapsLink}\n\nLooks good?`,
+        `📋 *Step 6/6 — Confirm New Run*\n\n📅 *${fd}*\n⏰ *${formatTime(fullData.time)}*\n📍 *${fullData.locationName}*\n🗺️ ${fullData.mapsLink}\n\n*Route Preview attached!* Looks good?`,
         { inline_keyboard: [[{ text: "✅ Create Run!", callback_data: "create_confirm_yes" }], [{ text: "❌ Cancel", callback_data: "cmd_menu" }]] }
     );
 }
@@ -917,16 +923,23 @@ async function createExecute(chatId) {
         const dateObj = new Date(`${d.date}T${d.time}`);
         const fd = dateObj.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
         const ft = formatTime(d.time);
+        
+        let previewVal = d.routeMap;
+        if(previewVal && previewVal.toLowerCase() === 'skip') previewVal = null;
+
         await dbInsert('stride_runs', {
             id: crypto.randomUUID(), date_label: `${fd} - ${ft}||${dateObj.toISOString()}`,
             location: d.locationName, location_link: d.mapsLink,
-            description: 'Every pace is welcome!', created_by: 'admin-1'
+            description: 'Every pace is welcome!', created_by: 'admin-1',
+            route_preview_url: previewVal,
+            route_type: previewVal ? d.routeType : 'image'
         });
         await clearSession();
         await sendMessage(chatId, `🎉 *Run Created!*\n\n📅 ${fd}\n⏰ ${ft}\n📍 ${d.locationName}\n\nLive on the site now! 🚀`);
         await sendMenu(chatId, "What else do you want to do?");
     } catch (e) {
-        await sendMessage(chatId, "❌ Something went wrong. Try again from the menu.");
+        console.error(e);
+        await sendMessage(chatId, "❌ Something went wrong while saving the run. Try again from the menu.");
     }
 }
 
@@ -1015,6 +1028,10 @@ export default async function handler(req, res) {
                 const session = await getSession();
                 if (session.state === 'waiting_gallery_photo') {
                     await handleGalleryPhoto(chatId, body.message, session);
+                } else if (session.state === 'waiting_route_map') {
+                    const imgUrl = await uploadShopPhoto(chatId, body.message);
+                    if (!imgUrl) { await sendMessage(chatId, "❌ Failed to upload map photo. Type 'Skip' or try again."); res.status(200).send('ok'); return; }
+                    await createConfirm(chatId, session.data.locationName, imgUrl, 'image', session.data);
                 } else if (session.state === 'shop_add_item' && session.data.step === 'photo') {
                     const imgUrl = await uploadShopPhoto(chatId, body.message);
                     if (!imgUrl) { await sendMessage(chatId, "❌ Failed to upload photo."); res.status(200).send('ok'); return; }
@@ -1095,11 +1112,12 @@ export default async function handler(req, res) {
             res.status(200).send('ok'); return;
         }
 
-        // Multi-step session handling
         if (session.state === 'waiting_maps_link') {
             await createStep4(chatId, text, session.data);
         } else if (session.state === 'waiting_location_name') {
-            await createConfirm(chatId, text, session.data);
+            await createStep5(chatId, text, session.data);
+        } else if (session.state === 'waiting_route_map') {
+            await createConfirm(chatId, session.data.locationName, text, 'link', session.data);
         } else if (session.state === 'waiting_lookup_name') {
             await handleLookup(chatId, text);
         } else if (session.state === 'waiting_broadcast_msg') {
