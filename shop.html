@@ -66,7 +66,7 @@
             if (!isOpen && !user.is_admin) {
                 contentDiv.innerHTML = `
                     <div class="closed-state">
-                        <h2>🔒 The VIP Shop is closed.</h2>
+                        <h2>🔒 The Shop is closed.</h2>
                         <p>We're brewing up fresh new merch for the community! Keep an eye on the WhatsApp group for the next drop announcement.</p>
                         <br><br>
                         <a href="dashboard.html" class="btn btn-primary">Back to Dashboard</a>
@@ -83,9 +83,9 @@
 
             if (!items || items.length === 0) {
                 contentDiv.innerHTML = adminBanner + `
-                    <div class="hero-banner animate-up">
-                        <h1 style="font-family:'Outfit'; font-size:3rem; margin-bottom:1rem;">Stride Rite <span style="color:var(--peach-accent);">Shop</span></h1>
-                        <p style="color:var(--text-muted); font-size:1.1rem; max-width:600px; margin:0 auto;">Exclusive community gear and essentials for the Stride Rite family.</p>
+                    <div class="hero-banner">
+                        <h1 style="font-size:3rem; margin-bottom:1rem;">Stride Rite Gear</h1>
+                        <p style="color:var(--text-muted);">Grab official community gear before it sells out.</p>
                     </div>
                     <p style="text-align:center; color:var(--text-muted); padding:3rem;">No items currently in stock.</p>`;
                 return;
