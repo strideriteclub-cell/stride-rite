@@ -27,6 +27,30 @@ function formatTime(time) {
     return `${hr}:${String(m).padStart(2,'0')} ${ampm}`;
 }
 
+// ─── DATE HELPERS ─────────────────────────────────────────────────────────────
+function extractIsoDate(dateLabel) {
+    if (!dateLabel || !dateLabel.includes('||')) return null;
+    return dateLabel.split('||')[1];
+}
+
+async function getSortedUpcomingRuns() {
+    const runs = await dbGet('stride_runs');
+    if (!runs || runs.length === 0) return [];
+    
+    const now = new Date().toISOString();
+    
+    return runs
+        .filter(r => {
+            const isoDate = extractIsoDate(r.date_label);
+            return isoDate && isoDate >= now;
+        })
+        .sort((a, b) => {
+            const dateA = extractIsoDate(a.date_label);
+            const dateB = extractIsoDate(b.date_label);
+            return dateA.localeCompare(dateB);
+        });
+}
+
 // ─── DB HELPERS ───────────────────────────────────────────────────────────────
 async function dbGet(table, query = 'select=*') {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${query}`, { headers: dbHeaders });
@@ -118,7 +142,7 @@ async function sendMenu(chatId, msg = "👟 *Stride Rite Admin Bot*\nHey Haleem!
             [{ text: "📝 Survey Link", callback_data: "cmd_survey" }, { text: "🎂 Birthdays", callback_data: "cmd_birthdays" }],
             [{ text: "🔍 Runner Lookup", callback_data: "cmd_lookup_start" }, { text: "📣 Broadcast", callback_data: "cmd_broadcast_start" }],
             [{ text: "📈 Growth Graph", callback_data: "cmd_growth" }, { text: "✏️ Edit a Run", callback_data: "cmd_edit_list" }],
-            [{ text: "📸 Add to Gallery", callback_data: "cmd_gallery_start" }, { text: "🛍️ Shop Admin", callback_data: "cmd_shop_menu" }],
+            [{ text: "📸 Add to Gallery", callback_data: "cmd_gallery_start" }, { text: "🛍️ VIP Shop Admin", callback_data: "cmd_shop_menu" }],
             [{ text: "🚫 Cancel a Run", callback_data: "cmd_cancel_list" }, { text: "🗑️ Delete a Run", callback_data: "cmd_delete_list" }],
             [{ text: "🆕 Create New Run", callback_data: "create_step1" }]
         ]
@@ -357,7 +381,7 @@ async function handleShopProductMenu(chatId) {
 async function uploadShopPhoto(chatId, message) {
     const photos = message.photo;
     const fileId = photos[photos.length - 1].file_id;
-    await sendMessage(chatId, "⏳ Uploading photo to VIP Shop cloud...");
+    await sendMessage(chatId, "⏳ Uploading photo to Shop cloud...");
     const fileRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getFile?file_id=${fileId}`);
     const fileData = await fileRes.json();
     const filePath = fileData.result?.file_path;
@@ -586,9 +610,9 @@ async function handleGrowthGraph(chatId) {
 
 // ─── STATS ────────────────────────────────────────────────────────────────────
 async function handleStats(chatId) {
-    const runs = await dbGet('stride_runs');
-    if (!runs || runs.length === 0) { await sendMessage(chatId, "❌ No runs scheduled."); return; }
-    const nextRun = runs[0];
+    const runs = await getSortedUpcomingRuns();
+    if (runs.length === 0) { await sendMessage(chatId, "❌ No upcoming runs scheduled."); return; }
+    const nextRun = runs[0]; // Chronologically closest upcoming run
     const regs = await dbGet('stride_registrations', `run_id=eq.${nextRun.id}`);
     const users = await dbGet('stride_users');
     let males = 0, females = 0, totalAge = 0;
@@ -597,17 +621,17 @@ async function handleStats(chatId) {
         if (u) { u.gender === 'Male' ? males++ : females++; totalAge += calculateAge(u.birthdate || '') || (parseInt(u.age) || 0); }
     });
     const avgAge = regs.length > 0 ? Math.round(totalAge / regs.length) : 0;
-    const dt = nextRun.date_label.includes('||') ? nextRun.date_label.split('||')[0] : nextRun.date_label;
+    const dt = nextRun.date_label.split('||')[0];
     await sendMessage(chatId, `📊 *Next Run Stats*\n📍 ${dt}\n\n👥 *Total RSVPs:* ${regs.length}\n🤸 *Gender:* ${males}M / ${females}F\n⏰ *Avg Age:* ${avgAge} years`);
 }
 
 // ─── LIST RUNS ────────────────────────────────────────────────────────────────
 async function handleListRuns(chatId) {
-    const runs = await dbGet('stride_runs');
-    if (!runs || runs.length === 0) { await sendMessage(chatId, "❌ No runs scheduled."); return; }
-    let msg = `📋 *All Scheduled Runs (${runs.length}):*\n\n`;
+    const runs = await getSortedUpcomingRuns();
+    if (runs.length === 0) { await sendMessage(chatId, "❌ No upcoming runs scheduled."); return; }
+    let msg = `📋 *Upcoming Scheduled Runs (${runs.length}):*\n\n`;
     runs.forEach((r, i) => {
-        const dt = r.date_label.includes('||') ? r.date_label.split('||')[0] : r.date_label;
+        const dt = r.date_label.split('||')[0];
         const cancelled = r.is_cancelled ? ' 🚫 CANCELLED' : '';
         msg += `*${i + 1}.* ${dt}${cancelled}\n`;
     });
@@ -616,9 +640,9 @@ async function handleListRuns(chatId) {
 
 // ─── EXPORT ───────────────────────────────────────────────────────────────────
 async function handleExport(chatId) {
-    await sendMessage(chatId, "⏳ Generating...");
-    const runs = await dbGet('stride_runs');
-    if (!runs || runs.length === 0) { await sendMessage(chatId, "❌ No runs."); return; }
+    await sendMessage(chatId, "⏳ Generating export for the next upcoming run...");
+    const runs = await getSortedUpcomingRuns();
+    if (runs.length === 0) { await sendMessage(chatId, "❌ No upcoming runs found."); return; }
     const nextRun = runs[0];
     const regs = await dbGet('stride_registrations', `run_id=eq.${nextRun.id}`);
     const users = await dbGet('stride_users');
@@ -630,19 +654,19 @@ async function handleExport(chatId) {
             csv += `"${u.name}","${u.email}","${age}","${u.birthdate || ''}","${u.gender}","${r.distance}","${r.level || u.level}","${r.registered_at}"\n`;
         }
     });
-    const dt = nextRun.date_label.includes('||') ? nextRun.date_label.split('||')[0] : nextRun.date_label;
+    const dt = nextRun.date_label.split('||')[0];
     await sendDocument(chatId, csv, `Stride_Rite_${dt.replace(/[^a-zA-Z0-9]/g, '_')}.csv`);
 }
 
 // ─── WHATSAPP BLAST ───────────────────────────────────────────────────────────
 async function handleBlast(chatId) {
-    const runs = await dbGet('stride_runs');
-    if (!runs || runs.length === 0) { await sendMessage(chatId, "❌ No runs scheduled."); return; }
+    const runs = await getSortedUpcomingRuns();
+    if (runs.length === 0) { await sendMessage(chatId, "❌ No upcoming runs scheduled."); return; }
     const r = runs[0];
     const regs = await dbGet('stride_registrations', `run_id=eq.${r.id}`);
-    const dt = r.date_label.includes('||') ? r.date_label.split('||')[0] : r.date_label;
+    const dt = r.date_label.split('||')[0];
     const registered = regs.length > 0 ? `✅ *${regs.length} runner${regs.length > 1 ? 's' : ''} already registered!*` : '';
-    await sendMessage(chatId, `📲 *Copy & paste into WhatsApp:*\n\n🏃‍♂️ Stride Rite Community Run 🏃‍♀️\n\n📅 ${dt}\n📍 ${r.location}\n🗺️ ${r.location_link}\n\n${registered}\n\nDon't miss it! Register 👇\n${SITE_URL}\n\n_Every pace is welcome. See you there!_ 💪`);
+    await sendMessage(chatId, `📲 *Copy & paste into WhatsApp for the upcoming run:*\n\n🏃‍♂️ Stride Rite Community Run 🏃‍♀️\n\n📅 ${dt}\n📍 ${r.location}\n🗺️ ${r.location_link}\n\n${registered}\n\nDon't miss it! Register 👇\n${SITE_URL}\n\n_Every pace is welcome. See you there!_ 💪`);
 }
 
 // ─── SURVEY ───────────────────────────────────────────────────────────────────
