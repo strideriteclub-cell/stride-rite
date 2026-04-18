@@ -114,7 +114,7 @@
                         </div>
                         
                         ${!isReg ? `
-                            ${run.route_preview_url ? `<button class="btn btn-secondary btn-block" style="margin-bottom: 12px; border-style: dashed; opacity: 0.9;" onclick="viewRouteMap('${run.route_preview_url}', '${run.route_type}')">🗺️ View Route Preview</button>` : ''}
+                            ${run.route_preview_url ? `<button class="btn btn-secondary btn-block" style="margin-bottom: 12px; border-style: dashed; opacity: 0.9;" onclick="viewRouteMap('${run.route_preview_url}', '${run.route_type}', '${run.location_link}', '${run.location}')">🗺️ View Route Preview</button>` : ''}
                             <div style="font-size:0.8rem; color:var(--text-muted); margin-bottom:8px; font-weight:600;">SELECT DISTANCE:</div>
                             <div class="dist-selector">
                                 <button class="dist-btn ${currentDist === '2K' ? 'active' : ''}" onclick="selectDist('${run.id}', '2K')">2K</button>
@@ -123,7 +123,7 @@
                             </div>
                             <button class="btn btn-primary btn-block" onclick="joinRun('${run.id}')">Confirm Registration</button>
                         ` : `
-                            ${run.route_preview_url ? `<button class="btn btn-secondary btn-block" style="margin-bottom: 12px; border-style: dashed; opacity: 0.9;" onclick="viewRouteMap('${run.route_preview_url}', '${run.route_type}')">🗺️ View Route Preview</button>` : ''}
+                            ${run.route_preview_url ? `<button class="btn btn-secondary btn-block" style="margin-bottom: 12px; border-style: dashed; opacity: 0.9;" onclick="viewRouteMap('${run.route_preview_url}', '${run.route_type}', '${run.location_link}', '${run.location}')">🗺️ View Route Preview</button>` : ''}
                             <button class="btn btn-secondary btn-block" disabled style="opacity:0.8; cursor:default; background:rgba(34, 197, 94, 0.1); border-color:#22c55e; color:#22c55e;">
                                 You're all set! See you there.
                             </button>
@@ -136,7 +136,7 @@
             if (runs.length > 0) loadAIAdvisor(runs[0]);
         }
 
-        window.viewRouteMap = (url, type) => {
+        window.viewRouteMap = (url, type, locLink, locName) => {
             if (type === 'link') {
                 window.open(url, '_blank');
             } else if (type === 'gpx') {
@@ -156,13 +156,23 @@
 
                         new L.GPX(url, {
                             async: true,
+                            polyline_options: {
+                                color: '#ff7300', // Orange color
+                                opacity: 0.9,
+                                weight: 5,
+                                lineCap: 'round'
+                            },
                             marker_options: {
-                                startIconUrl: 'https://raw.githubusercontent.com/mpetazzoni/leaflet-gpx/master/pin-icon-start.png',
-                                endIconUrl: 'https://raw.githubusercontent.com/mpetazzoni/leaflet-gpx/master/pin-icon-end.png',
-                                shadowUrl: 'https://raw.githubusercontent.com/mpetazzoni/leaflet-gpx/master/pin-shadow.png'
+                                startIconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+                                endIconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+                                shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png'
                             },
                         }).on('loaded', function(e) {
                             map.fitBounds(e.target.getBounds());
+                        }).on('addpoint', function(e) {
+                            if (e.point_type === 'start') {
+                                e.point.bindPopup(`🚀 <b>STARTING POINT</b><br><a href="${locLink}" target="_blank" style="color:#2b6cb0; text-decoration:underline; font-weight:bold;">${locName}</a>`).openPopup();
+                            }
                         }).addTo(map);
                     }
                 });
