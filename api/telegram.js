@@ -943,7 +943,7 @@ async function createStep4(chatId, mapsLink, sessionData) {
 
 async function createStep5(chatId, locationName, sessionData) {
     await setSession('waiting_route_map', { ...sessionData, locationName });
-    await sendMessage(chatId, `✅ Location Name saved!\n\n*Step 5/6* — 🗺️ Send the *Route Map*.\n\nYou can upload an *Image* now, or paste a *Link* (like Strava/GPX url).\nIf you don't have one right now, just type "Skip".`);
+    await sendMessage(chatId, `✅ Location Name saved!\n\n*Step 5/6* — 🗺️ Upload the *GPX route file* for this run.\n\n(Simply attach the .gpx file, or type "Skip" if you don't have it right now)`);
 }
 
 async function createConfirm(chatId, locationName, routeMap, routeType, sessionData) {
