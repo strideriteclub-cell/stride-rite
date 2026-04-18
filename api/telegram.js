@@ -140,10 +140,9 @@ async function sendMenu(chatId, msg = "👟 *Stride Rite Admin Bot*\nHey Haleem!
             [{ text: "📊 Run Stats", callback_data: "cmd_stats" }, { text: "📋 List All Runs", callback_data: "cmd_runs" }],
             [{ text: "📥 Export Excel", callback_data: "cmd_export" }, { text: "📲 WhatsApp Blast", callback_data: "cmd_blast" }],
             [{ text: "📝 Survey Link", callback_data: "cmd_survey" }, { text: "🎂 Birthdays", callback_data: "cmd_birthdays" }],
-            [{ text: "🔍 Runner Lookup", callback_data: "cmd_lookup_start" }, { text: "📢 RSVP Reminders", callback_data: "cmd_reminder" }],
-            [{ text: "📸 Add to Gallery", callback_data: "cmd_gallery_start" }],
-            [{ text: "📣 Broadcast", callback_data: "cmd_broadcast_start" }, { text: "📈 Growth Graph", callback_data: "cmd_growth" }],
-            [{ text: "✏️ Edit a Run", callback_data: "cmd_edit_list" }, { text: "🛍️ VIP Shop Admin", callback_data: "cmd_shop_menu" }],
+            [{ text: "🔍 Runner Lookup", callback_data: "cmd_lookup_start" }, { text: "📣 Broadcast", callback_data: "cmd_broadcast_start" }],
+            [{ text: "📈 Growth Graph", callback_data: "cmd_growth" }, { text: "✏️ Edit a Run", callback_data: "cmd_edit_list" }],
+            [{ text: "📸 Add to Gallery", callback_data: "cmd_gallery_start" }, { text: "🛍️ VIP Shop Admin", callback_data: "cmd_shop_menu" }],
             [{ text: "🚫 Cancel a Run", callback_data: "cmd_cancel_list" }, { text: "🗑️ Delete a Run", callback_data: "cmd_delete_list" }],
             [{ text: "🆕 Create New Run", callback_data: "create_step1" }]
         ]
@@ -152,25 +151,15 @@ async function sendMenu(chatId, msg = "👟 *Stride Rite Admin Bot*\nHey Haleem!
 
 // ─── GALLERY ─────────────────────────────────────────────────────────────────
 async function handleGalleryStart(chatId) {
-    try {
-        const runs = await dbGet('stride_runs');
-        // Limit to last 15 runs to prevent keyboard size errors
-        const recentRuns = (runs || []).slice(-15);
-        
-        const buttons = recentRuns.map(r => {
-            const label = r.date_label.includes('||') ? r.date_label.split('||')[0] : r.date_label;
-            return [{ text: `🏃 ${label}`, callback_data: `gallery_run_${encodeURIComponent(label)}` }];
-        });
-        
-        buttons.unshift([{ text: "📸 General / No specific run", callback_data: "gallery_run_general" }]);
-        buttons.push([{ text: "🗑️ Delete a Photo", callback_data: "cmd_gallery_delete" }]);
-        buttons.push([{ text: "↩️ Back", callback_data: "cmd_menu" }]);
-        
-        await sendMessage(chatId, "📸 *Gallery*\n\nAdd photos — pick which run they're from:", { inline_keyboard: buttons });
-    } catch (e) {
-        console.error("Gallery Start Fail:", e);
-        await sendMessage(chatId, "❌ *Gallery Error:* Failed to load runs. Check your connection or try again.");
-    }
+    const runs = await dbGet('stride_runs');
+    const buttons = (runs || []).map(r => {
+        const label = r.date_label.includes('||') ? r.date_label.split('||')[0] : r.date_label;
+        return [{ text: `🏃 ${label}`, callback_data: `gallery_run_${encodeURIComponent(label)}` }];
+    });
+    buttons.unshift([{ text: "📸 General / No specific run", callback_data: "gallery_run_general" }]);
+    buttons.push([{ text: "🗑️ Delete a Photo", callback_data: "cmd_gallery_delete" }]);
+    buttons.push([{ text: "↩️ Back", callback_data: "cmd_menu" }]);
+    await sendMessage(chatId, "📸 *Gallery*\n\nAdd photos — pick which run they're from:", { inline_keyboard: buttons });
 }
 
 async function handleGalleryRunPicked(chatId, runLabel) {
@@ -680,39 +669,6 @@ async function handleBlast(chatId) {
     await sendMessage(chatId, `📲 *Copy & paste into WhatsApp for the upcoming run:*\n\n🏃‍♂️ Stride Rite Community Run 🏃‍♀️\n\n📅 ${dt}\n📍 ${r.location}\n🗺️ ${r.location_link}\n\n${registered}\n\nDon't miss it! Register 👇\n${SITE_URL}\n\n_Every pace is welcome. See you there!_ 💪`);
 }
 
-// ─── RSVP REMINDER BLAST ─────────────────────────────────────────────────────
-async function handleReminderBlast(chatId) {
-    const runs = await getSortedUpcomingRuns();
-    if (runs.length === 0) { await sendMessage(chatId, "❌ No upcoming runs scheduled."); return; }
-    
-    const nextRun = runs[0];
-    const registrations = await dbGet('stride_registrations', `run_id=eq.${nextRun.id}`);
-    const users = await dbGet('stride_users');
-    
-    const registeredUserIds = (registrations || []).map(r => r.user_id);
-    const nonRegisteredUsers = (users || []).filter(u => !registeredUserIds.includes(u.id) && !u.is_admin);
-    
-    if (nonRegisteredUsers.length === 0) {
-        await sendMessage(chatId, "✅ *Everyone has already RSVP'd!* Zero reminders needed for this run.");
-        return;
-    }
-
-    const dt = nextRun.date_label.split('||')[0];
-    let msg = `📢 *RSVP Reminders Needed*\n📍 Run: ${nextRun.location}\n📅 Date: ${dt}\n\n👥 *Total Missing:* ${nonRegisteredUsers.length}\n\n`;
-    
-    nonRegisteredUsers.slice(0, 20).forEach(u => {
-        const phone = u.phone_number || '';
-        const waLink = phone ? ` — [📲 WhatsApp](https://wa.me/${phone.replace(/[^\d]/g, '')}?text=${encodeURIComponent(`Hey ${u.name}! We noticed you haven't RSVP'd for this week's Stride Rite run at ${nextRun.location} yet! Don't miss out, register here: ${SITE_URL}`)})` : '';
-        msg += `• *${u.name}*${waLink}\n`;
-    });
-    
-    if (nonRegisteredUsers.length > 20) {
-        msg += `\n_(plus ${nonRegisteredUsers.length - 20} more stidrers)_`;
-    }
-
-    await sendMessage(chatId, msg, { inline_keyboard: [[{ text: "↩️ Back", callback_data: "cmd_menu" }]] });
-}
-
 // ─── SURVEY ───────────────────────────────────────────────────────────────────
 async function handleSurvey(chatId) {
     const runs = await dbGet('stride_runs');
@@ -959,7 +915,6 @@ export default async function handler(req, res) {
             else if (data === 'cmd_runs') await handleListRuns(chatId);
             else if (data === 'cmd_export') await handleExport(chatId);
             else if (data === 'cmd_blast') await handleBlast(chatId);
-            else if (data === 'cmd_reminder') await handleReminderBlast(chatId);
             else if (data === 'cmd_survey') await handleSurvey(chatId);
             else if (data === 'cmd_birthdays') await checkBirthdays(chatId);
             else if (data === 'cmd_growth') await handleGrowthGraph(chatId);
@@ -976,9 +931,7 @@ export default async function handler(req, res) {
                 await sendMessage(chatId, "✅ *Run deleted!*");
                 await sendMenu(chatId, "What else?");
             }
-            else if (data === 'cmd_gallery_start') {
-                await handleGalleryStart(chatId);
-            }
+            else if (data === 'cmd_gallery_start') await handleGalleryStart(chatId);
             else if (data.startsWith('gallery_run_')) await handleGalleryRunPicked(chatId, data.replace('gallery_run_', ''));
             else if (data === 'cmd_gallery_delete') await handleGalleryDeleteList(chatId);
             else if (data.startsWith('gallery_del_yes_')) await handleGalleryDeleteExecute(chatId, data.replace('gallery_del_yes_', ''));
@@ -1016,10 +969,6 @@ export default async function handler(req, res) {
                 await createStep3(chatId, data.replace('create_date_', ''), session.data);
             }
             else if (data === 'create_confirm_yes') await createExecute(chatId);
-            else {
-                // FINAL DEBUG EAR: If nothing matches, tell us why
-                await sendMessage(chatId, `🔍 *Debug Ear: Unknown Command*\nCallback Data: \`${data}\``);
-            }
 
             res.status(200).send('ok'); return;
         }
@@ -1132,8 +1081,6 @@ export default async function handler(req, res) {
             else if (cmd === '/runs') await handleListRuns(chatId);
             else if (cmd === '/export') await handleExport(chatId);
             else if (cmd === '/blast') await handleBlast(chatId);
-            else if (cmd === '/reminder') await handleReminderBlast(chatId);
-            else if (cmd === '/gallery') await handleGalleryStart(chatId);
             else if (cmd === '/survey') await handleSurvey(chatId);
             else if (cmd === '/birthdays') await checkBirthdays(chatId);
             else if (cmd === '/growth') await handleGrowthGraph(chatId);
