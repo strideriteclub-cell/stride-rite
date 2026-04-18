@@ -90,15 +90,23 @@ async function clearSession() { await setSession('idle', {}); }
 async function sendMessage(chatId, text, replyMarkup = null) {
     const body = { chat_id: chatId, text, parse_mode: 'Markdown' };
     if (replyMarkup) body.reply_markup = replyMarkup;
-    await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+    const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
     });
+    if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(`Telegram API Error (sendMessage): ${errorData.description}`);
+    }
 }
 async function answerCallbackQuery(id) {
-    await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/answerCallbackQuery`, {
+    const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/answerCallbackQuery`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ callback_query_id: id })
     });
+    if (!res.ok) {
+        const err = await res.json();
+        console.error("answerCallbackQuery fail:", err);
+    }
 }
 async function sendDocument(chatId, content, filename) {
     const boundary = '----Boundary12345';
@@ -165,9 +173,10 @@ async function handleGalleryStart(chatId) {
         
         const buttons = recentRuns.map(r => {
             const label = r.date_label.includes('||') ? r.date_label.split('||')[0] : r.date_label;
-            return [{ text: `🏃 ${label}`, callback_data: `gallery_run_${encodeURIComponent(label)}` }];
+            // Use ID to avoid Telegram API 64-byte limit for callback_data
+            return [{ text: `🏃 ${label}`, callback_data: `gal_r_${r.id}` }];
         });
-        buttons.unshift([{ text: "📸 General / No specific run", callback_data: "gallery_run_general" }]);
+        buttons.unshift([{ text: "📸 General / No specific run", callback_data: "gal_r_general" }]);
         buttons.push([{ text: "🗑️ Delete a Photo", callback_data: "cmd_gallery_delete" }]);
         buttons.push([{ text: "↩️ Back", callback_data: "cmd_menu" }]);
         await sendMessage(chatId, "📸 *Gallery*\n\nAdd photos — pick which run they're from:", { inline_keyboard: buttons });
@@ -177,8 +186,17 @@ async function handleGalleryStart(chatId) {
     }
 }
 
-async function handleGalleryRunPicked(chatId, runLabel) {
-    const label = runLabel === 'general' ? '' : decodeURIComponent(runLabel);
+async function handleGalleryRunPicked(chatId, runId) {
+    let label = '';
+    if (runId !== 'general') {
+        const runs = await dbGet('stride_runs', `id=eq.${runId}`);
+        if (runs && runs.length > 0) {
+            label = runs[0].date_label.includes('||') ? runs[0].date_label.split('||')[0] : runs[0].date_label;
+        } else {
+            await sendMessage(chatId, "❌ Run not found.");
+            return;
+        }
+    }
     await setSession('waiting_gallery_photo', { runLabel: label });
     const msg = label
         ? `✅ Run: *${label}*\n\n📸 Now *send the photo*! You can add a caption too.\n\nSend one photo at a time.`
@@ -962,7 +980,7 @@ export default async function handler(req, res) {
                 await sendMenu(chatId, "What else?");
             }
             else if (data === 'cmd_gallery_start') await handleGalleryStart(chatId);
-            else if (data.startsWith('gallery_run_')) await handleGalleryRunPicked(chatId, data.replace('gallery_run_', ''));
+            else if (data.startsWith('gal_r_')) await handleGalleryRunPicked(chatId, data.replace('gal_r_', ''));
             else if (data === 'cmd_gallery_delete') await handleGalleryDeleteList(chatId);
             else if (data.startsWith('gallery_del_yes_')) await handleGalleryDeleteExecute(chatId, data.replace('gallery_del_yes_', ''));
             else if (data.startsWith('gallery_del_')) await handleGalleryDeleteConfirm(chatId, data.replace('gallery_del_', ''));
