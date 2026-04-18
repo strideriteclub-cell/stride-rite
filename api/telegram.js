@@ -152,15 +152,25 @@ async function sendMenu(chatId, msg = "👟 *Stride Rite Admin Bot*\nHey Haleem!
 
 // ─── GALLERY ─────────────────────────────────────────────────────────────────
 async function handleGalleryStart(chatId) {
-    const runs = await dbGet('stride_runs');
-    const buttons = (runs || []).map(r => {
-        const label = r.date_label.includes('||') ? r.date_label.split('||')[0] : r.date_label;
-        return [{ text: `🏃 ${label}`, callback_data: `gallery_run_${encodeURIComponent(label)}` }];
-    });
-    buttons.unshift([{ text: "📸 General / No specific run", callback_data: "gallery_run_general" }]);
-    buttons.push([{ text: "🗑️ Delete a Photo", callback_data: "cmd_gallery_delete" }]);
-    buttons.push([{ text: "↩️ Back", callback_data: "cmd_menu" }]);
-    await sendMessage(chatId, "📸 *Gallery*\n\nAdd photos — pick which run they're from:", { inline_keyboard: buttons });
+    try {
+        const runs = await dbGet('stride_runs');
+        // Limit to last 15 runs to prevent keyboard size errors
+        const recentRuns = (runs || []).slice(-15);
+        
+        const buttons = recentRuns.map(r => {
+            const label = r.date_label.includes('||') ? r.date_label.split('||')[0] : r.date_label;
+            return [{ text: `🏃 ${label}`, callback_data: `gallery_run_${encodeURIComponent(label)}` }];
+        });
+        
+        buttons.unshift([{ text: "📸 General / No specific run", callback_data: "gallery_run_general" }]);
+        buttons.push([{ text: "🗑️ Delete a Photo", callback_data: "cmd_gallery_delete" }]);
+        buttons.push([{ text: "↩️ Back", callback_data: "cmd_menu" }]);
+        
+        await sendMessage(chatId, "📸 *Gallery*\n\nAdd photos — pick which run they're from:", { inline_keyboard: buttons });
+    } catch (e) {
+        console.error("Gallery Start Fail:", e);
+        await sendMessage(chatId, "❌ *Gallery Error:* Failed to load runs. Check your connection or try again.");
+    }
 }
 
 async function handleGalleryRunPicked(chatId, runLabel) {
@@ -966,8 +976,7 @@ export default async function handler(req, res) {
                 await sendMessage(chatId, "✅ *Run deleted!*");
                 await sendMenu(chatId, "What else?");
             }
-             else if (data === 'cmd_gallery_start') {
-                console.log("Triggering handleGalleryStart...");
+            else if (data === 'cmd_gallery_start') {
                 await handleGalleryStart(chatId);
             }
             else if (data.startsWith('gallery_run_')) await handleGalleryRunPicked(chatId, data.replace('gallery_run_', ''));
