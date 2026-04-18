@@ -28,11 +28,11 @@
         <div class="stats-grid">
             <div class="stat-card">
                 <div class="stat-value" id="avgRating">--</div>
-                <div class="stat-label">Avg Effort (1-10)</div>
+                <div class="stat-label">Avg Effort (Latest Run)</div>
             </div>
             <div class="stat-card">
                 <div class="stat-value" id="totalFeedback" style="color: var(--neon-accent);">0</div>
-                <div class="stat-label">Total Responses</div>
+                <div class="stat-label">Responses (Latest Run)</div>
             </div>
         </div>
 
@@ -75,10 +75,13 @@
                     return;
                 }
                 
-                // Global Totals
-                document.getElementById('totalFeedback').innerText = surveys.length;
-                const globalAvg = surveys.reduce((sum, s) => sum + s.rating, 0) / surveys.length;
-                document.getElementById('avgRating').innerText = globalAvg.toFixed(1);
+                // Latest Run Totals (Top Boxes)
+                const latestRunLabel = surveys[0].run_label;
+                const latestRunSurveys = surveys.filter(s => s.run_label === latestRunLabel);
+                
+                document.getElementById('totalFeedback').innerText = latestRunSurveys.length;
+                const latestAvg = latestRunSurveys.reduce((sum, s) => sum + s.rating, 0) / latestRunSurveys.length;
+                document.getElementById('avgRating').innerText = latestAvg.toFixed(1);
                 
                 // Group by run_label
                 const grouped = {};
