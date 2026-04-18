@@ -1016,6 +1016,10 @@ export default async function handler(req, res) {
                 await createStep3(chatId, data.replace('create_date_', ''), session.data);
             }
             else if (data === 'create_confirm_yes') await createExecute(chatId);
+            else {
+                // FINAL DEBUG EAR: If nothing matches, tell us why
+                await sendMessage(chatId, `🔍 *Debug Ear: Unknown Command*\nCallback Data: \`${data}\``);
+            }
 
             res.status(200).send('ok'); return;
         }
@@ -1129,6 +1133,7 @@ export default async function handler(req, res) {
             else if (cmd === '/export') await handleExport(chatId);
             else if (cmd === '/blast') await handleBlast(chatId);
             else if (cmd === '/reminder') await handleReminderBlast(chatId);
+            else if (cmd === '/gallery') await handleGalleryStart(chatId);
             else if (cmd === '/survey') await handleSurvey(chatId);
             else if (cmd === '/birthdays') await checkBirthdays(chatId);
             else if (cmd === '/growth') await handleGrowthGraph(chatId);
