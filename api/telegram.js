@@ -940,21 +940,8 @@ export default async function handler(req, res) {
             const cq = body.callback_query;
             const chatId = cq.message.chat.id.toString();
             
-            // SECURITY CHECK
             if (chatId !== ADMIN_CHAT_ID) { res.status(200).send('ok'); return; }
-            
-            // DEBUG EAR: IMMEDIATELY tell the admin what we heard
-            try { 
-                await sendMessage(chatId, `🛠️ *DEBUG EAR:* Button Pressed -> \`${cq.data}\``);
-            } catch (e) {
-                console.error("Debug ear failed", e);
-            }
-
-            try {
-                await answerCallbackQuery(cq.id);
-            } catch (e) {
-                console.error("Answer CQ failed", e);
-            }
+            await answerCallbackQuery(cq.id);
             
             const data = cq.data;
             
