@@ -118,7 +118,7 @@ async function sendMenu(chatId, msg = "👟 *Stride Rite Admin Bot*\nHey Haleem!
             [{ text: "📝 Survey Link", callback_data: "cmd_survey" }, { text: "🎂 Birthdays", callback_data: "cmd_birthdays" }],
             [{ text: "🔍 Runner Lookup", callback_data: "cmd_lookup_start" }, { text: "📣 Broadcast", callback_data: "cmd_broadcast_start" }],
             [{ text: "📈 Growth Graph", callback_data: "cmd_growth" }, { text: "✏️ Edit a Run", callback_data: "cmd_edit_list" }],
-            [{ text: "📸 Add to Gallery", callback_data: "cmd_gallery_start" }, { text: "🛍️ VIP Shop Admin", callback_data: "cmd_shop_menu" }],
+            [{ text: "📸 Add to Gallery", callback_data: "cmd_gallery_start" }, { text: "🛍️ Shop Admin", callback_data: "cmd_shop_menu" }],
             [{ text: "🚫 Cancel a Run", callback_data: "cmd_cancel_list" }, { text: "🗑️ Delete a Run", callback_data: "cmd_delete_list" }],
             [{ text: "🆕 Create New Run", callback_data: "create_step1" }]
         ]
@@ -236,7 +236,7 @@ async function handleShopMenu(chatId) {
     const isShopOpen = (settings && settings.length > 0) ? settings[0].is_open : false;
     const statusText = isShopOpen ? "🟢 *OPEN* (Visible to everyone)" : "🔴 *CLOSED* (Hidden)";
     const toggleText = isShopOpen ? "🔴 Hide Shop / Turn Off" : "🟢 Open Shop / Turn On";
-    await sendMessage(chatId, `🛍️ *VIP Shop Admin*\n\nCurrent Status: ${statusText}`, {
+    await sendMessage(chatId, `🛍️ *Shop Admin*\n\nCurrent Status: ${statusText}`, {
         inline_keyboard: [
             [{ text: toggleText, callback_data: `shop_toggle_${!isShopOpen}` }],
             [{ text: "📦 Export All Orders (Excel)", callback_data: "cmd_shop_export" }],
