@@ -921,10 +921,25 @@ export default async function handler(req, res) {
         if (body.callback_query) {
             const cq = body.callback_query;
             const chatId = cq.message.chat.id.toString();
+            
+            // SECURITY CHECK
             if (chatId !== ADMIN_CHAT_ID) { res.status(200).send('ok'); return; }
-            await answerCallbackQuery(cq.id);
-            const data = cq.data;
+            
+            // DEBUG EAR: IMMEDIATELY tell the admin what we heard
+            try { 
+                await sendMessage(chatId, `🛠️ *DEBUG EAR:* Button Pressed -> \`${cq.data}\``);
+            } catch (e) {
+                console.error("Debug ear failed", e);
+            }
 
+            try {
+                await answerCallbackQuery(cq.id);
+            } catch (e) {
+                console.error("Answer CQ failed", e);
+            }
+            
+            const data = cq.data;
+            
             if (data === 'cmd_menu') await sendMenu(chatId);
             else if (data === 'cmd_stats') await handleStats(chatId);
             else if (data === 'cmd_runs') await handleListRuns(chatId);
