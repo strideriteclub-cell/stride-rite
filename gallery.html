@@ -21,6 +21,10 @@
         .filter-btn.active { background: var(--neon-accent); border-color: var(--neon-accent); color: white; }
         .empty-state { text-align: center; padding: 4rem; color: var(--text-muted); }
         .empty-state svg { width: 80px; opacity: 0.3; margin-bottom: 1rem; }
+        .download-btn { position: absolute; bottom: 12px; right: 12px; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); color: white; border: 1px solid rgba(255,255,255,0.3); width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; text-decoration: none; transition: 0.2s; font-size: 1.2rem; box-shadow: 0 4px 12px rgba(0,0,0,0.3); opacity: 0; }
+        .gallery-item:hover .download-btn { opacity: 1; }
+        .download-btn:hover { background: var(--neon-accent); transform: scale(1.1); border-color: var(--neon-accent); }
+        @media (max-width: 768px) { .download-btn { opacity: 0.9; } }
     </style>
 </head>
 <body>
@@ -96,6 +100,7 @@
             grid.innerHTML = photos.map(p => `
                 <div class="gallery-item" onclick="openPhoto('${p.photo_url}', '${(p.caption || '').replace(/'/g, '\\x27')}')">
                     <img src="${p.photo_url}" loading="lazy" onerror="this.parentElement.style.display='none'">
+                    <a href="${p.photo_url}?download=" download class="download-btn" onclick="event.stopPropagation();" title="Download Image">⬇️</a>
                 </div>`).join('');
         }
 
