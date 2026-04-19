@@ -270,25 +270,27 @@ const AppService = {
         const cleanTimestamp = (run.date_label || '').split('||')[0];
         const phone = phoneNumber || 'Not provided';
 
-        let text;
+        let text, parseMode;
         if (run.tour_stop_id) {
-            // ── TOUR DE CAIRO REGISTRATION ──────────────────────────────
+            // ── TOUR DE CAIRO REGISTRATION (HTML format) ────────────────
+            parseMode = 'HTML';
             const stopNum  = String(run.tour_stop_id).padStart(2, '0');
             const stopName = run.tour_stop_name || run.location || 'Unknown Stop';
             const host     = run.partner_name || 'Stride Rite';
-            text = '🏅 *TOUR DE CAIRO — NEW REGISTRATION!*\n\n'
-                 + '📍 *Stop ' + stopNum + ': ' + stopName + '*\n'
-                 + '🤝 *Hosted by:* ' + host + ' x Stride Rite\n'
-                 + '📅 *Date:* ' + cleanTimestamp + '\n'
+            text = '🏅 <b>TOUR DE CAIRO — STOP ' + stopNum + ' REGISTRATION!</b>\n\n'
+                 + '📍 <b>Stop ' + stopNum + ': ' + stopName + '</b>\n'
+                 + '🤝 <b>Hosted by:</b> ' + host + ' x Stride Rite\n'
+                 + '📅 <b>Date:</b> ' + cleanTimestamp + '\n'
                  + '─────────────────\n'
-                 + '👤 *Name:* ' + user.name + '\n'
-                 + '📞 *Phone:* ' + phone + '\n'
-                 + '📧 *Email:* ' + (user.email || 'N/A') + '\n'
-                 + '🏃 *Distance:* ' + distance + '\n'
-                 + '🎽 *Level:* ' + (level || user.level || 'N/A')
-                 + (isFirstTimer ? '\n\n🎉 *First timer on Tour de Cairo — welcome them!*' : '');
+                 + '👤 <b>Name:</b> ' + user.name + '\n'
+                 + '📞 <b>Phone:</b> ' + phone + '\n'
+                 + '📧 <b>Email:</b> ' + (user.email || 'N/A') + '\n'
+                 + '🏃 <b>Distance:</b> ' + distance + '\n'
+                 + '🎽 <b>Level:</b> ' + (level || user.level || 'N/A')
+                 + (isFirstTimer ? '\n\n🎉 <b>First timer on Tour de Cairo!</b>' : '');
         } else {
-            // ── REGULAR RUN REGISTRATION ────────────────────────────────
+            // ── REGULAR RUN REGISTRATION (Markdown format) ───────────────
+            parseMode = 'Markdown';
             const age = user.birthdate ? calculateAge(user.birthdate) : (user.age || '?');
             const firstTimerBadge = isFirstTimer ? '\n\n🎉 *FIRST TIMER! Welcome them warmly!*' : '';
             const phoneLine = phoneNumber ? ('\n📞 *Phone:* ' + phoneNumber) : '';
@@ -299,11 +301,13 @@ const AppService = {
                  + '📅 *Run:* ' + cleanTimestamp + firstTimerBadge;
         }
         try {
-            await fetch('https://api.telegram.org/bot' + botToken + '/sendMessage', {
+            const tgRes = await fetch('https://api.telegram.org/bot' + botToken + '/sendMessage', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ chat_id: chatId, text: text, parse_mode: 'Markdown' })
+                body: JSON.stringify({ chat_id: chatId, text: text, parse_mode: parseMode })
             });
+            const tgJson = await tgRes.json();
+            if (!tgJson.ok) console.error('Telegram error:', JSON.stringify(tgJson));
         } catch (e) { console.error('Telegram alert failed', e); }
     },
 
