@@ -27,6 +27,18 @@ function calculateAge(birthdate) {
     return age;
 }
 
+// Parse Instagram handle from any format (URL, @handle, plain text)
+function parseIgHandle(raw) {
+    if (!raw) return null;
+    try {
+        const url = new URL(raw);
+        const parts = url.pathname.split('/').filter(Boolean);
+        return parts[0] || null;
+    } catch (_) {
+        return raw.replace(/^@/, '').trim() || null;
+    }
+}
+
 // --- API HELPERS ---
 async function dbGet(table, query = 'select=*') {
     try {
@@ -49,7 +61,7 @@ async function dbInsert(table, data) {
         if (!res.ok) {
             const errBody = await res.text();
             console.error(`DB Insert Error (${table}):`, errBody);
-            window.lastDbError = errBody; // Expose for UI
+            window.lastDbError = errBody;
             throw new Error(errBody);
         }
         if (res.status === 201) {
@@ -115,7 +127,6 @@ const AuthService = {
 
         if (userRecord) {
             localStorage.setItem(KEYS.SESSION, JSON.stringify(userRecord));
-            // Sync to DB to ensure FKs work
             try {
                 await fetch(`${SUPABASE_URL}/rest/v1/stride_users`, {
                     method: 'POST',
@@ -189,14 +200,13 @@ const AppService = {
                     continue;
                 }
                 run.date_label = parts[0];
-                run.iso_date = parts[1]; // Store for sorting
+                run.iso_date = parts[1];
             } else {
-                continue; // Skip runs without a valid ISO part
+                continue;
             }
             validRuns.push(run);
         }
 
-        // Sort chronologically ascending
         return validRuns.sort((a, b) => new Date(a.iso_date) - new Date(b.iso_date));
     },
 
@@ -254,19 +264,45 @@ const AppService = {
         return false;
     },
 
-    sendTelegramAlert: async (user, distance, level, run, isFirstTimer = false, phoneNumber = null) => {
+    sendTelegramAlert: async (user, distance, level, run, isFirstTimer, phoneNumber) => {
         const botToken = '8682463984:AAHA2PWT7WtQRskETmOanj0k2b45ZgGfYIs';
         const chatId = '1538316434';
-        const cleanTimestamp = run.date_label.split('||')[0];
-        const age = user.birthdate ? calculateAge(user.birthdate) : (user.age || '?');
-        const firstTimerBadge = isFirstTimer ? '\n\n🎉 *FIRST TIMER! Welcome them warmly!*' : '';
-        const phoneLine = phoneNumber ? `\n📞 *Phone:* \`${phoneNumber}\`` : '';
-        const text = `${isFirstTimer ? '🌟' : '🚨'} *${isFirstTimer ? 'First-Time' : 'New'} Runner Alert!*\n\n*${user.name}* (${age}${user.gender === 'Male' ? 'M' : 'F'}) just registered for the *${distance}*!${phoneLine}\n📧 *Email:* ${user.email}\n🏃 *Level:* ${level || user.level}\n📅 *Run:* ${cleanTimestamp}${firstTimerBadge}`;
+        const cleanTimestamp = (run.date_label || '').split('||')[0];
+        const phone = phoneNumber || 'Not provided';
+
+        let text;
+        if (run.tour_stop_id) {
+            // ── TOUR DE CAIRO REGISTRATION ──────────────────────────────
+            const stopNum  = String(run.tour_stop_id).padStart(2, '0');
+            const stopName = run.tour_stop_name || run.location || 'Unknown Stop';
+            const host     = run.partner_name || 'Stride Rite';
+            text = '🏅 *TOUR DE CAIRO — NEW REGISTRATION!*\n\n'
+                 + '📍 *Stop ' + stopNum + ': ' + stopName + '*\n'
+                 + '🤝 *Hosted by:* ' + host + ' x Stride Rite\n'
+                 + '📅 *Date:* ' + cleanTimestamp + '\n'
+                 + '─────────────────\n'
+                 + '👤 *Name:* ' + user.name + '\n'
+                 + '📞 *Phone:* ' + phone + '\n'
+                 + '📧 *Email:* ' + (user.email || 'N/A') + '\n'
+                 + '🏃 *Distance:* ' + distance + '\n'
+                 + '🎽 *Level:* ' + (level || user.level || 'N/A')
+                 + (isFirstTimer ? '\n\n🎉 *First timer on Tour de Cairo — welcome them!*' : '');
+        } else {
+            // ── REGULAR RUN REGISTRATION ────────────────────────────────
+            const age = user.birthdate ? calculateAge(user.birthdate) : (user.age || '?');
+            const firstTimerBadge = isFirstTimer ? '\n\n🎉 *FIRST TIMER! Welcome them warmly!*' : '';
+            const phoneLine = phoneNumber ? ('\n📞 *Phone:* ' + phoneNumber) : '';
+            text = (isFirstTimer ? '🌟' : '🚨') + ' *' + (isFirstTimer ? 'First-Time' : 'New') + ' Runner Alert!*\n\n'
+                 + '*' + user.name + '* (' + age + (user.gender === 'Male' ? 'M' : 'F') + ') just registered for the *' + distance + '*!' + phoneLine + '\n'
+                 + '📧 *Email:* ' + user.email + '\n'
+                 + '🏃 *Level:* ' + (level || user.level) + '\n'
+                 + '📅 *Run:* ' + cleanTimestamp + firstTimerBadge;
+        }
         try {
-            await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+            await fetch('https://api.telegram.org/bot' + botToken + '/sendMessage', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ chat_id: chatId, text, parse_mode: 'Markdown' })
+                body: JSON.stringify({ chat_id: chatId, text: text, parse_mode: 'Markdown' })
             });
         } catch (e) { console.error('Telegram alert failed', e); }
     },
@@ -319,15 +355,11 @@ const AppService = {
         const progress = TOUR_CONFIG.map(stop => {
             const runForStop = (rawRuns || []).find(r => {
                 if (!r.tour_stop_id || Number(r.tour_stop_id) !== Number(stop.id)) return false;
-                
-                // Ensure it's not exported/past
                 if (r.date_label && r.date_label.includes('[EXPORTED]')) return false;
-
                 const dateStr = r.iso_date || (r.date_label && r.date_label.includes('||') ? r.date_label.split('||')[1] : null);
                 if (!dateStr) return false;
-                
                 const runDate = new Date(dateStr);
-                return runDate >= now; // Any upcoming stop
+                return runDate >= now;
             });
 
             const registration = runForStop ? userRegs.find(reg => reg.run_id === runForStop.id) : null;
@@ -374,6 +406,7 @@ const AppService = {
         const items = await dbGet('shop_items', 'is_active=eq.true');
         return items || [];
     },
+
     submitOrder: async (itemId, size, refNumber, phone, paymentMethod, screenshotFile) => {
         const currentUser = AuthService.getCurrentUser();
         if (!currentUser) return false;
@@ -389,10 +422,8 @@ const AppService = {
             status: 'pending'
         };
 
-        console.log("Saving order to database...", newOrder);
         let result = await dbInsert('shop_orders', newOrder);
 
-        // Handle common schema fallback
         if (result === null && window.lastDbError && window.lastDbError.includes('receipt_ref')) {
             const fallbackOrder = { ...newOrder, receipt_ref: refNumber };
             result = await dbInsert('shop_orders', fallbackOrder);
@@ -422,11 +453,7 @@ const AppService = {
                     formData.append('caption', caption);
                     formData.append('parse_mode', 'Markdown');
                     formData.append('reply_markup', replyMarkup);
-
-                    await fetch(`https://api.telegram.org/bot${botToken}/sendPhoto`, {
-                        method: 'POST',
-                        body: formData
-                    });
+                    await fetch(`https://api.telegram.org/bot${botToken}/sendPhoto`, { method: 'POST', body: formData });
                 } else {
                     await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
                         method: 'POST',
@@ -486,6 +513,7 @@ document.addEventListener('DOMContentLoaded', () => {
 window.AuthService = AuthService;
 window.AppService = AppService;
 window.Utils = Utils;
+window.parseIgHandle = parseIgHandle;
 window.SUPABASE_URL = SUPABASE_URL;
 window.SUPABASE_KEY = SUPABASE_KEY;
 window.defaultHeaders = defaultHeaders;
