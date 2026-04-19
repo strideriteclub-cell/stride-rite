@@ -23,6 +23,7 @@
             padding: 2.5rem; 
             border-bottom: 4px solid var(--neon-accent); 
             transition: transform 0.3s;
+            position: relative;
         }
         .run-card.registered { border-bottom-color: #22c55e; }
         .run-card:hover { transform: translateY(-5px); }
@@ -41,13 +42,8 @@
             margin-bottom: 1rem;
         }
 
-        .weather-meta { display: flex; gap: 1.5rem; margin-top: 1rem; }
-        .weather-stat { display: flex; flex-direction: column; }
-        .weather-label { font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
-        .weather-val { font-weight: 700; color: white; }
-
         /* Tour Map Styles */
-        .leaflet-tile { display: none; } /* Hide map tiles, use background image */
+        .leaflet-tile { display: none; } 
         .leaflet-control-attribution, .leaflet-control-zoom { display:none !important; }
         .leaflet-container { background: transparent !important; }
 
@@ -58,77 +54,22 @@
             background-position: center;
         }
         
-        .tour-map-bg { 
-            position: absolute; inset: 0; pointer-events: none; z-index: 400; background:rgba(26, 26, 31, 0.4); 
-        }
-        
-        .m-name { font-family:'Outfit',sans-serif; font-weight:700; font-size:10px; color:#f5f0e8; letter-spacing:1px; text-transform:uppercase; }
-        .m-ring2 { position:absolute; width:46px; height:46px; border:1px solid var(--peach-accent); border-radius:50%; opacity:.18; transform:translate(-50%,-50%); top:0; left:0; }
-        .m-ring1 { position:absolute; width:28px; height:28px; border:1.5px solid var(--peach-accent); border-radius:50%; opacity:.45; transform:translate(-50%,-50%); top:0; left:0; }
-        .m-core { position:absolute; width:14px; height:14px; background:var(--peach-accent); border-radius:50%; border:2px solid #1a1a1f; transform:translate(-50%,-50%); top:0; left:0; z-index:2; }
-        .m-label { position:absolute; transform:translateX(-50%); top:14px; left:0; background:rgba(26,26,31,0.95); border:1px solid var(--peach-accent); padding:4px 10px; border-radius:4px; white-space:nowrap; display:flex; align-items:center; gap:6px; z-index:3; transition: transform 0.2s; box-shadow: 0 4px 12px rgba(0,0,0,0.5); }
-        .m-label.up { top: auto; bottom: 14px; }
-        .m-label.left { transform: translateX(-70%); }
-        .m-label.small .m-num, .m-label.small .m-name { font-size: 8px; }
-        .m-num { font-family:'Outfit',sans-serif; font-weight:800; font-size:10px; color:var(--peach-accent); letter-spacing:.5px; }
-
+        .tour-map-bg { position: absolute; inset: 0; pointer-events: none; z-index: 400; background:rgba(26, 26, 31, 0.4); }
         .m-wrap { position:relative; width:0; height:0; opacity: 0; transform: scale(0); transition: opacity 0.4s, transform 0.4s; }
         .m-wrap.visible { opacity: 1; transform: scale(1); }
+        .m-core { position:absolute; width:14px; height:14px; background:var(--peach-accent); border-radius:50%; border:2px solid #1a1a1f; transform:translate(-50%,-50%); top:0; left:0; z-index:2; }
+        .m-label { position:absolute; transform:translateX(-50%); top:14px; left:0; background:rgba(26,26,31,0.95); border:1px solid var(--peach-accent); padding:4px 10px; border-radius:4px; white-space:nowrap; z-index:3; font-family:'Outfit'; font-weight:800; font-size:10px; color:var(--peach-accent); }
 
-        .m-impact {
-            position: absolute; width: 120px; height: 120px; border: 1px solid var(--peach-accent); border-radius: 50%;
-            transform: translate(-50%, -50%) scale(0); pointer-events: none; top:0; left:0;
-        }
-        .m-wrap.visible .m-impact { animation: impact 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards 0.2s; }
-        @keyframes impact {
-            0% { transform: translate(-50%, -50%) scale(0); opacity: 1; }
-            100% { transform: translate(-50%, -50%) scale(1.5); opacity: 0; }
-        }
-
-        .side-progress {
-            position: absolute; left: 0; top: 0; width: 100%; height: 3px; background: rgba(255,255,255,0.05); z-index: 450;
-        }
-        .side-progress-fill {
-            position: absolute; top: 0; left: 0; height: 100%; width: 0%; background: var(--peach-accent); transition: width 0.6s ease; box-shadow: 0 0 10px var(--peach-accent);
-        }
-        
-        .side-list {
-            position: absolute; top: 20px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: row; gap: 40px; z-index: 500;
-        }
-        .list-item {
-            width: 28px; height: 28px; background: #1a1a1f; border: 2px solid var(--peach-accent); border-radius: 50%;
-            display: flex; align-items: center; justify-content: center; color: var(--peach-accent); font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 12px;
-            transition: all 0.7s cubic-bezier(0.4, 0, 0.2, 1); opacity: 0.8;
-        }
-        .list-item.active { transform: scale(1.2); background: var(--peach-accent); color: #1a1a1f; opacity: 1; }
-        .list-item.unlocked { background: #22c55e; border-color: #22c55e; color: #1a1a1f; opacity: 1; }
-        .list-item.gone { opacity: 0; transform: translateY(-20px) scale(0); }
-
-        /* Status-specific Marker Styles */
-        .m-wrap.unlocked .m-core { background: #22c55e; border-color: #f5f0e8; }
-        .m-wrap.unlocked .m-ring1, .m-wrap.unlocked .m-ring2 { border-color: #22c55e; }
-        .m-wrap.unlocked .m-label { border-color: #22c55e; background: rgba(13, 13, 13, 0.95); }
-        .m-wrap.unlocked .m-num { color: #22c55e; }
-        .m-wrap.unlocked .m-impact { border-color: #22c55e; }
-
-        .m-wrap.locked { filter: grayscale(1); opacity: 0.5; }
-        .m-wrap.locked .m-impact { display: none; }
-
-        @keyframes highlight-pulse {
-            0% { box-shadow: 0 0 0 0 rgba(255, 115, 0, 0.7); border-color: #ff7300; transform: scale(1); }
-            50% { box-shadow: 0 0 30px 10px rgba(255, 115, 0, 0.4); border-color: #fff; transform: scale(1.02); }
-            100% { box-shadow: 0 0 0 0 rgba(255, 115, 0, 0); border-color: var(--neon-accent); transform: scale(1); }
-        }
-        .highlight-active {
-            animation: highlight-pulse 2s ease-in-out infinite;
-            z-index: 100 !important;
-        }
-
+        .side-progress { position: absolute; left: 0; top: 0; width: 100%; height: 3px; background: rgba(255,255,255,0.05); z-index: 450; }
+        .side-progress-fill { position: absolute; top: 0; left: 0; height: 100%; width: 0%; background: var(--peach-accent); transition: width 0.6s ease; }
+        .side-list { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: row; gap: 40px; z-index: 500; }
+        .list-item { width: 28px; height: 28px; background: #1a1a1f; border: 2px solid var(--peach-accent); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--peach-accent); font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 12px; }
+        .list-item.unlocked { background: #22c55e; border-color: #22c55e; color: #1a1a1f; }
     </style>
 </head>
 <body>
     <nav class="navbar">
-        <div style="font-family:'Outfit'; font-weight:800; font-size:1.5rem;">S<span style="color:var(--peach-accent);">.</span></div>
+        <div style="font-family:'Outfit'; font-weight:800; font-size:1.5rem;">S<span style="color:var(--neon-accent);">.</span></div>
         <div class="nav-links">
             <a href="shop.html">🛍 Shop</a>
             <a href="gallery.html">📸 Gallery</a>
@@ -138,21 +79,21 @@
     </nav>
 
     <div class="main-container">
-        <header class="dashboard-header animate-up">
+        <header class="dashboard-header">
             <h1 id="welcomeUser">Welcome, Runner!</h1>
             <p class="welcome-text">Your central hub for community runs and rewards.</p>
         </header>
 
         <div id="advisorContainer"></div>
 
-        <section class="animate-up" style="animation-delay: 0.1s; margin-bottom: 3rem;">
-            <div class="glass-card" style="padding: 0; overflow: hidden; position: relative; border-bottom: 4px solid var(--peach-accent);">
+        <section style="margin-bottom: 3rem;">
+            <div class="glass-card" style="padding: 0; overflow: hidden; position: relative; border-bottom: 4px solid var(--neon-accent);">
                 <div style="padding: 2rem; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center;">
                     <div>
                         <h2 class="section-title" style="margin-bottom: 0;">🗺️ Tour de Cairo</h2>
                         <div style="display: flex; gap: 10px; margin-top: 5px;">
                             <p style="color: var(--text-muted); font-size: 0.9rem;">8 Runs · 8 Districts · 1 City</p>
-                            <button onclick="showTourInfo()" style="background: none; border: none; color: var(--peach-accent); font-size: 0.8rem; text-decoration: underline; cursor: pointer; padding: 0;">What is this?</button>
+                            <button onclick="showTourInfo()" style="background: none; border: none; color: var(--neon-accent); font-size: 0.8rem; text-decoration: underline; cursor: pointer; padding: 0;">What is this?</button>
                         </div>
                     </div>
                     <button class="btn btn-primary btn-sm" onclick="spotlightNextStop()">🚀 Register for next Stop</button>
@@ -160,11 +101,10 @@
                 <div style="position: relative; height: 500px; width: 100%; background: #1a1a1f; overflow: hidden;">
                     <div id="tourMap" style="width: 100%; height: 100%;"></div>
                 </div>
-
             </div>
         </section>
 
-        <section class="animate-up" style="animation-delay: 0.2s;">
+        <section>
             <h2 class="section-title">🗓 Upcoming Community Runs</h2>
             <div class="runs-grid" id="runsContainer">
                 <p style="color:var(--text-muted); padding:2rem;">Loading runs...</p>
@@ -174,239 +114,125 @@
 
     <script src="app.js?v=23"></script>
     <script>
-        // GLOBAL STATE
         let user = null;
         let runSelections = {};
 
-        // INITIALIZATION WRAPPER
         window.addEventListener('load', async () => {
-            console.log("Dashboard initializing...");
-            try {
-                if (window.AuthService) {
-                    user = window.AuthService.getCurrentUser();
-                } else {
-                    console.error("AuthService missing!");
-                    throw new Error("Core system failed to load. Please refresh.");
-                }
-
-                if (!user) {
-                    window.location.href = 'index.html';
-                    return;
-                }
-
-                const welcomeUser = document.getElementById('welcomeUser');
-                if (welcomeUser) welcomeUser.innerText = `Welcome back, ${(user.name || 'Runner').split(' ')[0]}!`;
-                
-                await initDashboard();
-                await initTourMap();
-                
-            } catch (err) {
-                console.error("Dashboard Crash:", err);
-                const container = document.getElementById('runsContainer');
-                if (container) {
-                    container.innerHTML = `<div class="glass-card" style="padding:2rem; border-color:#ff4d4d;">
-                        <h3 style="color:#ff4d4d;">⚠️ Dashboard Error</h3>
-                        <p style="color:#ccc;">${err.message}</p>
-                        <button onclick="location.reload()" class="btn btn-sm" style="margin-top:1rem;">Retry Connection</button>
-                    </div>`;
-                }
-            }
+            user = AuthService.getCurrentUser();
+            if (!user) { window.location.href = 'index.html'; return; }
+            document.getElementById('welcomeUser').innerText = `Welcome back, ${user.name.split(' ')[0]}!`;
+            await initDashboard();
+            await initTourMap();
         });
 
         async function initDashboard() {
-            if (!user) return;
             const container = document.getElementById('runsContainer');
-            
             try {
-                const [runs, myRegs] = await Promise.all([
-                    AppService.getRuns(),
-                    AppService.getUserRegistrations(user.id)
-                ]);
-                
+                const [runs, myRegs] = await Promise.all([AppService.getRuns(), AppService.getUserRegistrations(user.id)]);
                 window.lastFetchedRuns = runs;
                 window.myRegistrations = myRegs;
 
                 if (!runs || runs.length === 0) {
-                    container.innerHTML = `<p style="padding:3rem; text-align:center; color:var(--text-muted); grid-column:1/-1;">No community runs scheduled at the moment. Check back soon!</p>`;
+                    container.innerHTML = `<p style="padding:3rem; text-align:center; color:var(--text-muted); grid-column:1/-1;">No community runs scheduled.</p>`;
                     return;
                 }
 
                 container.innerHTML = runs.map(run => {
                     const isReg = myRegs.includes(run.id);
-                    if (!runSelections[run.id]) runSelections[run.id] = '5K';
-                    const currentDist = runSelections[run.id];
-
+                    const currentDist = runSelections[run.id] || '5K';
+                    
                     return `
-                        <div class="glass-card run-card ${isReg ? 'registered' : ''} animate-up">
+                        <div class="glass-card run-card ${isReg ? 'registered' : ''}">
                             ${isReg ? '<span class="registered-badge">✓ Registered</span>' : ''}
                             
-                            ${run.partner_name ? `
                             <div style="display:flex; align-items:center; gap:12px; margin-bottom:1rem; padding-bottom:1rem; border-bottom:1px solid rgba(255,255,255,0.05);">
-                                ${run.partner_logo ? `<img src="${run.partner_logo}" style="width:40px; height:40px; border-radius:8px; object-fit:cover;">` : ''}
+                                ${run.partner_logo ? `<img src="${run.partner_logo}" style="width:40px; height:40px; border-radius:8px; object-fit:cover;">` : '<div style="width:40px; height:40px; background:var(--neon-accent); border-radius:8px; display:flex; align-items:center; justify-content:center; color:#000; font-weight:800;">S.</div>'}
                                 <div>
-                                    <div style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px; font-weight:700;">Hosted By</div>
+                                    <div style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px; font-weight:700;">Hosted By</div>
                                     <div style="font-weight:700; color:#fff; display:flex; align-items:center; gap:6px;">
-                                        ${run.partner_name} x Stride Rite
-                                        ${run.partner_ig ? `<a href="https://instagram.com/${run.partner_ig.replace('@', '')}" target="_blank" style="color:var(--neon-accent);"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg></a>` : ''}
+                                        ${run.partner_name || 'Stride Rite'} x Stride Rite
+                                        ${run.partner_ig ? `<a href="https://instagram.com/${run.partner_ig.replace('@', '')}" target="_blank" style="color:var(--neon-accent);"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.153.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg></a>` : ''}
                                     </div>
                                 </div>
                             </div>
-                            ` : ''}
     
-                            ${run.tour_stop_id ? `<div style="font-family:'Barlow Condensed', sans-serif; font-weight:800; color:var(--neon-accent); letter-spacing:3px; text-transform:uppercase; margin-bottom:0.5rem; display:inline-block; border:1px solid var(--neon-accent); opacity:0.8; padding:2px 8px; border-radius:4px; font-size:0.8rem;">Tour Stop 0${run.tour_stop_id}</div>` : ''}
-                            
-                            <div class="run-date">${run.date_label.split('||')[0]}</div>
-                            <div class="run-loc">
-                                <span>📍</span>
-                                <a href="${run.location_link}" target="_blank" style="color:var(--neon-accent); text-decoration:underline;">${run.location}</a>
+                            <div style="font-family:'Outfit'; font-weight:800; color:var(--neon-accent); letter-spacing:2px; text-transform:uppercase; margin-bottom:0.8rem; font-size:1.1rem;">
+                                ${run.tour_stop_id ? `Stop 0${run.tour_stop_id}: ${run.tour_stop_name || run.location}` : run.location}
                             </div>
                             
+                            <div class="run-date">${run.date_label.split('||')[0]}</div>
+                            <div class="run-loc">📍 <a href="${run.location_link}" target="_blank" style="color:var(--text-muted); text-decoration:underline;">${run.location}</a></div>
+                            
                             ${!isReg ? `
-                                ${run.route_preview_url ? `<button class="btn btn-secondary btn-block" style="margin-bottom: 12px; border-style: dashed; opacity: 0.9;" onclick="viewRouteMap('${run.route_preview_url}', '${run.route_type}', '${run.location_link}', '${run.location}')">🗺️ View Route Preview</button>` : ''}
-                                <div style="font-size:0.8rem; color:var(--text-muted); margin-bottom:8px; font-weight:600;">SELECT DISTANCE:</div>
-                                <div class="dist-selector">
-                                    <button class="dist-btn ${currentDist === '2K' ? 'active' : ''}" onclick="selectDist('${run.id}', '2K')">2K</button>
-                                    <button class="dist-btn ${currentDist === '5K' ? 'active' : ''}" onclick="selectDist('${run.id}', '5K')">5K</button>
-                                    <button class="dist-btn ${currentDist === '8K' ? 'active' : ''}" onclick="selectDist('${run.id}', '8K')">8K</button>
+                                <div class="dist-selector" style="margin-top:1rem;">
+                                    ${['2K','5K','8K'].map(d => `<button class="dist-btn ${currentDist === d ? 'active' : ''}" onclick="selectDist('${run.id}','${d}')">${d}</button>`).join('')}
                                 </div>
-                                <button class="btn btn-primary btn-block" onclick="joinRun('${run.id}')">Confirm Registration</button>
-                            ` : `
-                                ${run.route_preview_url ? `<button class="btn btn-secondary btn-block" style="margin-bottom: 12px; border-style: dashed; opacity: 0.9;" onclick="viewRouteMap('${run.route_preview_url}', '${run.route_type}', '${run.location_link}', '${run.location}')">🗺️ View Route Preview</button>` : ''}
-                                <button class="btn btn-secondary btn-block" disabled style="opacity:0.8; cursor:default; background:rgba(34, 197, 94, 0.1); border-color:#22c55e; color:#22c55e;">
-                                    You're all set! See you there.
-                                </button>
-                            `}
+                                <button class="btn btn-primary btn-block" onclick="joinRun('${run.id}')">Join Mission</button>
+                            ` : `<button class="btn btn-secondary btn-block" disabled style="background:rgba(34,197,94,0.1); color:#22c55e; border-color:#22c55e;">You're Registered ✓</button>`}
                         </div>
                     `;
                 }).join('');
-    
                 if (runs.length > 0) loadAIAdvisor(runs[0]);
-            } catch (error) {
-                console.error("Dashboard failed to load runs:", error);
-                container.innerHTML = `<p style="padding:3rem; text-align:center; color:#ff4d4d; grid-column:1/-1;">⚠️ Failed to load runs. Please refresh the page.</p>`;
-            }
+            } catch (error) { container.innerHTML = `<p style="color:#ff4d4d; padding:2rem;">Dashboard connection failed.</p>`; }
         }
 
         window.spotlightNextStop = async () => {
-            if (!window.lastFetchedRuns || window.lastFetchedRuns.length === 0) {
-                Swal.fire({ title: 'No Runs Found', text: 'There are no upcoming stops scheduled right now.', background: '#1a1a1f', color: '#fff' });
-                return;
-            }
-
-            let nextStop = window.lastFetchedRuns.find(r => r.tour_stop_id && !window.myRegistrations.includes(r.id)) 
-                           || window.lastFetchedRuns.find(r => r.tour_stop_id);
-
-            if (!nextStop) nextStop = window.lastFetchedRuns[0];
-
-            if (!nextStop) {
-                Swal.fire({ title: 'Next Stop', text: 'No upcoming runs found.', background: '#1a1a1f', color: '#fff' });
-                return;
-            }
+            if (!window.lastFetchedRuns) return;
+            let nextStop = window.lastFetchedRuns.find(r => r.tour_stop_id && !window.myRegistrations.includes(r.id)) || window.lastFetchedRuns.find(r => r.tour_stop_id) || window.lastFetchedRuns[0];
+            if (!nextStop) return;
 
             const isTour = !!nextStop.tour_stop_id;
             const isReg = window.myRegistrations.includes(nextStop.id);
 
             Swal.fire({
-                title: `<div style="font-family:'Outfit'; font-size:1.5rem; color:#fff;">📍 ${isTour ? `Stop 0${nextStop.tour_stop_id}: ${nextStop.tour_stop_name || nextStop.location}` : 'Upcoming Community Run'}</div>`,
+                title: `<div style="font-family:'Outfit'; font-size:1.5rem; color:#fff;">📍 ${isTour ? `Stop 0${nextStop.tour_stop_id}: ${nextStop.tour_stop_name || nextStop.location}` : 'Upcoming Mission'}</div>`,
                 html: `
                     <div style="text-align: left; background: #0d0d11; border-radius: 12px; padding: 1.5rem; margin-top: 10px; border: 1px solid rgba(255,255,255,0.05);">
-                        <!-- DUAL BRANDING HEADER -->
-                        <div style="display:flex; align-items:center; justify-content:center; gap:20px; margin-bottom:1.5rem; padding-bottom:1rem; border-bottom:1px solid rgba(255,255,255,0.1);">
-                            <!-- PARTNER -->
+                        <div style="display:flex; align-items:center; justify-content:center; gap:25px; margin-bottom:1.5rem; padding-bottom:1rem; border-bottom:1px solid rgba(255,255,255,0.1);">
                             <div style="text-align:center;">
                                 <div style="position:relative; display:inline-block;">
-                                    <img src="${nextStop.partner_logo || 'https://via.placeholder.com/60/1a1a1f/ffffff?text=Host'}" style="width:60px; height:60px; border-radius:12px; object-fit:cover; border:1px solid rgba(255,255,255,0.1);">
-                                    ${nextStop.partner_ig ? `<a href="https://instagram.com/${nextStop.partner_ig.replace('@', '')}" target="_blank" style="position:absolute; bottom:-5px; right:-5px; background:var(--neon-accent); color:#000; width:22px; height:22px; border-radius:50%; display:flex; align-items:center; justify-content:center;"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg></a>` : ''}
+                                    <img src="${nextStop.partner_logo || 'https://via.placeholder.com/60/1a1a1f/ffffff?text=Host'}" style="width:60px; height:60px; border-radius:12px; object-fit:cover;">
+                                    ${nextStop.partner_ig ? `<a href="https://instagram.com/${nextStop.partner_ig.replace('@','')}" target="_blank" style="position:absolute; bottom:-5px; right:-5px; background:var(--neon-accent); color:#000; width:22px; height:22px; border-radius:50%; display:flex; align-items:center; justify-content:center;"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg></a>` : ''}
                                 </div>
                                 <div style="font-size:0.8rem; color:#fff; font-weight:700; margin-top:5px;">${nextStop.partner_name || 'Host'}</div>
                             </div>
-
                             <div style="font-family:'Outfit'; font-weight:800; font-size:1.5rem; color:rgba(255,255,255,0.2);">X</div>
-
-                            <!-- STRIDE RITE -->
                             <div style="text-align:center;">
                                 <div style="position:relative; display:inline-block;">
                                     <div style="width:60px; height:60px; border-radius:12px; border:2px solid var(--neon-accent); display:flex; align-items:center; justify-content:center; font-family:'Outfit'; font-weight:800; font-size:2rem; color:var(--neon-accent); background:#000;">S.</div>
-                                    <a href="https://instagram.com/strideriteclub" target="_blank" style="position:absolute; bottom:-5px; right:-5px; background:#fff; color:#000; width:22px; height:22px; border-radius:50%; display:flex; align-items:center; justify-content:center;"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg></a>
+                                    <a href="https://instagram.com/strideriteclub" target="_blank" style="position:absolute; bottom:-5px; right:-5px; background:#fff; color:#000; width:22px; height:22px; border-radius:50%; display:flex; align-items:center; justify-content:center;"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg></a>
                                 </div>
                                 <div style="font-size:0.8rem; color:#fff; font-weight:700; margin-top:5px;">Stride Rite</div>
                             </div>
                         </div>
-
                         <div style="margin-bottom:1.5rem;">
-                            <div style="font-family:'Barlow Condensed', sans-serif; font-weight:800; color:var(--neon-accent); letter-spacing:2px; text-transform:uppercase; font-size:0.85rem; margin-bottom:0.5rem;">MISSION BRIEFING</div>
-                            <div style="color:#fff; font-size:1.1rem; font-weight:600; margin-bottom:4px;">📅 ${nextStop.date_label.split('||')[0]}</div>
-                            <div style="color:var(--text-muted); font-size:0.9rem;">📍 Meeting Point: <b style="color:#fff;">${nextStop.location}</b></div>
+                            <div style="font-family:'Barlow Condensed',sans-serif; font-weight:800; color:var(--neon-accent); letter-spacing:2px; font-size:0.85rem; margin-bottom:0.5rem;">MISSION BRIEFING</div>
+                            <div style="color:#fff; font-size:1.1rem; font-weight:600;">📅 ${nextStop.date_label.split('||')[0]}</div>
+                            <div style="color:var(--text-muted); font-size:0.9rem;">📍 Meeting Point: <span style="color:#fff;">${nextStop.location}</span></div>
                         </div>
-
-                        <div id="spotlight-map" style="width: 100%; height: 320px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); background:#000;"></div>
+                        <div id="spotlight-map" style="width: 100%; height: 320px; border-radius: 12px; background:#000;"></div>
                     </div>
                 `,
-                width: 600,
-                background: '#141419',
-                color: '#fff',
-                showConfirmButton: !isReg,
-                confirmButtonText: '🚀 Join Official Mission',
-                confirmButtonColor: 'var(--neon-accent)',
-                showCancelButton: true,
-                cancelButtonText: isReg ? 'Secure Exit' : 'Discard',
+                width: 600, background: '#141419', color: '#fff',
+                showConfirmButton: !isReg, confirmButtonText: '🚀 Join Official Mission', confirmButtonColor: 'var(--neon-accent)',
+                showCancelButton: true, cancelButtonText: isReg ? 'Close' : 'Discard',
                 didOpen: () => {
-                    const map = L.map('spotlight-map', { zoomControl: true }).setView([30.0444, 31.2357], 13);
-                    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-                        attribution: 'Tiles &copy; Esri &mdash; Source: Esri'
-                    }).addTo(map);
-
+                    const map = L.map('spotlight-map').setView([30.0444, 31.2357], 13);
+                    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: 'Esri' }).addTo(map);
                     if (nextStop.route_preview_url && nextStop.route_type === 'gpx') {
-                        new L.GPX(nextStop.route_preview_url, {
-                            async: true,
-                            polyline_options: { color: '#ff7300', opacity: 1, weight: 4 },
-                            marker_options: {
-                                startIconUrl: 'https://cdn-icons-png.flaticon.com/512/684/684908.png',
-                                endIconUrl: 'https://cdn-icons-png.flaticon.com/512/61/61041.png',
-                                iconSize: [32, 32],
-                                iconAnchor: [16, 32]
-                            }
-                        }).on('loaded', e => map.fitBounds(e.target.getBounds())).addTo(map);
+                        new L.GPX(nextStop.route_preview_url, { async: true, polyline_options: { color: '#ff7300', weight: 4 }, marker_options: { startIconUrl: 'https://cdn-icons-png.flaticon.com/512/684/684908.png', endIconUrl: 'https://cdn-icons-png.flaticon.com/512/61/61041.png', iconSize:[32,32] } }).on('loaded', e => map.fitBounds(e.target.getBounds())).addTo(map);
                     } else if (nextStop.route_preview_url) {
                         document.getElementById('spotlight-map').innerHTML = `<img src="${nextStop.route_preview_url}" style="width:100%; height:100%; object-fit:cover; border-radius:12px;">`;
                     }
                 }
-            }).then((result) => {
-                if (result.isConfirmed) window.joinRun(nextStop.id);
-            });
-        };
-
-        window.viewRouteMap = (url, type, locLink, locName) => {
-            if (type === 'link') { window.open(url, '_blank'); }
-            else if (type === 'gpx') {
-                Swal.fire({
-                    title: 'Interactive Route Map',
-                    html: '<div id="gpx-map" style="width: 100%; height: 400px; border-radius: 12px; z-index: 1;"></div>',
-                    width: 700,
-                    background: '#141419',
-                    color: '#fff',
-                    didOpen: () => {
-                        const map = L.map('gpx-map').setView([0, 0], 2);
-                        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(map);
-                        new L.GPX(url, {
-                            async: true,
-                            polyline_options: { color: '#ff7300', opacity: 0.9, weight: 5 },
-                            marker_options: { startIconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png', endIconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png' }
-                        }).on('loaded', e => map.fitBounds(e.target.getBounds())).addTo(map);
-                    }
-                });
-            } else {
-                Swal.fire({ title: 'Route Map', imageUrl: url, background: '#141419', color: '#fff' });
-            }
+            }).then(r => { if(r.isConfirmed) window.joinRun(nextStop.id); });
         };
 
         window.selectDist = (rId, dist) => { runSelections[rId] = dist; initDashboard(); };
-
         window.joinRun = async (rId) => {
             Swal.fire({ title: 'Registering...', background:'#141419', didOpen: () => Swal.showLoading() });
-            const success = await AppService.registerForRun(rId, runSelections[rId] || '5K', user.level || 'Beginner');
-            if (success) {
-                Swal.fire({ icon: 'success', title: 'See you there! 🏃‍♂️', background: '#141419', color: '#fff' });
+            if(await AppService.registerForRun(rId, runSelections[rId] || '5K', user.level || 'Beginner')) {
+                Swal.fire({ icon:'success', title:'Registered!', background:'#141419', color:'#fff' });
                 initDashboard();
             }
         };
@@ -415,59 +241,30 @@
             try {
                 const res = await fetch(`https://api.weatherapi.com/v1/current.json?key=686edc30f7764d08ada12150261604&q=${encodeURIComponent(run.location)}`);
                 const data = await res.json();
-                document.getElementById('advisorContainer').innerHTML = `
-                    <div class="advisor-card animate-up">
-                        <img src="${data.current.condition.icon}" style="width:64px; height:64px;">
-                        <div style="flex:1;">
-                            <div style="font-size:0.75rem; color:var(--neon-accent); font-weight:800; letter-spacing:2px;">🌤 AI WEATHER ADVISOR</div>
-                            <div style="font-weight:700; color:white; font-size:1.1rem; margin-top:8px;">${data.current.temp_c}°C - ${data.current.condition.text}</div>
-                        </div>
-                    </div>
-                `;
+                document.getElementById('advisorContainer').innerHTML = `<div class="advisor-card"><img src="${data.current.condition.icon}" style="width:64px;"><div style="flex:1;"><div style="color:var(--neon-accent); font-weight:800; font-size:0.75rem;">🌤 AI WEATHER ADVISOR</div><div style="color:white; font-weight:700;">${data.current.temp_c}°C - ${data.current.condition.text}</div></div></div>`;
             } catch (e) {}
         }
 
         async function initTourMap() {
-            if (!user) return;
-            const tourMap = L.map('tourMap', { zoomControl: false, attributionControl: false });
-            tourMap.setView([30.035, 31.4775], 9.7);
-            
-            window.showTourInfo = () => {
-                Swal.fire({
-                    title: 'Tour de Cairo',
-                    html: `<div style="text-align:left; color:#ccc;">Complete 8 iconic runs in a month to earn your Monthly Finisher Medal.</div>`,
-                    background: '#1a1a1f', color: '#fff'
-                });
-            };
-            
+            const tourMap = L.map('tourMap', { zoomControl: false, attributionControl: false }).setView([30.035, 31.4775], 9.7);
             document.getElementById('tourMap').insertAdjacentHTML('afterbegin', '<div class="tour-map-bg"></div><div class="side-progress"><div class="side-progress-fill" id="progressFill"></div></div><div class="side-list" id="sideList"></div>');
             const stops = await AppService.getTourProgress(user.id);
-            const polyline = L.polyline([], { color: '#ff6b35', weight: 2, opacity: 0.8, dashArray: '6 8' }).addTo(tourMap);
-            
             const sideList = document.getElementById('sideList');
-            stops.forEach((s, i) => {
-                const el = document.createElement('div');
-                el.className = `list-item ${s.status === 'unlocked' ? 'unlocked' : ''}`;
-                el.innerText = i + 1;
-                sideList.appendChild(el);
-            });
-
+            stops.forEach((s,i) => sideList.insertAdjacentHTML('beforeend', `<div class="list-item ${s.status==='unlocked'?'unlocked':''}" id="item-${i}">${i+1}</div>`));
+            const polyline = L.polyline([], { color: '#ff6b35', weight: 2, dashArray: '6 8' }).addTo(tourMap);
+            
             async function startTour() {
                 const fill = document.getElementById('progressFill');
-                for (let i = 0; i < stops.length; i++) {
+                for (let i=0; i<stops.length; i++) {
                     const s = stops[i];
-                    fill.style.width = `${(i / (stops.length - 1)) * 100}%`;
-                    const markerHtml = `<div class="m-wrap ${s.status}" id="marker-${s.id}"><div class="m-impact"></div><div class="m-core"></div><div class="m-label"><span class="m-num">0${s.id}</span></div></div>`;
-                    L.marker([s.lat, s.lng], { icon: L.divIcon({ html: markerHtml, className:'', iconSize:[0,0] }) }).addTo(tourMap);
+                    fill.style.width = `${(i/(stops.length-1))*100}%`;
+                    L.marker([s.lat, s.lng], { icon: L.divIcon({ html: `<div class="m-wrap ${s.status}" id="marker-${s.id}"><div class="m-core"></div><div class="m-label">0${s.id}</div></div>`, className:'' }) }).addTo(tourMap);
                     setTimeout(() => document.getElementById(`marker-${s.id}`).classList.add('visible'), 40);
-                    if (i > 0) polyline.addLatLng([s.lat, s.lng]);
+                    if (i>0) polyline.addLatLng([s.lat, s.lng]);
                     await new Promise(r => setTimeout(r, 300));
                 }
             }
-
-            const observer = new IntersectionObserver((entries) => {
-                if(entries[0].isIntersecting) { startTour(); observer.disconnect(); }
-            }, { threshold: 0.1 });
+            const observer = new IntersectionObserver(e => { if(e[0].isIntersecting) { startTour(); observer.disconnect(); } }, { threshold:0.1 });
             observer.observe(document.getElementById('tourMap'));
         }
     </script>
