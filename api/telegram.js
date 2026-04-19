@@ -981,14 +981,19 @@ async function createTourStopSetup(chatId) {
     const rows = [];
     for(let i=1; i<=8; i+=4) {
         rows.push([
-            { text: `Stop ${i}`, callback_data: `create_stop_${i}` },
-            { text: `Stop ${i+1}`, callback_data: `create_stop_${i+1}` },
-            { text: `Stop ${i+2}`, callback_data: `create_stop_${i+2}` },
-            { text: `Stop ${i+3}`, callback_data: `create_stop_${i+3}` }
+            { text: `Stop ${i}`, callback_data: `create_stop_v2_${i}` },
+            { text: `Stop ${i+1}`, callback_data: `create_stop_v2_${i+1}` },
+            { text: `Stop ${i+2}`, callback_data: `create_stop_v2_${i+2}` },
+            { text: `Stop ${i+3}`, callback_data: `create_stop_v2_${i+3}` }
         ]);
     }
     rows.push([{ text: "↩️ Back", callback_data: "create_setup_start" }]);
     await sendMessage(chatId, "<b>Step 1</b>: Which Tour Stop number is this?", { inline_keyboard: rows });
+}
+
+async function handleAskStopName(chatId, stopNum) {
+    await setSession('setup_stop_name', { stopNum, isTour: true });
+    await sendMessage(chatId, `📍 <b>Stop ${stopNum} Selected</b>\n\nWhat is the <b>Name</b> of this stop?\n(e.g. <i>Heliopolis Hills</i> or <i>The Sphinx Sprint</i>)`);
 }
 
 async function createPartnerSetup(chatId, stopNum) {
@@ -1113,6 +1118,7 @@ async function createExecute(chatId) {
             route_preview_url: previewVal,
             route_type: previewVal ? d.routeType : 'image',
             tour_stop_id: d.isTour ? parseInt(d.stopNum) : null,
+            tour_stop_name: d.isTour ? d.stopName : null,
             partner_name: d.partnerName || null,
             partner_ig: d.partnerIg || null,
             partner_logo: d.partnerLogo || null
@@ -1208,7 +1214,7 @@ export default async function handler(req, res) {
             else if (data === 'create_step1' || data === 'create_setup_start') await createSetup(chatId);
             else if (data === 'create_tour_yes') await createTourStopSetup(chatId);
             else if (data === 'create_tour_no') { await setSession('picking_time', { isTour: false }); await createStep1(chatId); }
-            else if (data.startsWith('create_stop_')) await createPartnerSetup(chatId, data.replace('create_stop_', ''));
+            else if (data.startsWith('create_stop_v2_')) await handleAskStopName(chatId, data.replace('create_stop_v2_', ''));
             else if (data === 'create_partner_yes') { const s = await getSession(); await createPartnerName(chatId, true, { ...s.data, isTour: true }); }
             else if (data === 'create_partner_no') { const s = await getSession(); await createPartnerName(chatId, false, { ...s.data, isTour: true }); }
             
@@ -1347,6 +1353,11 @@ export default async function handler(req, res) {
             res.status(200).send('ok'); return;
         }
 
+        if (session.state === 'setup_stop_name') {
+            await createPartnerSetup(chatId, { ...session.data, stopName: text }, text);
+            return;
+        }
+        
         if (session.state === 'partner_name') {
             await createPartnerIg(chatId, text, session.data);
         } else if (session.state === 'partner_ig') {
