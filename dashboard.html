@@ -155,7 +155,7 @@
                             <button onclick="showTourInfo()" style="background: none; border: none; color: var(--peach-accent); font-size: 0.8rem; text-decoration: underline; cursor: pointer; padding: 0;">What is this?</button>
                         </div>
                     </div>
-                    <button class="btn btn-primary btn-sm" onclick="scrollToNextStop()">🚀 Register for next Stop</button>
+                    <button class="btn btn-primary btn-sm" onclick="spotlightNextStop()">🚀 Register for next Stop</button>
                 </div>
                 <div style="position: relative; height: 500px; width: 100%; background: #1a1a1f; overflow: hidden;">
                     <div id="tourMap" style="width: 100%; height: 100%;"></div>
@@ -225,6 +225,9 @@
                     AppService.getRuns(),
                     AppService.getUserRegistrations(user.id)
                 ]);
+                
+                window.lastFetchedRuns = runs; // Store for spotlight
+                window.myRegistrations = myRegs; // Store for spotlight
 
                 if (!runs || runs.length === 0) {
                     container.innerHTML = `<p style="padding:3rem; text-align:center; color:var(--text-muted); grid-column:1/-1;">No community runs scheduled at the moment. Check back soon!</p>`;
@@ -288,22 +291,79 @@
             }
         }
 
-        window.scrollToNextStop = () => {
-            // Find all run cards
-            const cards = Array.from(document.querySelectorAll('.run-card'));
-            // Find the first one that has a Tour Stop badge AND is not registered yet
-            const target = cards.find(card => 
-                card.innerHTML.includes('Tour Stop') && 
-                !card.classList.contains('registered')
-            ) || cards.find(card => card.innerHTML.includes('Tour Stop')); // Fallback to any tour stop
-
-            if (target) {
-                target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                target.classList.add('highlight-active');
-                setTimeout(() => target.classList.remove('highlight-active'), 4000);
-            } else {
-                document.getElementById('runsContainer').scrollIntoView({ behavior: 'smooth' });
+        window.spotlightNextStop = async () => {
+            if (!window.lastFetchedRuns || window.lastFetchedRuns.length === 0) {
+                Swal.fire({ title: 'No Runs Found', text: 'There are no upcoming stops scheduled right now.', background: '#1a1a1f', color: '#fff' });
+                return;
             }
+
+            // Find the first tour stop that isn't registered yet
+            const nextStop = window.lastFetchedRuns.find(r => r.tour_stop_id && !window.myRegistrations.includes(r.id)) 
+                           || window.lastFetchedRuns.find(r => r.tour_stop_id);
+
+            if (!nextStop) {
+                Swal.fire({ title: 'Next Stop', text: 'No upcoming Tour stops found in the list.', background: '#1a1a1f', color: '#fff' });
+                return;
+            }
+
+            const isReg = window.myRegistrations.includes(nextStop.id);
+
+            Swal.fire({
+                title: `<div style="font-family:'Outfit'; font-size:1.5rem; color:#fff;">📍 Stop 0${nextStop.tour_stop_id}: ${nextStop.location}</div>`,
+                html: `
+                    <div style="text-align: left; background: #0d0d11; border-radius: 12px; padding: 1.5rem; margin-top: 10px; border: 1px solid rgba(255,255,255,0.05);">
+                        <div style="display:flex; align-items:center; gap:12px; margin-bottom:1.5rem; padding-bottom:1rem; border-bottom:1px solid rgba(255,255,255,0.1);">
+                            ${nextStop.partner_logo ? `<img src="${nextStop.partner_logo}" style="width:50px; height:50px; border-radius:10px; object-fit:cover;">` : ''}
+                            <div style="flex:1;">
+                                <div style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px; font-weight:700;">Official Host</div>
+                                <div style="font-weight:700; color:#fff; font-size:1.1rem; display:flex; align-items:center; gap:8px;">
+                                    ${nextStop.partner_name || 'Stride Rite'} 
+                                    ${nextStop.partner_ig ? `<a href="https://instagram.com/${nextStop.partner_ig.replace('@', '')}" target="_blank" style="color:var(--neon-accent); line-height:0;"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg></a>` : ''}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="margin-bottom:1.5rem;">
+                            <div style="font-family:'Barlow Condensed', sans-serif; font-weight:800; color:var(--neon-accent); letter-spacing:2px; text-transform:uppercase; font-size:0.85rem; margin-bottom:0.5rem;">MISSION DETAILS</div>
+                            <div style="color:#fff; font-size:1.1rem; font-weight:600; margin-bottom:4px;">${nextStop.date_label}</div>
+                            <div style="color:var(--text-muted); font-size:0.9rem;">📍 ${nextStop.location}</div>
+                        </div>
+
+                        <div id="spotlight-map" style="width: 100%; height: 280px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); background:#1a1a1f;"></div>
+                    </div>
+                `,
+                width: 600,
+                background: '#141419',
+                color: '#fff',
+                showConfirmButton: !isReg,
+                confirmButtonText: '🚀 Confirm Registration',
+                confirmButtonColor: 'var(--neon-accent)',
+                showCancelButton: true,
+                cancelButtonText: isReg ? 'Close' : 'Cancel',
+                didOpen: () => {
+                    if (nextStop.route_preview_url && nextStop.route_type === 'gpx') {
+                        const map = L.map('spotlight-map', { zoomControl: false }).setView([0, 0], 2);
+                        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(map);
+                        new L.GPX(nextStop.route_preview_url, {
+                            async: true,
+                            polyline_options: { color: '#ff7300', opacity: 0.9, weight: 4 },
+                            marker_options: {
+                                startIconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+                                endIconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+                                shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png'
+                            }
+                        }).on('loaded', e => map.fitBounds(e.target.getBounds())).addTo(map);
+                    } else if (nextStop.route_preview_url) {
+                        document.getElementById('spotlight-map').innerHTML = `<img src="${nextStop.route_preview_url}" style="width:100%; height:100%; object-fit:cover; border-radius:12px;">`;
+                    } else {
+                        document.getElementById('spotlight-map').innerHTML = `<div style="display:flex; align-items:center; justify-content:center; height:100%; color:var(--text-muted); font-size:0.8rem;">Route Preview coming soon...</div>`;
+                    }
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    window.joinRun(nextStop.id);
+                }
+            });
         };
 
         window.viewRouteMap = (url, type, locLink, locName) => {
