@@ -123,8 +123,12 @@
                     const logoHtml = run.partner_logo
                         ? '<div style="width:40px;height:40px;border-radius:8px;background:#0d0d11;border:1px solid rgba(255,255,255,0.07);display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;"><img src="' + run.partner_logo + '" style="max-width:36px;max-height:36px;object-fit:contain;"></div>'
                         : '<div style="width:40px;height:40px;background:var(--neon-accent);border-radius:8px;display:flex;align-items:center;justify-content:center;color:#000;font-weight:800;flex-shrink:0;">S.</div>';
-                    const igLink = run.partner_ig
-                        ? ' <a href="https://instagram.com/' + run.partner_ig.replace('@','') + '" target="_blank" style="color:var(--neon-accent);">@' + run.partner_ig.replace('@','') + '</a>'
+                    // Extract clean IG handle (handles full URLs too)
+                    const igHandle = typeof parseIgHandle === 'function' ? parseIgHandle(run.partner_ig) : (run.partner_ig ? run.partner_ig.replace('@','').split('?')[0].split('/').filter(Boolean).pop() : null);
+                    const igIconSvg = '<svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>';
+                    // Only show IG icon for the PARTNER (no Stride Rite IG on run cards)
+                    const igLink = igHandle
+                        ? ' <a href="https://instagram.com/' + igHandle + '" target="_blank" title="@' + igHandle + '" style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;background:rgba(255,107,53,0.15);border:1px solid rgba(255,107,53,0.3);border-radius:50%;color:var(--neon-accent);vertical-align:middle;margin-left:4px;">' + igIconSvg + '</a>'
                         : '';
                     const stopLabel = run.tour_stop_id
                         ? 'Stop ' + String(run.tour_stop_id).padStart(2,'0') + ': ' + (run.tour_stop_name || run.location)
@@ -192,12 +196,15 @@
     </div>
 
     ${stopNum ? `
-    <div style="display:flex; align-items:center; gap:16px; margin-bottom:1rem;">
+    <div style="display:flex; align-items:center; gap:16px; margin-bottom:0.5rem;">
       <div style="font-family:'Outfit',sans-serif; font-size:3.5rem; font-weight:800; line-height:1; color:rgba(255,255,255,0.06); letter-spacing:-3px; flex-shrink:0; user-select:none;">${stopNum}</div>
       <div>
-        <div style="font-size:0.55rem;font-weight:700;letter-spacing:3px;color:rgba(255,255,255,0.3);text-transform:uppercase;margin-bottom:3px;">STOP</div>
+        <div style="font-size:0.55rem;font-weight:700;letter-spacing:3px;color:rgba(255,255,255,0.3);text-transform:uppercase;margin-bottom:3px;">STOP ${stopNum} / 8</div>
         <div style="font-family:'Outfit',sans-serif; font-size:1.55rem; font-weight:800; color:#fff; line-height:1.1;">${stopName}</div>
       </div>
+    </div>
+    <div style="margin-bottom:1rem;padding:8px 12px;background:linear-gradient(90deg,rgba(255,107,53,0.12),transparent);border-left:3px solid var(--neon-accent,#ff6b35);border-radius:0 6px 6px 0;font-size:0.82rem;color:rgba(255,255,255,0.7);font-style:italic;">
+      🔥 This is your chance to add Stop ${stopNum} to your Tour de Cairo legacy. Lock in your spot!
     </div>` : `<div style="font-family:'Outfit',sans-serif; font-size:1.55rem; font-weight:800; color:#fff; margin-bottom:1rem;">${stopName}</div>`}
 
     <!-- Host branding row -->
@@ -210,8 +217,7 @@
         <div style="font-weight:700;color:#fff;font-size:0.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${partnerName} × Stride Rite</div>
       </div>
       <div style="display:flex;gap:6px;flex-shrink:0;">
-        ${nextStop.partner_ig ? `<a href="https://instagram.com/${nextStop.partner_ig.replace('@','')}" target="_blank" style="width:26px;height:26px;background:rgba(255,107,53,0.12);border:1px solid rgba(255,107,53,0.25);border-radius:6px;display:flex;align-items:center;justify-content:center;color:var(--neon-accent,#ff6b35);text-decoration:none;">${igSvg}</a>` : ''}
-        <a href="https://instagram.com/strideriteclub" target="_blank" style="width:26px;height:26px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:6px;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.7);text-decoration:none;">${igSvg}</a>
+        ${nextStop.partner_ig ? `<a href="https://instagram.com/${parseIgHandle(nextStop.partner_ig)||nextStop.partner_ig.replace('@','')}" target="_blank" title="Partner Instagram" style="width:26px;height:26px;background:rgba(255,107,53,0.12);border:1px solid rgba(255,107,53,0.25);border-radius:6px;display:flex;align-items:center;justify-content:center;color:var(--neon-accent,#ff6b35);text-decoration:none;">${igSvg}</a>` : ''}
       </div>
     </div>
   </div>
