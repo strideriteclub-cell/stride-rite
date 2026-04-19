@@ -312,18 +312,18 @@ const AppService = {
         const rawRuns = await dbGet('stride_runs');
         const userRegs = await dbGet('stride_registrations', `user_id=eq.${userId}`);
         
-        // Filter to current month tour stops
-        const now = new Date();
-        const currentMonth = now.getMonth();
-        const currentYear = now.getFullYear();
-
         const progress = TOUR_CONFIG.map(stop => {
             const runForStop = (rawRuns || []).find(r => {
                 if (!r.tour_stop_id || Number(r.tour_stop_id) !== Number(stop.id)) return false;
+                
+                // Ensure it's not exported/past
+                if (r.date_label && r.date_label.includes('[EXPORTED]')) return false;
+
                 const dateStr = r.iso_date || (r.date_label && r.date_label.includes('||') ? r.date_label.split('||')[1] : null);
                 if (!dateStr) return false;
+                
                 const runDate = new Date(dateStr);
-                return runDate.getMonth() === currentMonth && runDate.getFullYear() === currentYear;
+                return runDate >= now; // Any upcoming stop
             });
 
             const registration = runForStop ? userRegs.find(reg => reg.run_id === runForStop.id) : null;
