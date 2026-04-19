@@ -168,7 +168,7 @@ const AuthService = {
 };
 
 const TOUR_STOPS_COUNT = 8;
-const TOUR_CONFIG = [
+const DEFAULT_TOUR_CONFIG = [
     { id: 1, name: 'Al Rehab',    lat: 30.065846, lng: 31.504127, small: true },
     { id: 2, name: 'Madinaty',    lat: 30.101, lng: 31.646, up: true },
     { id: 3, name: 'New Administrative Capital', lat: 30.013, lng: 31.800, left: true },
@@ -176,10 +176,7 @@ const TOUR_CONFIG = [
     { id: 5, name: 'Zamalek',     lat: 30.062, lng: 31.222 },
     { id: 6, name: 'Maadi',       lat: 29.959, lng: 31.250 },
     { id: 7, name: 'Giza',        lat: 29.987, lng: 31.141 },
-    { id: 8, name: 'Heliopolis',  lat: 30.089, lng: 31.319, up: true, path: [
-        [29.987, 31.141], [30.025, 31.160], [30.055, 31.185], [30.080, 31.205],
-        [30.095, 31.222], [30.098, 31.245], [30.095, 31.275], [30.089, 31.319]
-    ]}
+    { id: 8, name: 'Heliopolis',  lat: 30.089, lng: 31.319, up: true }
 ];
 
 // --- APP SERVICE ---
@@ -354,9 +351,18 @@ const AppService = {
     getTourProgress: async (userId) => {
         const rawRuns = await dbGet('stride_runs');
         const userRegs = await dbGet('stride_registrations', `user_id=eq.${userId}`);
+        const dbStops = await dbGet('stride_tour_stops');
         const now = new Date();
         
-        const progress = TOUR_CONFIG.map(stop => {
+        const currentTourConfig = DEFAULT_TOUR_CONFIG.map(def => {
+            const override = (dbStops || []).find(s => Number(s.id) === Number(def.id));
+            if (override) {
+                return { ...def, name: override.name, lat: override.lat, lng: override.lng };
+            }
+            return def;
+        });
+
+        const progress = currentTourConfig.map(stop => {
             const runForStop = (rawRuns || []).find(r => {
                 if (!r.tour_stop_id || Number(r.tour_stop_id) !== Number(stop.id)) return false;
                 if (r.date_label && r.date_label.includes('[EXPORTED]')) return false;
