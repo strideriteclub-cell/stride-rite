@@ -179,11 +179,11 @@
             if (!user) { window.location.href = 'index.html'; return; }
             
             const welcomeUser = document.getElementById('welcomeUser');
-            if (welcomeUser) welcomeUser.innerText = `Welcome back, ${user.full_name.split(' ')[0]}!`;
+            if (welcomeUser) welcomeUser.innerText = `Welcome back, ${(user.name || 'Runner').split(' ')[0]}!`;
             
             const container = document.getElementById('runsContainer');
             const welcomeMsg = document.getElementById('welcomeMsg');
-            if (welcomeMsg) welcomeMsg.innerText = `Focus on Today's Goal, ${user.full_name.split(' ')[0]}`;
+            if (welcomeMsg) welcomeMsg.innerText = `Focus on Today's Goal, ${(user.name || 'Runner').split(' ')[0]}`;
             
             // Re-check for existing registrations to keep list current
             const [runs, myRegs] = await Promise.all([
