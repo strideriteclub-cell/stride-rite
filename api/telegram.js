@@ -34,7 +34,7 @@ function formatTime(time) {
     const [h, m] = time.split(':').map(Number);
     const ampm = h >= 12 ? 'PM' : 'AM';
     const hr = h % 12 || 12;
-    return `${hr}:${String(m).padStart(2,'0')} ${ampm}`;
+    return `${hr}:${String(m).padStart(2, '0')} ${ampm}`;
 }
 
 // ─── DATE HELPERS ─────────────────────────────────────────────────────────────
@@ -46,9 +46,9 @@ function extractIsoDate(dateLabel) {
 async function getSortedUpcomingRuns() {
     const runs = await dbGet('stride_runs');
     if (!runs || runs.length === 0) return [];
-    
+
     const now = new Date().toISOString();
-    
+
     return runs
         .filter(r => {
             const isoDate = extractIsoDate(r.date_label);
@@ -161,8 +161,8 @@ async function sendMenu(chatId, msg = "👟 <b>Stride Rite Admin Bot</b>\nHey Ha
             [{ text: "🔍 Runner Lookup", callback_data: "cmd_lookup_start" }, { text: "📣 Broadcast", callback_data: "cmd_broadcast_start" }],
             [{ text: "📈 Growth Graph", callback_data: "cmd_growth" }, { text: "✏️ Edit a Run", callback_data: "cmd_edit_list" }],
             [{ text: "📸 Add to Gallery", callback_data: "cmd_gallery_start" }, { text: "🛍️ VIP Shop Admin", callback_data: "cmd_shop_menu" }],
-            [{text: "🚫 Cancel a Run", callback_data: "cmd_cancel_list"}, {text: "🗑️ Delete a Run", callback_data: "cmd_delete_list"}],
-            [{text: "🆕 Create New Run", callback_data: "create_setup_start"}]
+            [{ text: "🚫 Cancel a Run", callback_data: "cmd_cancel_list" }, { text: "🗑️ Delete a Run", callback_data: "cmd_delete_list" }],
+            [{ text: "🆕 Create New Run", callback_data: "create_setup_start" }]
         ]
     });
 }
@@ -171,7 +171,7 @@ async function sendMenu(chatId, msg = "👟 <b>Stride Rite Admin Bot</b>\nHey Ha
 async function handleGalleryStart(chatId) {
     try {
         const runs = await dbGet('stride_runs');
-        
+
         // SAFE-GATE: If the database returns an error object instead of an array, handle it gracefully
         if (!Array.isArray(runs)) {
             console.error("Supabase Error:", runs);
@@ -180,7 +180,7 @@ async function handleGalleryStart(chatId) {
 
         // Limit to last 15 runs to prevent Telegram keyboard size errors
         const recentRuns = runs.slice(-15);
-        
+
         const buttons = recentRuns.map(r => {
             const label = r.date_label.includes('||') ? r.date_label.split('||')[0] : r.date_label;
             // Use ID to avoid Telegram API 64-byte limit for callback_data
@@ -269,27 +269,27 @@ async function handleGalleryDeleteList(chatId, messageId = null) {
     }
 
     const photos = await dbGet('gallery_photos', 'order=uploaded_at.desc&limit=15');
-    if (!photos || photos.length === 0) { 
-        if (messageId) await sendMessage(chatId, "❌ No photos in the gallery yet."); 
-        else await sendMessage(chatId, "❌ No photos in the gallery yet."); 
-        return; 
+    if (!photos || photos.length === 0) {
+        if (messageId) await sendMessage(chatId, "❌ No photos in the gallery yet.");
+        else await sendMessage(chatId, "❌ No photos in the gallery yet.");
+        return;
     }
-    
+
     const buttons = photos.map((p, i) => {
         const isSelected = selected.includes(p.id);
         const icon = isSelected ? '✅' : '⬜️';
-        const label = p.caption || (p.run_label ? `🏃 ${p.run_label}` : `Photo ${i+1}`);
-        return [{ text: `${icon} ${i+1}. ${label.slice(0,35)}`, callback_data: `gal_tgl_del_${p.id}` }];
+        const label = p.caption || (p.run_label ? `🏃 ${p.run_label}` : `Photo ${i + 1}`);
+        return [{ text: `${icon} ${i + 1}. ${label.slice(0, 35)}`, callback_data: `gal_tgl_del_${p.id}` }];
     });
-    
+
     if (selected.length > 0) {
         buttons.push([{ text: `🗑️ Delete Selected (${selected.length})`, callback_data: `gal_del_bulk_conf` }]);
     }
-    
+
     buttons.push([{ text: "↩️ Back Menu", callback_data: "cmd_gallery_start" }]);
-    
+
     const text = `🗑️ *Bulk Delete Photos*\n\nTap to select the photos you want to permanently delete:`;
-    
+
     if (messageId) {
         await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/editMessageText`, {
             method: 'POST',
@@ -319,7 +319,7 @@ async function handleGalleryBulkExecute(chatId) {
     if (sel.length === 0) { await sendMessage(chatId, "❌ Nothing selected."); return; }
 
     await sendMessage(chatId, `⏳ Deleting ${sel.length} photos...`);
-    
+
     for (const photoId of sel) {
         const photos = await dbGet('gallery_photos', `id=eq.${photoId}`);
         if (photos && photos.length > 0) {
@@ -411,7 +411,7 @@ async function updateOrderStatusAndEmail(chatId, orderId, newStatus, templateId,
     const waUrl = `https://wa.me/${waPhone}?text=${encodeURIComponent(`Hey ${user.name}! Your order for ${item.name} has been ${newStatus} ${statusEmoji}`)}`;
 
     const text = `${statusEmoji} *ORDER ${newStatus.toUpperCase()}*\n\n👤 *Customer:* ${user.name}\n📧 *Email:* ${user.email}\n📞 *Phone:* ${order.phone_number}\n\n🛍️ *Item:* ${item.name}\n📏 *Size:* ${order.size}\n💰 *Price:* ${item.price} EGP\n\n💳 *Payment Prop:* ${order.payment_method || 'N/A'}\n🔢 *Ref:* \`${order.payment_detail || order.receipt_ref || order.reference || 'N/A'}\`\n\n📅 *Order Date:* ${new Date(order.created_at).toLocaleString()}`;
-    
+
     // Detect if we need to edit a CAPTION (photo message) or TEXT (normal message)
     const method = isPhoto ? 'editMessageCaption' : 'editMessageText';
     const payload = {
@@ -584,13 +584,13 @@ async function handleEditPickField(chatId, runId) {
 
 async function handleEditDateTime(chatId) {
     const session = await getSession();
-    const amHours = [4,5,6,7,8,9,10,11].map(h => ({ text: `${h} AM`, callback_data: `edit_hour_${String(h).padStart(2,'0')}` }));
-    const pmHours = [1,2,3,4,5,6,7,8,9,10,11].map(h => ({ text: `${h} PM`, callback_data: `edit_hour_${String(h+12).padStart(2,'0')}` }));
+    const amHours = [4, 5, 6, 7, 8, 9, 10, 11].map(h => ({ text: `${h} AM`, callback_data: `edit_hour_${String(h).padStart(2, '0')}` }));
+    const pmHours = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map(h => ({ text: `${h} PM`, callback_data: `edit_hour_${String(h + 12).padStart(2, '0')}` }));
     const special = [{ text: "12 PM", callback_data: "edit_hour_12" }, { text: "12 AM", callback_data: "edit_hour_00" }];
     const rows = [];
-    for (let i = 0; i < amHours.length; i += 4) rows.push(amHours.slice(i, i+4));
+    for (let i = 0; i < amHours.length; i += 4) rows.push(amHours.slice(i, i + 4));
     rows.push(special);
-    for (let i = 0; i < pmHours.length; i += 4) rows.push(pmHours.slice(i, i+4));
+    for (let i = 0; i < pmHours.length; i += 4) rows.push(pmHours.slice(i, i + 4));
     rows.push([{ text: "↩️ Back", callback_data: `edit_pick_${session.data.runId}` }]);
     await setSession('edit_picking_hour', session.data);
     await sendMessage(chatId, "⏰ *New time — pick the hour:*", { inline_keyboard: rows });
@@ -600,7 +600,7 @@ async function handleEditHour(chatId, hour) {
     const session = await getSession();
     await setSession('edit_picking_minutes', { ...session.data, hour });
     const h = parseInt(hour);
-    const label = h === 0 ? '12 AM' : h === 12 ? '12 PM' : h < 12 ? `${h} AM` : `${h-12} PM`;
+    const label = h === 0 ? '12 AM' : h === 12 ? '12 PM' : h < 12 ? `${h} AM` : `${h - 12} PM`;
     await sendMessage(chatId, `✅ Hour: *${label}*\n\n⏱️ *Minutes?*`, {
         inline_keyboard: [
             [{ text: ":00 (Sharp)", callback_data: "edit_min_00" }, { text: ":30", callback_data: "edit_min_30" }],
@@ -612,15 +612,15 @@ async function handleEditHour(chatId, hour) {
 async function handleEditMinutes(chatId, min) {
     const session = await getSession();
     await setSession('edit_picking_date', { ...session.data, min });
-    const dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-    const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const days = [];
     for (let i = 1; i <= 21; i++) {
         const d = new Date(); d.setDate(d.getDate() + i);
         days.push({ text: `${dayNames[d.getDay()]} ${monthNames[d.getMonth()]} ${d.getDate()}`, callback_data: `edit_date_${d.toISOString().split('T')[0]}` });
     }
     const rows = [];
-    for (let i = 0; i < days.length; i += 2) rows.push(days.slice(i, i+2));
+    for (let i = 0; i < days.length; i += 2) rows.push(days.slice(i, i + 2));
     rows.push([{ text: "↩️ Back", callback_data: "edit_field_datetime" }]);
     await sendMessage(chatId, `✅ Time: *${formatTime(`${session.data.hour}:${min}`)}*\n\n📅 *New date?*`, { inline_keyboard: rows });
 }
@@ -628,12 +628,12 @@ async function handleEditMinutes(chatId, min) {
 async function handleEditTour(chatId) {
     const session = await getSession();
     const rows = [];
-    for(let i=1; i<=8; i+=4) {
+    for (let i = 1; i <= 8; i += 4) {
         rows.push([
             { text: `Stop ${i}`, callback_data: `edit_stop_save_${i}` },
-            { text: `Stop ${i+1}`, callback_data: `edit_stop_save_${i+1}` },
-            { text: `Stop ${i+2}`, callback_data: `edit_stop_save_${i+2}` },
-            { text: `Stop ${i+3}`, callback_data: `edit_stop_save_${i+3}` }
+            { text: `Stop ${i + 1}`, callback_data: `edit_stop_save_${i + 1}` },
+            { text: `Stop ${i + 2}`, callback_data: `edit_stop_save_${i + 2}` },
+            { text: `Stop ${i + 3}`, callback_data: `edit_stop_save_${i + 3}` }
         ]);
     }
     rows.push([{ text: "👟 No Stop (Normal Run)", callback_data: `edit_stop_save_0` }]);
@@ -698,24 +698,24 @@ async function handleGrowthGraph(chatId) {
     const users = await dbGet('stride_users');
     if (!users || users.length === 0) { await sendMessage(chatId, "❌ No members yet."); return; }
     const monthCounts = {};
-    const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     users.forEach(u => {
         const date = u.created_at || u.registered_at;
         if (!date) return;
         const d = new Date(date);
-        const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
         monthCounts[key] = (monthCounts[key] || 0) + 1;
     });
     const keys = Object.keys(monthCounts).sort();
     if (keys.length === 0) { await sendMessage(chatId, "❌ No registration dates found."); return; }
     const labels = keys.map(k => {
         const [y, m] = k.split('-');
-        return `${monthNames[parseInt(m)-1]} '${y.slice(2)}`;
+        return `${monthNames[parseInt(m) - 1]} '${y.slice(2)}`;
     });
     let cumulative = 0;
     const data = keys.map(k => { cumulative += monthCounts[k]; return cumulative; });
-    const newThisMonth = monthCounts[keys[keys.length-1]] || 0;
-    const totalMembers = data[data.length-1];
+    const newThisMonth = monthCounts[keys[keys.length - 1]] || 0;
+    const totalMembers = data[data.length - 1];
     const chartConfig = {
         type: 'line',
         data: {
@@ -818,9 +818,9 @@ async function handleSurveyHub(chatId) {
 
 async function handleSurvey(chatId) {
     const runs = await dbGet('stride_runs');
-    if (!Array.isArray(runs) || runs.length === 0) { 
-        await sendMessage(chatId, "❌ No runs found or database error."); 
-        return; 
+    if (!Array.isArray(runs) || runs.length === 0) {
+        await sendMessage(chatId, "❌ No runs found or database error.");
+        return;
     }
     // Safely get the last inserted run
     const lastRun = runs[runs.length - 1];
@@ -855,7 +855,7 @@ async function handleLookup(chatId, query) {
             }).join('\n');
         }
         await sendMessage(chatId,
-`👤 *${u.name}*
+            `👤 *${u.name}*
 📧 ${u.email}
 🎂 ${birthStr} (Age ${age})
 ⚧️ ${u.gender}
@@ -881,7 +881,7 @@ async function handleBroadcast(chatId, message) {
     const body = encodeURIComponent(message);
     const mailtoLink = `https://mail.google.com/mail/?view=cm&bcc=${encodeURIComponent(bccList)}&su=${subject}&body=${body}`;
     await sendMessage(chatId,
-`📣 *Broadcast Ready!*
+        `📣 *Broadcast Ready!*
 
 📧 *${emails.length} runners* will receive this message.
 
@@ -927,7 +927,7 @@ async function handleCancelExecute(chatId, runId, reason) {
     const runs = await dbGet('stride_runs', `id=eq.${runId}`);
     const dt = runs[0]?.date_label.includes('||') ? runs[0].date_label.split('||')[0] : runs[0]?.date_label;
     await sendMessage(chatId,
-`✅ *Run Cancelled!*
+        `✅ *Run Cancelled!*
 
 📅 ${dt}
 📝 *Reason:* ${reason}
@@ -979,12 +979,12 @@ async function createSetup(chatId) {
 async function createTourStopSetup(chatId) {
     await setSession('setup_stop', { step: 1, isTour: true });
     const rows = [];
-    for(let i=1; i<=8; i+=4) {
+    for (let i = 1; i <= 8; i += 4) {
         rows.push([
             { text: `Stop ${i}`, callback_data: `create_stop_v2_${i}` },
-            { text: `Stop ${i+1}`, callback_data: `create_stop_v2_${i+1}` },
-            { text: `Stop ${i+2}`, callback_data: `create_stop_v2_${i+2}` },
-            { text: `Stop ${i+3}`, callback_data: `create_stop_v2_${i+3}` }
+            { text: `Stop ${i + 1}`, callback_data: `create_stop_v2_${i + 1}` },
+            { text: `Stop ${i + 2}`, callback_data: `create_stop_v2_${i + 2}` },
+            { text: `Stop ${i + 3}`, callback_data: `create_stop_v2_${i + 3}` }
         ]);
     }
     rows.push([{ text: "↩️ Back", callback_data: "create_setup_start" }]);
@@ -1010,7 +1010,7 @@ async function createPartnerSetup(chatId, stopNum) {
 async function createPartnerName(chatId, isPartner, initData) {
     if (!isPartner) {
         await setSession('picking_time', { ...initData, isPartner: false, isTour: true });
-        await createStep1(chatId); 
+        await createStep1(chatId);
     } else {
         await setSession('partner_name', { ...initData, isPartner: true, isTour: true });
         await sendMessage(chatId, "🤝 <b>Partner Details</b>\n\nPlease type the Partner Club Name:");
@@ -1031,13 +1031,13 @@ async function createStep1(chatId) {
     const existing = await getSession();
     const baseData = (existing.state.startsWith('partner_') || existing.state.startsWith('picking_') || existing.state.startsWith('setup_')) ? existing.data : {};
     await setSession('picking_time', baseData);
-    const amHours = [4,5,6,7,8,9,10,11].map(h => ({ text: `${h} AM`, callback_data: `create_hour_${String(h).padStart(2,'0')}` }));
-    const pmHours = [1,2,3,4,5,6,7,8,9,10,11].map(h => ({ text: `${h} PM`, callback_data: `create_hour_${String(h+12).padStart(2,'0')}` }));
+    const amHours = [4, 5, 6, 7, 8, 9, 10, 11].map(h => ({ text: `${h} AM`, callback_data: `create_hour_${String(h).padStart(2, '0')}` }));
+    const pmHours = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map(h => ({ text: `${h} PM`, callback_data: `create_hour_${String(h + 12).padStart(2, '0')}` }));
     const special = [{ text: "12 PM", callback_data: "create_hour_12" }, { text: "12 AM", callback_data: "create_hour_00" }];
     const rows = [];
-    for (let i = 0; i < amHours.length; i += 4) rows.push(amHours.slice(i, i+4));
+    for (let i = 0; i < amHours.length; i += 4) rows.push(amHours.slice(i, i + 4));
     rows.push(special);
-    for (let i = 0; i < pmHours.length; i += 4) rows.push(pmHours.slice(i, i+4));
+    for (let i = 0; i < pmHours.length; i += 4) rows.push(pmHours.slice(i, i + 4));
     rows.push([{ text: "↩️ Back", callback_data: "cmd_menu" }]);
     await sendMessage(chatId, "🆕 <b>Create New Run — Step 1/5</b>\n\n⏰ What <b>hour</b> will the run start?", { inline_keyboard: rows });
 }
@@ -1046,7 +1046,7 @@ async function createStep1b(chatId, hour) {
     const session = await getSession();
     await setSession('picking_minutes', { ...session.data, hour });
     const h = parseInt(hour);
-    const label = h === 0 ? '12 AM' : h === 12 ? '12 PM' : h < 12 ? `${h} AM` : `${h-12} PM`;
+    const label = h === 0 ? '12 AM' : h === 12 ? '12 PM' : h < 12 ? `${h} AM` : `${h - 12} PM`;
     await sendMessage(chatId, `✅ Hour: *${label}*\n\n⏱️ *Minutes?*`, {
         inline_keyboard: [
             [{ text: ":00 (Sharp)", callback_data: "create_min_00" }, { text: ":30", callback_data: "create_min_30" }],
@@ -1058,15 +1058,15 @@ async function createStep1b(chatId, hour) {
 async function createStep2(chatId, hour, min) {
     const session = await getSession();
     await setSession('picking_date', { ...session.data, time: `${hour}:${min}` });
-    const dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-    const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const days = [];
     for (let i = 1; i <= 21; i++) {
         const d = new Date(); d.setDate(d.getDate() + i);
         days.push({ text: `${dayNames[d.getDay()]} ${monthNames[d.getMonth()]} ${d.getDate()}`, callback_data: `create_date_${d.toISOString().split('T')[0]}` });
     }
     const rows = [];
-    for (let i = 0; i < days.length; i += 2) rows.push(days.slice(i, i+2));
+    for (let i = 0; i < days.length; i += 2) rows.push(days.slice(i, i + 2));
     rows.push([{ text: "↩️ Back", callback_data: "create_step1" }]);
     await sendMessage(chatId, `✅ Time: <b>${esc(formatTime(`${hour}:${min}`))}</b>\n\n<b>Step 2/5</b> — 📅 Pick the run date:`, { inline_keyboard: rows });
 }
@@ -1107,9 +1107,9 @@ async function createExecute(chatId) {
         const dateObj = new Date(`${d.date}T${d.time}`);
         const fd = dateObj.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
         const ft = formatTime(d.time);
-        
+
         let previewVal = d.routeMap;
-        if(previewVal && previewVal.toLowerCase() === 'skip') previewVal = null;
+        if (previewVal && previewVal.toLowerCase() === 'skip') previewVal = null;
 
         await dbInsert('stride_runs', {
             id: crypto.randomUUID(), date_label: `${fd} - ${ft}||${dateObj.toISOString()}`,
@@ -1141,12 +1141,12 @@ export default async function handler(req, res) {
         if (body.callback_query) {
             const cq = body.callback_query;
             const chatId = cq.message.chat.id.toString();
-            
+
             if (chatId !== ADMIN_CHAT_ID) { res.status(200).send('ok'); return; }
             await answerCallbackQuery(cq.id);
-            
+
             const data = cq.data;
-            
+
             if (data === 'cmd_menu') await sendMenu(chatId);
             else if (data === 'cmd_stats') await handleStats(chatId);
             else if (data === 'cmd_runs') await handleListRuns(chatId);
@@ -1209,7 +1209,7 @@ export default async function handler(req, res) {
             else if (data.startsWith('edit_hour_')) await handleEditHour(chatId, data.replace('edit_hour_', ''));
             else if (data.startsWith('edit_min_')) await handleEditMinutes(chatId, data.replace('edit_min_', ''));
             else if (data.startsWith('edit_date_')) await handleEditDate(chatId, data.replace('edit_date_', ''));
-            
+
             // New Setup Overrides
             else if (data === 'create_step1' || data === 'create_setup_start') await createSetup(chatId);
             else if (data === 'create_tour_yes') await createTourStopSetup(chatId);
@@ -1217,7 +1217,7 @@ export default async function handler(req, res) {
             else if (data.startsWith('create_stop_v2_')) await handleAskStopName(chatId, data.replace('create_stop_v2_', ''));
             else if (data === 'create_partner_yes') { const s = await getSession(); await createPartnerName(chatId, true, { ...s.data, isTour: true }); }
             else if (data === 'create_partner_no') { const s = await getSession(); await createPartnerName(chatId, false, { ...s.data, isTour: true }); }
-            
+
             else if (data.startsWith('create_hour_')) await createStep1b(chatId, data.replace('create_hour_', ''));
             else if (data.startsWith('create_min_')) {
                 const session = await getSession();
@@ -1271,6 +1271,11 @@ export default async function handler(req, res) {
                     await sendMessage(chatId, "✅ <b>Photo successfully updated!</b>");
                     await clearSession();
                     await handleShopProductEditMenu(chatId, session.data.productId);
+                } else if (session.state === 'partner_logo') {
+                    const imgUrl = await uploadShopPhoto(chatId, body.message); // reuse upload helper
+                    if (!imgUrl) { await sendMessage(chatId, "❌ Failed to upload logo."); res.status(200).send('ok'); return; }
+                    await setSession('waiting_maps_link', { ...session.data, partnerLogo: imgUrl });
+                    await sendMessage(chatId, "✅ <b>Logo successfully saved!</b>\n\n<b>Step 3/6</b> — 📍 Send me the <b>Google Maps location link</b> for the start point:");
                 } else {
                     await sendMessage(chatId, "📸 Got a photo! Choose an option from the menus to attach it somewhere.");
                 }
@@ -1283,7 +1288,7 @@ export default async function handler(req, res) {
             const chatId = body.message.chat.id.toString();
             if (chatId !== ADMIN_CHAT_ID) { res.status(200).send('ok'); return; }
             const session = await getSession();
-            
+
             if (session.state === 'waiting_route_map') {
                 const doc = body.message.document;
                 if (!doc.file_name || !doc.file_name.toLowerCase().endsWith('.gpx')) {
@@ -1291,9 +1296,9 @@ export default async function handler(req, res) {
                     res.status(200).send('ok'); return;
                 }
                 const fileUrl = await uploadRouteDocument(chatId, doc);
-                if (!fileUrl) { 
-                    await sendMessage(chatId, "❌ Failed to upload GPX file. Try again or type 'Skip'."); 
-                    res.status(200).send('ok'); return; 
+                if (!fileUrl) {
+                    await sendMessage(chatId, "❌ Failed to upload GPX file. Try again or type 'Skip'.");
+                    res.status(200).send('ok'); return;
                 }
                 await createConfirm(chatId, session.data.locationName, fileUrl, 'gpx', session.data);
             } else {
@@ -1354,20 +1359,35 @@ export default async function handler(req, res) {
         }
 
         if (session.state === 'setup_stop_name') {
-            await createPartnerSetup(chatId, { ...session.data, stopName: text }, text);
-            return;
+            await createPartnerSetup(chatId, { ...session.data, stopName: text });
+            res.status(200).send('ok'); return;
         }
-        
+
         if (session.state === 'partner_name') {
             await createPartnerIg(chatId, text, session.data);
+            res.status(200).send('ok'); return;
         } else if (session.state === 'partner_ig') {
             await createPartnerLogo(chatId, text, session.data);
+            res.status(200).send('ok'); return;
+        } else if (session.state === 'partner_logo') {
+            // Text handler for logo (only if they typed "Skip")
+            if (text.toLowerCase() === 'skip') {
+                await setSession('waiting_maps_link', { ...session.data, partnerLogo: null });
+                await sendMessage(chatId, "✅ Logo skipped.\n\n<b>Step 3/6</b> — 📍 Send me the <b>Google Maps location link</b> for the start point:");
+            } else {
+                await sendMessage(chatId, "📸 Please send a <b>photo</b> for the logo, or type 'Skip'.");
+            }
+            res.status(200).send('ok'); return;
         } else if (session.state === 'waiting_maps_link') {
             await createStep4(chatId, text, session.data);
+            res.status(200).send('ok'); return;
         } else if (session.state === 'waiting_location_name') {
             await createStep5(chatId, text, session.data);
+            res.status(200).send('ok'); return;
         } else if (session.state === 'waiting_route_map') {
             await createConfirm(chatId, session.data.locationName, text, 'link', session.data);
+            res.status(200).send('ok'); return;
+        }
         } else if (session.state === 'waiting_lookup_name') {
             await handleLookup(chatId, text);
         } else if (session.state === 'waiting_broadcast_msg') {
