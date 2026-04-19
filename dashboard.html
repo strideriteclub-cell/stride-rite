@@ -49,11 +49,15 @@
         /* Tour Map Styles */
         .leaflet-tile { display: none; } /* Hide map tiles, use background image */
         .leaflet-control-attribution, .leaflet-control-zoom { display:none !important; }
-        .tour-map-bg { 
-            position: absolute; inset: 0; pointer-events: none; z-index: 400; background:rgba(26, 26, 31, 0.4); 
+        #tourMap {
+            width: 100%; height: 100%;
             background-image: url('cairo_map_bg.png');
             background-size: cover;
             background-position: center;
+        }
+        
+        .tour-map-bg { 
+            position: absolute; inset: 0; pointer-events: none; z-index: 400; background:rgba(26, 26, 31, 0.4); 
         }
         
         .m-name { font-family:'Outfit',sans-serif; font-weight:700; font-size:10px; color:#f5f0e8; letter-spacing:1px; text-transform:uppercase; }
