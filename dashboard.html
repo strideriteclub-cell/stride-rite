@@ -142,7 +142,7 @@
                     const igIconSvg = '<svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>';
                     // Only show IG icon for the PARTNER (no Stride Rite IG on run cards)
                     const igLink = igHandle
-                        ? ' <a href="https://instagram.com/' + igHandle + '" target="_blank" title="@' + igHandle + '" style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;background:rgba(255,107,53,0.15);border:1px solid rgba(255,107,53,0.3);border-radius:50%;color:var(--neon-accent);vertical-align:middle;margin-left:4px;">' + igIconSvg + '</a>'
+                        ? ' <a href="https://instagram.com/' + igHandle + '" target="_blank" title="@' + igHandle + '" style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;background:rgba(88,74,220,0.15);border:1px solid rgba(88,74,220,0.3);border-radius:50%;color:var(--neon-accent);vertical-align:middle;margin-left:4px;">' + igIconSvg + '</a>'
                         : '';
                     const stopLabel = run.tour_stop_id
                         ? 'Stop ' + String(run.tour_stop_id).padStart(2,'0') + ': ' + (run.tour_stop_name || run.location)
@@ -205,7 +205,7 @@
   <!-- STATION HEADER -->
   <div style="background:linear-gradient(160deg,#0f0f1a 0%,#1a1533 100%); padding:1.5rem 1.5rem 1.125rem; border-bottom:1px solid rgba(255,255,255,0.06);">
     <div style="display:flex; align-items:center; gap:8px; margin-bottom:1rem; flex-wrap:wrap;">
-      <span style="font-size:0.6rem;font-weight:800;letter-spacing:3px;color:var(--neon-accent,#ff6b35);text-transform:uppercase;background:rgba(255,107,53,0.1);border:1px solid rgba(255,107,53,0.25);padding:4px 10px;border-radius:20px;">🏅 Tour de Cairo</span>
+      <span style="font-size:0.6rem;font-weight:800;letter-spacing:3px;color:var(--neon-accent);text-transform:uppercase;background:rgba(88,74,220,0.1);border:1px solid rgba(88,74,220,0.25);padding:4px 10px;border-radius:20px;">🏅 Tour de Cairo</span>
       ${isReg ? '<span style="font-size:0.6rem;font-weight:800;letter-spacing:2px;color:#22c55e;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.25);padding:4px 10px;border-radius:20px;">✓ ALREADY REGISTERED</span>' : ''}
     </div>
 
@@ -249,16 +249,16 @@
       </div>
     </div>
     ${nextStop.location_link ? `
-    <a href="${nextStop.location_link}" target="_blank" style="display:flex;align-items:center;gap:8px;background:rgba(255,107,53,0.05);border:1px solid rgba(255,107,53,0.18);border-radius:8px;padding:0.6rem 0.9rem;color:var(--neon-accent,#ff6b35);text-decoration:none;font-size:0.82rem;font-weight:600;">
+    <a href="${nextStop.location_link}" target="_blank" style="display:flex;align-items:center;gap:8px;background:rgba(88,74,220,0.05);border:1px solid rgba(88,74,220,0.18);border-radius:8px;padding:0.6rem 0.9rem;color:var(--neon-accent);text-decoration:none;font-size:0.82rem;font-weight:600;">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
       Open Start Location in Google Maps →
     </a>` : ''}
     <div style="margin-top:0.75rem;">
       <div style="font-size:0.55rem;font-weight:700;letter-spacing:2px;color:rgba(255,255,255,0.3);text-transform:uppercase;margin-bottom:6px;">🏃 AVAILABLE DISTANCES</div>
       <div style="display:flex;gap:6px;">
-        <span style="background:rgba(255,107,53,0.1);border:1px solid rgba(255,107,53,0.2);color:var(--neon-accent,#ff6b35);padding:4px 14px;border-radius:20px;font-size:0.8rem;font-weight:800;">2K</span>
-        <span style="background:rgba(255,107,53,0.1);border:1px solid rgba(255,107,53,0.2);color:var(--neon-accent,#ff6b35);padding:4px 14px;border-radius:20px;font-size:0.8rem;font-weight:800;">5K</span>
-        <span style="background:rgba(255,107,53,0.1);border:1px solid rgba(255,107,53,0.2);color:var(--neon-accent,#ff6b35);padding:4px 14px;border-radius:20px;font-size:0.8rem;font-weight:800;">8K</span>
+        <span style="background:rgba(88,74,220,0.1);border:1px solid rgba(88,74,220,0.2);color:var(--neon-accent);padding:4px 14px;border-radius:20px;font-size:0.8rem;font-weight:800;">2K</span>
+        <span style="background:rgba(88,74,220,0.1);border:1px solid rgba(88,74,220,0.2);color:var(--neon-accent);padding:4px 14px;border-radius:20px;font-size:0.8rem;font-weight:800;">5K</span>
+        <span style="background:rgba(88,74,220,0.1);border:1px solid rgba(88,74,220,0.2);color:var(--neon-accent);padding:4px 14px;border-radius:20px;font-size:0.8rem;font-weight:800;">8K</span>
       </div>
     </div>
   </div>
@@ -277,7 +277,7 @@
       <div style="font-size:0.8rem;color:rgba(255,255,255,0.4);margin-top:4px;">See you on race day 🏃</div>
     </div>
     ` : `
-    <div style="font-size:0.6rem;font-weight:800;letter-spacing:2px;color:var(--neon-accent,#ff6b35);text-transform:uppercase;margin-bottom:0.9rem;">📋 YOUR DETAILS</div>
+    <div style="font-size:0.6rem;font-weight:800;letter-spacing:2px;color:var(--neon-accent);text-transform:uppercase;margin-bottom:0.9rem;">📋 YOUR DETAILS</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
       <input id="reg-firstname" class="reg-input" type="text" placeholder="First Name" value="${firstN}">
       <input id="reg-lastname"  class="reg-input" type="text" placeholder="Last Name"  value="${lastN}">
@@ -302,7 +302,7 @@
                 padding: '1.25rem',
                 showConfirmButton: !isReg,
                 confirmButtonText: '🚀 Lock In My Spot',
-                confirmButtonColor: 'var(--neon-accent, #ff6b35)',
+                confirmButtonColor: 'var(--neon-accent)',
                 showCancelButton: true,
                 cancelButtonText: isReg ? 'Close' : 'Cancel',
                 preConfirm: () => {
@@ -419,7 +419,7 @@
             Swal.fire({
                 title: '<span style="font-family:Outfit;color:#fff;">🏅 Tour de Cairo</span>',
                 html: '<p style="color:rgba(255,255,255,0.65);text-align:left;line-height:1.7;">Tour de Cairo is Stride Rite\'s flagship 8-stop running series across Cairo\'s most iconic neighbourhoods. Complete every stop to earn your Tour Finisher badge and be celebrated by the community.</p>',
-                background:'#141419', color:'#fff', confirmButtonColor:'var(--neon-accent,#ff6b35)'
+                background:'#141419', color:'#fff', confirmButtonColor:'var(--neon-accent)'
             });
         }
     </script>
