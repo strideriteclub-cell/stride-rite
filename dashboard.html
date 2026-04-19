@@ -396,7 +396,7 @@
                 for (let i = 0; i < stops.length; i++) {
                     const s = stops[i];
                     const icon = L.divIcon({
-                        html: '<div class="m-wrap" id="mwrap-' + s.id + '"><div class="m-core"></div><div class="m-label">' + String(s.id).padStart(2,'0') + '</div></div>',
+                        html: '<div class="m-wrap" id="mwrap-' + s.id + '"><div class="m-core"></div><div class="m-label">' + String(s.id).padStart(2,'0') + ' \u2014 ' + s.name + '</div></div>',
                         className: ''
                     });
                     L.marker([s.lat, s.lng], { icon }).addTo(tourMap);
