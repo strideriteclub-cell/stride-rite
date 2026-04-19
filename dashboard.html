@@ -164,25 +164,47 @@
 
     <script src="app.js?v=23"></script>
     <script>
-        // Use global user state immediately
-        const user = AuthService.getCurrentUser();
-        if (!user) { 
-            // Only redirect if we're not already on the homepage
-            if (!window.location.href.includes('index.html')) {
-                window.location.href = 'index.html'; 
-            }
-        }
-
-        // Update UI immediately (Synchronous)
-        document.addEventListener('DOMContentLoaded', () => {
-            const welcomeUser = document.getElementById('welcomeUser');
-            if (welcomeUser && user) welcomeUser.innerText = `Welcome back, ${(user.name || 'Runner').split(' ')[0]}!`;
-            
-            const welcomeMsg = document.getElementById('welcomeMsg');
-            if (welcomeMsg && user) welcomeMsg.innerText = `Focus on Today's Goal, ${(user.name || 'Runner').split(' ')[0]}`;
-        });
-
+        // GLOBAL STATE
+        let user = null;
         let runSelections = {};
+
+        // INITIALIZATION WRAPPER
+        window.addEventListener('load', async () => {
+            console.log("Dashboard initializing...");
+            try {
+                // 1. Check Auth (Use window.AuthService to be 100% sure)
+                if (window.AuthService) {
+                    user = window.AuthService.getCurrentUser();
+                } else {
+                    console.error("AuthService missing!");
+                    throw new Error("Core system failed to load. Please refresh.");
+                }
+
+                if (!user) {
+                    window.location.href = 'index.html';
+                    return;
+                }
+
+                // 2. Update UI
+                const welcomeUser = document.getElementById('welcomeUser');
+                if (welcomeUser) welcomeUser.innerText = `Welcome back, ${(user.name || 'Runner').split(' ')[0]}!`;
+                
+                // 3. Kick off services
+                await initDashboard();
+                await initTourMap();
+                
+            } catch (err) {
+                console.error("Dashboard Crash:", err);
+                const container = document.getElementById('runsContainer');
+                if (container) {
+                    container.innerHTML = `<div class="glass-card" style="padding:2rem; border-color:#ff4d4d;">
+                        <h3 style="color:#ff4d4d;">⚠️ Dashboard Error</h3>
+                        <p style="color:#ccc;">${err.message}</p>
+                        <button onclick="location.reload()" class="btn btn-sm" style="margin-top:1rem;">Retry Connection</button>
+                    </div>`;
+                }
+            }
+        });
 
         async function initDashboard() {
             if (!user) return;
@@ -512,8 +534,6 @@
             observer.observe(document.getElementById('tourMap'));
         }
 
-        initDashboard();
-        initTourMap();
 
     </script>
 </body>
