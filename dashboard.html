@@ -45,6 +45,69 @@
         .weather-stat { display: flex; flex-direction: column; }
         .weather-label { font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
         .weather-val { font-weight: 700; color: white; }
+
+        /* Tour Map Styles */
+        .leaflet-tile { display: none; } /* Hide map tiles, use background image */
+        .leaflet-control-attribution, .leaflet-control-zoom { display:none !important; }
+        .tour-map-bg { 
+            position: absolute; inset: 0; pointer-events: none; z-index: 400; background:rgba(26, 26, 31, 0.4); 
+            background-image: url('cairo_medium_density_wide_map_1776562543956.png');
+            background-size: cover;
+            background-position: center;
+        }
+        
+        .m-name { font-family:'Outfit',sans-serif; font-weight:700; font-size:10px; color:#f5f0e8; letter-spacing:1px; text-transform:uppercase; }
+        .m-ring2 { position:absolute; width:46px; height:46px; border:1px solid var(--peach-accent); border-radius:50%; opacity:.18; transform:translate(-50%,-50%); top:0; left:0; }
+        .m-ring1 { position:absolute; width:28px; height:28px; border:1.5px solid var(--peach-accent); border-radius:50%; opacity:.45; transform:translate(-50%,-50%); top:0; left:0; }
+        .m-core { position:absolute; width:14px; height:14px; background:var(--peach-accent); border-radius:50%; border:2px solid #1a1a1f; transform:translate(-50%,-50%); top:0; left:0; z-index:2; }
+        .m-label { position:absolute; transform:translateX(-50%); top:14px; left:0; background:rgba(26,26,31,0.95); border:1px solid var(--peach-accent); padding:4px 10px; border-radius:4px; white-space:nowrap; display:flex; align-items:center; gap:6px; z-index:3; transition: transform 0.2s; box-shadow: 0 4px 12px rgba(0,0,0,0.5); }
+        .m-label.up { top: auto; bottom: 14px; }
+        .m-label.left { transform: translateX(-70%); }
+        .m-label.small .m-num, .m-label.small .m-name { font-size: 8px; }
+        .m-num { font-family:'Outfit',sans-serif; font-weight:800; font-size:10px; color:var(--peach-accent); letter-spacing:.5px; }
+
+        .m-wrap { position:relative; width:0; height:0; opacity: 0; transform: scale(0); transition: opacity 0.4s, transform 0.4s; }
+        .m-wrap.visible { opacity: 1; transform: scale(1); }
+
+        .m-impact {
+            position: absolute; width: 120px; height: 120px; border: 1px solid var(--peach-accent); border-radius: 50%;
+            transform: translate(-50%, -50%) scale(0); pointer-events: none; top:0; left:0;
+        }
+        .m-wrap.visible .m-impact { animation: impact 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards 0.2s; }
+        @keyframes impact {
+            0% { transform: translate(-50%, -50%) scale(0); opacity: 1; }
+            100% { transform: translate(-50%, -50%) scale(1.5); opacity: 0; }
+        }
+
+        .side-progress {
+            position: absolute; left: 0; top: 0; width: 100%; height: 3px; background: rgba(255,255,255,0.05); z-index: 450;
+        }
+        .side-progress-fill {
+            position: absolute; top: 0; left: 0; height: 100%; width: 0%; background: var(--peach-accent); transition: width 0.6s ease; box-shadow: 0 0 10px var(--peach-accent);
+        }
+        
+        .side-list {
+            position: absolute; top: 20px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: row; gap: 40px; z-index: 500;
+        }
+        .list-item {
+            width: 28px; height: 28px; background: #1a1a1f; border: 2px solid var(--peach-accent); border-radius: 50%;
+            display: flex; align-items: center; justify-content: center; color: var(--peach-accent); font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 12px;
+            transition: all 0.7s cubic-bezier(0.4, 0, 0.2, 1); opacity: 0.8;
+        }
+        .list-item.active { transform: scale(1.2); background: var(--peach-accent); color: #1a1a1f; opacity: 1; }
+        .list-item.unlocked { background: #22c55e; border-color: #22c55e; color: #1a1a1f; opacity: 1; }
+        .list-item.gone { opacity: 0; transform: translateY(-20px) scale(0); }
+
+        /* Status-specific Marker Styles */
+        .m-wrap.unlocked .m-core { background: #22c55e; border-color: #f5f0e8; }
+        .m-wrap.unlocked .m-ring1, .m-wrap.unlocked .m-ring2 { border-color: #22c55e; }
+        .m-wrap.unlocked .m-label { border-color: #22c55e; background: rgba(13, 13, 13, 0.95); }
+        .m-wrap.unlocked .m-num { color: #22c55e; }
+        .m-wrap.unlocked .m-impact { border-color: #22c55e; }
+
+        .m-wrap.locked { filter: grayscale(1); opacity: 0.5; }
+        .m-wrap.locked .m-impact { display: none; }
+
     </style>
 </head>
 <body>
@@ -65,6 +128,20 @@
         </header>
 
         <div id="advisorContainer"></div>
+
+        <section class="animate-up" style="animation-delay: 0.1s; margin-bottom: 3rem;">
+            <div class="glass-card" style="padding: 0; overflow: hidden; position: relative; border-bottom: 4px solid var(--peach-accent);">
+                <div style="padding: 2rem; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <h2 class="section-title" style="margin-bottom: 0;">🗺️ Tour de Cairo</h2>
+                        <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 0.5rem;">8 Runs · 8 Districts · 1 City</p>
+                    </div>
+                </div>
+                <div style="position: relative; height: 500px; width: 100%; background: #1a1a1f; overflow: hidden;">
+                    <div id="tourMap" style="width: 100%; height: 100%;"></div>
+                </div>
+            </div>
+        </section>
 
         <section class="animate-up" style="animation-delay: 0.2s;">
             <h2 class="section-title">🗓 Upcoming Community Runs</h2>
@@ -107,6 +184,22 @@
                 return `
                     <div class="glass-card run-card ${isReg ? 'registered' : ''} animate-up">
                         ${isReg ? '<span class="registered-badge">✓ Registered</span>' : ''}
+                        
+                        ${run.partner_name ? `
+                        <div style="display:flex; align-items:center; gap:12px; margin-bottom:1rem; padding-bottom:1rem; border-bottom:1px solid rgba(255,255,255,0.05);">
+                            ${run.partner_logo ? `<img src="${run.partner_logo}" style="width:40px; height:40px; border-radius:8px; object-fit:cover;">` : ''}
+                            <div>
+                                <div style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px; font-weight:700;">Hosted By</div>
+                                <div style="font-weight:700; color:#fff; display:flex; align-items:center; gap:6px;">
+                                    ${run.partner_name} x Stride Rite
+                                    ${run.partner_ig ? `<a href="https://instagram.com/${run.partner_ig.replace('@', '')}" target="_blank" style="color:var(--neon-accent);"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg></a>` : ''}
+                                </div>
+                            </div>
+                        </div>
+                        ` : ''}
+
+                        ${run.tour_stop_id ? `<div style="font-family:'Barlow Condensed', sans-serif; font-weight:800; color:var(--neon-accent); letter-spacing:3px; text-transform:uppercase; margin-bottom:0.5rem; display:inline-block; border:1px solid var(--neon-accent); opacity:0.8; padding:2px 8px; border-radius:4px; font-size:0.8rem;">Tour Stop 0${run.tour_stop_id}</div>` : ''}
+                        
                         <div class="run-date">${run.date_label}</div>
                         <div class="run-loc">
                             <span>📍</span>
@@ -260,7 +353,121 @@
             }
         }
 
+        // -------------------------
+        // TOUR MAP LOGIC
+        // -------------------------
+        async function initTourMap() {
+            const mapContainer = document.getElementById('tourMap');
+            if (!mapContainer) return;
+            
+            const tourMap = L.map('tourMap', {
+                zoomSnap: 0.1, zoomControl: false, scrollWheelZoom: false,
+                dragging: true, touchZoom: false, doubleClickZoom: false,
+                boxZoom: false, keyboard: false, attributionControl: false
+            });
+            
+            tourMap.setView([30.035, 31.4775], 9.7);
+            
+            // Add custom background overlay
+            mapContainer.insertAdjacentHTML('afterbegin', '<div class="tour-map-bg"></div><div class="side-progress"><div class="side-progress-fill" id="progressFill"></div></div><div class="side-list" id="sideList"></div>');
+
+            const stops = await AppService.getTourProgress(user.id);
+            const polyline = L.polyline([], { color: '#ff6b35', weight: 2, opacity: 0.8, dashArray: '6 8' }).addTo(tourMap);
+            
+            const sideList = document.getElementById('sideList');
+            stops.forEach((s, i) => {
+                const el = document.createElement('div');
+                el.className = `list-item ${s.status === 'unlocked' ? 'unlocked' : ''}`;
+                el.id = `item-${i}`;
+                el.innerText = i + 1;
+                sideList.appendChild(el);
+            });
+
+            async function animateLine(points, duration = 960) {
+                if (polyline.getLatLngs().length === 0) polyline.addLatLng(points[0]);
+                const segments = points.length - 1;
+                const segDuration = duration / segments;
+
+                for (let i = 0; i < segments; i++) {
+                    const start = L.latLng(points[i]);
+                    const end = L.latLng(points[i+1]);
+                    await new Promise(resolve => {
+                        const startTime = performance.now();
+                        polyline.addLatLng(start);
+                        function frame(now) {
+                            const elapsed = (now - startTime);
+                            const progress = Math.min(elapsed / segDuration, 1);
+                            const currentLat = start.lat + (end.lat - start.lat) * progress;
+                            const currentLng = start.lng + (end.lng - start.lng) * progress;
+                            const currentPoints = polyline.getLatLngs();
+                            currentPoints[currentPoints.length - 1] = L.latLng(currentLat, currentLng);
+                            polyline.setLatLngs(currentPoints);
+                            if (progress < 1) requestAnimationFrame(frame);
+                            else resolve();
+                        }
+                        requestAnimationFrame(frame);
+                    });
+                }
+            }
+
+            function createMarker(s) {
+                const html = `<div class="m-wrap ${s.status}" id="marker-${s.id}"><div class="m-impact"></div><div class="m-ring2"></div><div class="m-ring1"></div><div class="m-core"></div><div class="m-label ${s.up ? 'up' : ''} ${s.left ? 'left' : ''} ${s.small ? 'small' : ''}"><span class="m-num">0${s.id}</span><span class="m-name">${s.name}</span></div></div>`;
+                const icon = L.divIcon({ html, className:'', iconSize:[0,0], iconAnchor:[0,0] });
+                return L.marker([s.lat, s.lng], { icon });
+            }
+
+            async function startTour() {
+                const progressFill = document.getElementById('progressFill');
+                const totalStops = stops.length;
+                let unlockedCount = 0;
+
+                for (let i = 0; i < totalStops; i++) {
+                    const s = stops[i];
+                    const listItem = document.getElementById(`item-${i}`);
+                    
+                    if (s.status === 'unlocked') unlockedCount++;
+                    progressFill.style.width = `${((i) / (totalStops - 1)) * 100}%`;
+                    
+                    if (s.status !== 'unlocked') {
+                        listItem.classList.add('active');
+                    }
+                    
+                    await new Promise(r => setTimeout(r, 200));
+                    
+                    if (s.status !== 'unlocked') {
+                        listItem.classList.remove('active');
+                    }
+                    
+                    createMarker(s).addTo(tourMap);
+                    setTimeout(() => {
+                        const markerEl = document.getElementById(`marker-${s.id}`);
+                        if (markerEl) markerEl.classList.add('visible');
+                    }, 40);
+
+                    if (i > 0) {
+                        const path = s.path || [stops[i-1], stops[i]];
+                        animateLine(path, 600);
+                    }
+                    await new Promise(r => setTimeout(r, 300));
+                }
+                
+                // Final progress bar reflects actual completion for the month
+                const actualCompletion = (stops.filter(s => s.status === 'unlocked').length / totalStops) * 100;
+                progressFill.style.width = `${actualCompletion}%`;
+            }
+
+            const observer = new IntersectionObserver((entries) => {
+                if(entries[0].isIntersecting) {
+                    setTimeout(startTour, 500);
+                    observer.disconnect();
+                }
+            }, { threshold: 0.1 });
+            observer.observe(document.getElementById('tourMap'));
+        }
+
         initDashboard();
+        initTourMap();
+
     </script>
 </body>
 </html>
