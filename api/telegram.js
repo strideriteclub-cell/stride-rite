@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const SUPABASE_URL = 'https://qcqyyfnsfyuaaaacddsm.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_uXs2e5aPzrIL_M2xsYDmWg_hPOUaG1l';
 const BOT_TOKEN = '8682463984:AAHA2PWT7WtQRskETmOanj0k2b45ZgGfYIs';
