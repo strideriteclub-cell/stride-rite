@@ -46,9 +46,9 @@
     <nav class="navbar">
         <div style="font-family:'Outfit'; font-weight:800; font-size:1.5rem;">S<span style="color:var(--neon-accent);">.</span></div>
         <div class="nav-links">
-            <a href="shop.html">ðŸ› Shop</a>
-            <a href="gallery.html">ðŸ“¸ Gallery</a>
-            <a href="profile.html">ðŸ‘¤ My Profile</a>
+            <a href="shop.html">🛍 Shop</a>
+            <a href="gallery.html">📸 Gallery</a>
+            <a href="profile.html">👤 My Profile</a>
             <a href="#" onclick="AuthService.logout()">Logout</a>
         </div>
     </nav>
@@ -66,13 +66,13 @@
             <div class="glass-card" style="padding:0; overflow:hidden; position:relative; border-bottom:4px solid var(--neon-accent);">
                 <div style="padding:2rem; border-bottom:1px solid rgba(255,255,255,0.05); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
                     <div>
-                        <h2 class="section-title" style="margin-bottom:0;">ðŸ—ºï¸ Tour de Cairo</h2>
+                        <h2 class="section-title" style="margin-bottom:0;">🗺️ Tour de Cairo</h2>
                         <div style="display:flex; gap:10px; align-items:center; margin-top:5px;">
-                            <p style="color:var(--text-muted); font-size:0.9rem; margin:0;">8 Runs Â· 8 Districts Â· 1 City</p>
+                            <p style="color:var(--text-muted); font-size:0.9rem; margin:0;">8 Runs · 8 Districts · 1 City</p>
                             <button onclick="showTourInfo()" style="background:none;border:none;color:var(--neon-accent);font-size:0.8rem;text-decoration:underline;cursor:pointer;padding:0;">What is this?</button>
                         </div>
                     </div>
-                    <button class="btn btn-primary btn-sm" onclick="spotlightNextStop()">ðŸš€ Register for next Stop</button>
+                    <button class="btn btn-primary btn-sm" onclick="spotlightNextStop()">🚀 Register for next Stop</button>
                 </div>
                 <div style="position:relative; height:480px; width:100%; background:#0d0d11; overflow:hidden;">
                     <div id="tourMap" style="width:100%; height:100%;"></div>
@@ -82,7 +82,7 @@
 
         <!-- Upcoming Runs -->
         <section>
-            <h2 class="section-title">ðŸ—“ Upcoming Community Runs</h2>
+            <h2 class="section-title">🗓 Upcoming Community Runs</h2>
             <div class="runs-grid" id="runsContainer">
                 <p style="color:var(--text-muted); padding:2rem;">Loading runs...</p>
             </div>
@@ -102,9 +102,9 @@
             initTourMap();
         });
 
-        // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ─────────────────────────────────────────────────────────────────
         // Dashboard Cards
-        // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ─────────────────────────────────────────────────────────────────
         async function initDashboard() {
             const container = document.getElementById('runsContainer');
             try {
@@ -134,20 +134,20 @@
                         ? 'Stop ' + String(run.tour_stop_id).padStart(2,'0') + ': ' + (run.tour_stop_name || run.location)
                         : run.location;
                     return '<div class="glass-card run-card ' + (isReg?'registered':'') + '">'
-                        + (isReg ? '<span class="registered-badge">âœ“ Registered</span>' : '')
+                        + (isReg ? '<span class="registered-badge">✓ Registered</span>' : '')
                         + '<div style="display:flex;align-items:center;gap:12px;margin-bottom:1rem;padding-bottom:1rem;border-bottom:1px solid rgba(255,255,255,0.05);">'
                         + logoHtml
                         + '<div><div style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;font-weight:700;">Hosted By</div>'
-                        + '<div style="font-weight:700;color:#fff;">' + (run.partner_name || 'Stride Rite') + ' Ã— Stride Rite' + igLink + '</div></div>'
+                        + '<div style="font-weight:700;color:#fff;">' + (run.partner_name || 'Stride Rite') + ' × Stride Rite' + igLink + '</div></div>'
                         + '</div>'
                         + '<div style="font-family:Outfit;font-weight:800;color:var(--neon-accent);letter-spacing:2px;text-transform:uppercase;margin-bottom:0.8rem;font-size:1.05rem;">' + stopLabel + '</div>'
                         + '<div class="run-date">' + run.date_label + '</div>'
-                        + '<div class="run-loc">ðŸ“ <a href="' + run.location_link + '" target="_blank" style="color:var(--text-muted);text-decoration:underline;">' + run.location + '</a></div>'
+                        + '<div class="run-loc">📍 <a href="' + run.location_link + '" target="_blank" style="color:var(--text-muted);text-decoration:underline;">' + run.location + '</a></div>'
                         + (!isReg
                             ? '<div class="dist-selector" style="margin-top:1rem;">'
                               + ['2K','5K','8K'].map(d => '<button class="dist-btn ' + (dist===d?'active':'') + '" onclick="selectDist(\'' + run.id + '\',\'' + d + '\')">' + d + '</button>').join('')
                               + '</div><button class="btn btn-primary btn-block" onclick="joinRun(\'' + run.id + '\')">Join Mission</button>'
-                            : '<button class="btn btn-secondary btn-block" disabled style="background:rgba(34,197,94,0.1);color:#22c55e;border-color:#22c55e;cursor:default;">You\'re Registered âœ“</button>')
+                            : '<button class="btn btn-secondary btn-block" disabled style="background:rgba(34,197,94,0.1);color:#22c55e;border-color:#22c55e;cursor:default;">You\'re Registered ✓</button>')
                         + '</div>';
                 }).join('');
 
@@ -158,9 +158,9 @@
             }
         }
 
-        // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ─────────────────────────────────────────────────────────────────
         // Station / Mission Briefing Spotlight
-        // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ─────────────────────────────────────────────────────────────────
         window.spotlightNextStop = async () => {
             if (!window.lastFetchedRuns) { await initDashboard(); }
             if (!window.lastFetchedRuns || window.lastFetchedRuns.length === 0) {
@@ -191,8 +191,8 @@
   <!-- STATION HEADER -->
   <div style="background:linear-gradient(160deg,#0f0f1a 0%,#1a1533 100%); padding:1.5rem 1.5rem 1.125rem; border-bottom:1px solid rgba(255,255,255,0.06);">
     <div style="display:flex; align-items:center; gap:8px; margin-bottom:1rem; flex-wrap:wrap;">
-      <span style="font-size:0.6rem;font-weight:800;letter-spacing:3px;color:var(--neon-accent,#ff6b35);text-transform:uppercase;background:rgba(255,107,53,0.1);border:1px solid rgba(255,107,53,0.25);padding:4px 10px;border-radius:20px;">ðŸ… Tour de Cairo</span>
-      ${isReg ? '<span style="font-size:0.6rem;font-weight:800;letter-spacing:2px;color:#22c55e;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.25);padding:4px 10px;border-radius:20px;">âœ“ ALREADY REGISTERED</span>' : ''}
+      <span style="font-size:0.6rem;font-weight:800;letter-spacing:3px;color:var(--neon-accent,#ff6b35);text-transform:uppercase;background:rgba(255,107,53,0.1);border:1px solid rgba(255,107,53,0.25);padding:4px 10px;border-radius:20px;">🏅 Tour de Cairo</span>
+      ${isReg ? '<span style="font-size:0.6rem;font-weight:800;letter-spacing:2px;color:#22c55e;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.25);padding:4px 10px;border-radius:20px;">✓ ALREADY REGISTERED</span>' : ''}
     </div>
 
     ${stopNum ? `
@@ -204,7 +204,7 @@
       </div>
     </div>
     <div style="margin-bottom:1rem;padding:8px 12px;background:linear-gradient(90deg,rgba(255,107,53,0.12),transparent);border-left:3px solid var(--neon-accent,#ff6b35);border-radius:0 6px 6px 0;font-size:0.82rem;color:rgba(255,255,255,0.7);font-style:italic;">
-      ðŸ”¥ This is your chance to add Stop ${stopNum} to your Tour de Cairo legacy. Lock in your spot!
+      🔥 This is your chance to add Stop ${stopNum} to your Tour de Cairo legacy. Lock in your spot!
     </div>` : `<div style="font-family:'Outfit',sans-serif; font-size:1.55rem; font-weight:800; color:#fff; margin-bottom:1rem;">${stopName}</div>`}
 
     <!-- Host branding row -->
@@ -214,7 +214,7 @@
       </div>
       <div style="flex:1;min-width:0;">
         <div style="font-size:0.6rem;color:rgba(255,255,255,0.35);font-weight:600;letter-spacing:1px;text-transform:uppercase;">Hosted by</div>
-        <div style="font-weight:700;color:#fff;font-size:0.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${partnerName} Ã— Stride Rite</div>
+        <div style="font-weight:700;color:#fff;font-size:0.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${partnerName} × Stride Rite</div>
       </div>
       <div style="display:flex;gap:6px;flex-shrink:0;">
         ${nextStop.partner_ig ? `<a href="https://instagram.com/${parseIgHandle(nextStop.partner_ig)||nextStop.partner_ig.replace('@','')}" target="_blank" title="Partner Instagram" style="width:26px;height:26px;background:rgba(255,107,53,0.12);border:1px solid rgba(255,107,53,0.25);border-radius:6px;display:flex;align-items:center;justify-content:center;color:var(--neon-accent,#ff6b35);text-decoration:none;">${igSvg}</a>` : ''}
@@ -226,21 +226,21 @@
   <div style="background:#0d0d11; padding:1rem 1.5rem; border-bottom:1px solid rgba(255,255,255,0.06);">
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:0.75rem;">
       <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:0.7rem;">
-        <div style="font-size:0.55rem;font-weight:700;letter-spacing:2px;color:rgba(255,255,255,0.35);text-transform:uppercase;margin-bottom:3px;">ðŸ“… DATE & TIME</div>
+        <div style="font-size:0.55rem;font-weight:700;letter-spacing:2px;color:rgba(255,255,255,0.35);text-transform:uppercase;margin-bottom:3px;">📅 DATE & TIME</div>
         <div style="font-weight:700;color:#fff;font-size:0.9rem;">${dateLabel}</div>
       </div>
       <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:0.7rem;overflow:hidden;">
-        <div style="font-size:0.55rem;font-weight:700;letter-spacing:2px;color:rgba(255,255,255,0.35);text-transform:uppercase;margin-bottom:3px;">ðŸ“ START POINT</div>
-        <div style="font-weight:700;color:#fff;font-size:0.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${nextStop.location || 'â€”'}</div>
+        <div style="font-size:0.55rem;font-weight:700;letter-spacing:2px;color:rgba(255,255,255,0.35);text-transform:uppercase;margin-bottom:3px;">📍 START POINT</div>
+        <div style="font-weight:700;color:#fff;font-size:0.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${nextStop.location || '—'}</div>
       </div>
     </div>
     ${nextStop.location_link ? `
     <a href="${nextStop.location_link}" target="_blank" style="display:flex;align-items:center;gap:8px;background:rgba(255,107,53,0.05);border:1px solid rgba(255,107,53,0.18);border-radius:8px;padding:0.6rem 0.9rem;color:var(--neon-accent,#ff6b35);text-decoration:none;font-size:0.82rem;font-weight:600;">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
-      Open Start Location in Google Maps â†’
+      Open Start Location in Google Maps →
     </a>` : ''}
     <div style="margin-top:0.75rem;">
-      <div style="font-size:0.55rem;font-weight:700;letter-spacing:2px;color:rgba(255,255,255,0.3);text-transform:uppercase;margin-bottom:6px;">ðŸƒ AVAILABLE DISTANCES</div>
+      <div style="font-size:0.55rem;font-weight:700;letter-spacing:2px;color:rgba(255,255,255,0.3);text-transform:uppercase;margin-bottom:6px;">🏃 AVAILABLE DISTANCES</div>
       <div style="display:flex;gap:6px;">
         <span style="background:rgba(255,107,53,0.1);border:1px solid rgba(255,107,53,0.2);color:var(--neon-accent,#ff6b35);padding:4px 14px;border-radius:20px;font-size:0.8rem;font-weight:800;">2K</span>
         <span style="background:rgba(255,107,53,0.1);border:1px solid rgba(255,107,53,0.2);color:var(--neon-accent,#ff6b35);padding:4px 14px;border-radius:20px;font-size:0.8rem;font-weight:800;">5K</span>
@@ -258,17 +258,17 @@
   <div style="background:#0d0d11; padding:1.25rem 1.5rem 1.5rem;">
     ${isReg ? `
     <div style="text-align:center;padding:1rem;background:rgba(34,197,94,0.06);border:1px solid rgba(34,197,94,0.18);border-radius:10px;">
-      <div style="font-size:1.2rem;margin-bottom:4px;">âœ…</div>
+      <div style="font-size:1.2rem;margin-bottom:4px;">✅</div>
       <div style="font-weight:700;color:#22c55e;font-size:0.95rem;">You're already registered for this stop!</div>
-      <div style="font-size:0.8rem;color:rgba(255,255,255,0.4);margin-top:4px;">See you on race day ðŸƒ</div>
+      <div style="font-size:0.8rem;color:rgba(255,255,255,0.4);margin-top:4px;">See you on race day 🏃</div>
     </div>
     ` : `
-    <div style="font-size:0.6rem;font-weight:800;letter-spacing:2px;color:var(--neon-accent,#ff6b35);text-transform:uppercase;margin-bottom:0.9rem;">ðŸ“‹ YOUR DETAILS</div>
+    <div style="font-size:0.6rem;font-weight:800;letter-spacing:2px;color:var(--neon-accent,#ff6b35);text-transform:uppercase;margin-bottom:0.9rem;">📋 YOUR DETAILS</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
       <input id="reg-firstname" class="reg-input" type="text" placeholder="First Name" value="${firstN}">
       <input id="reg-lastname"  class="reg-input" type="text" placeholder="Last Name"  value="${lastN}">
     </div>
-    <input id="reg-phone" class="reg-input" type="tel" placeholder="ðŸ“ž Phone (e.g. 0100 000 0000)" style="margin-bottom:12px;">
+    <input id="reg-phone" class="reg-input" type="tel" placeholder="📞 Phone (e.g. 0100 000 0000)" style="margin-bottom:12px;">
     <div style="font-size:0.6rem;font-weight:700;letter-spacing:1.5px;color:rgba(255,255,255,0.35);text-transform:uppercase;margin-bottom:8px;">YOUR DISTANCE</div>
     <div style="display:flex;gap:8px;" id="dist-row">
       <button class="dist-opt" data-dist="2K" onclick="selectModalDist(this)">2K</button>
@@ -287,7 +287,7 @@
                 color: '#fff',
                 padding: '1.25rem',
                 showConfirmButton: !isReg,
-                confirmButtonText: 'ðŸš€ Lock In My Spot',
+                confirmButtonText: '🚀 Lock In My Spot',
                 confirmButtonColor: 'var(--neon-accent, #ff6b35)',
                 showCancelButton: true,
                 cancelButtonText: isReg ? 'Close' : 'Cancel',
@@ -299,7 +299,7 @@
                     const active = document.querySelector('#dist-row .dist-opt.active');
                     const dist  = active ? active.dataset.dist : null;
                     if (!fn || !phone || !dist) {
-                        Swal.showValidationMessage('âš ï¸ Please enter your first name, phone number, and choose a distance.');
+                        Swal.showValidationMessage('⚠️ Please enter your first name, phone number, and choose a distance.');
                         return false;
                     }
                     return { name: (fn + ' ' + ln).trim(), phone, dist };
@@ -340,16 +340,16 @@
             Swal.fire({ title: 'Locking in your spot...', background:'#141419', didOpen: () => Swal.showLoading() });
             const ok = await AppService.registerForRun(rId, finalDist, user.level || 'Beginner', finalName, phoneNumber);
             if (ok) {
-                Swal.fire({ icon:'success', title:'You\'re in!', text:'Mission confirmed. See you there ðŸƒ', background:'#141419', color:'#fff' });
+                Swal.fire({ icon:'success', title:'You\'re in!', text:'Mission confirmed. See you there 🏃', background:'#141419', color:'#fff' });
                 await initDashboard();
             } else {
                 Swal.fire({ icon:'error', title:'Couldn\'t register', text:'You may already be registered, or a connection error occurred.', background:'#141419', color:'#fff' });
             }
         };
 
-        // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ─────────────────────────────────────────────────────────────────
         // Weather Banner
-        // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ─────────────────────────────────────────────────────────────────
         async function loadAIAdvisor(run) {
             try {
                 const res  = await fetch('https://api.weatherapi.com/v1/current.json?key=686edc30f7764d08ada12150261604&q=' + encodeURIComponent(run.location));
@@ -357,15 +357,15 @@
                 document.getElementById('advisorContainer').innerHTML =
                     '<div class="advisor-card" style="margin-bottom:2rem;">'
                     + '<img src="' + data.current.condition.icon + '" style="width:52px;">'
-                    + '<div style="flex:1;"><div style="color:var(--neon-accent);font-weight:800;font-size:0.7rem;text-transform:uppercase;letter-spacing:1px;">ðŸŒ¤ Weather for Next Run</div>'
-                    + '<div style="color:white;font-weight:700;margin-top:2px;">' + data.current.temp_c + 'Â°C â€” ' + data.current.condition.text + '</div></div>'
+                    + '<div style="flex:1;"><div style="color:var(--neon-accent);font-weight:800;font-size:0.7rem;text-transform:uppercase;letter-spacing:1px;">🌤 Weather for Next Run</div>'
+                    + '<div style="color:white;font-weight:700;margin-top:2px;">' + data.current.temp_c + '°C — ' + data.current.condition.text + '</div></div>'
                     + '</div>';
             } catch (e) { /* silent */ }
         }
 
-        // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ─────────────────────────────────────────────────────────────────
         // Animated Tour Overview Map (CartoDB Dark)
-        // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ─────────────────────────────────────────────────────────────────
         async function initTourMap() {
             const mapEl = document.getElementById('tourMap');
             const tourMap = L.map(mapEl, { zoomControl: false, attributionControl: false }).setView([30.035, 31.4775], 9.7);
@@ -403,7 +403,7 @@
 
         function showTourInfo() {
             Swal.fire({
-                title: '<span style="font-family:Outfit;color:#fff;">ðŸ… Tour de Cairo</span>',
+                title: '<span style="font-family:Outfit;color:#fff;">🏅 Tour de Cairo</span>',
                 html: '<p style="color:rgba(255,255,255,0.65);text-align:left;line-height:1.7;">Tour de Cairo is Stride Rite\'s flagship 8-stop running series across Cairo\'s most iconic neighbourhoods. Complete every stop to earn your Tour Finisher badge and be celebrated by the community.</p>',
                 background:'#141419', color:'#fff', confirmButtonColor:'var(--neon-accent,#ff6b35)'
             });
