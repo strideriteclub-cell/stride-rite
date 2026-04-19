@@ -575,6 +575,7 @@ async function handleEditPickField(chatId, runId) {
             [{ text: "⏰ Date & Time", callback_data: "edit_field_datetime" }],
             [{ text: "📍 Location Name", callback_data: "edit_field_location" }],
             [{ text: "🗺️ Maps Link", callback_data: "edit_field_maps" }],
+            [{ text: "📍 Tour Stop #", callback_data: "edit_field_tour" }],
             [{ text: "↩️ Back", callback_data: "cmd_edit_list" }]
         ]
     });
@@ -621,6 +622,32 @@ async function handleEditMinutes(chatId, min) {
     for (let i = 0; i < days.length; i += 2) rows.push(days.slice(i, i+2));
     rows.push([{ text: "↩️ Back", callback_data: "edit_field_datetime" }]);
     await sendMessage(chatId, `✅ Time: *${formatTime(`${session.data.hour}:${min}`)}*\n\n📅 *New date?*`, { inline_keyboard: rows });
+}
+
+async function handleEditTour(chatId) {
+    const session = await getSession();
+    const rows = [];
+    for(let i=1; i<=8; i+=4) {
+        rows.push([
+            { text: `Stop ${i}`, callback_data: `edit_stop_save_${i}` },
+            { text: `Stop ${i+1}`, callback_data: `edit_stop_save_${i+1}` },
+            { text: `Stop ${i+2}`, callback_data: `edit_stop_save_${i+2}` },
+            { text: `Stop ${i+3}`, callback_data: `edit_stop_save_${i+3}` }
+        ]);
+    }
+    rows.push([{ text: "👟 No Stop (Normal Run)", callback_data: `edit_stop_save_0` }]);
+    rows.push([{ text: "↩️ Back", callback_data: `edit_pick_${session.data.runId}` }]);
+    await sendMessage(chatId, "📍 *Edit Tour Stop #*\n\nWhich stop number should this be?", { inline_keyboard: rows });
+}
+
+async function handleEditTourSave(chatId, stopNum) {
+    const session = await getSession();
+    const { runId } = session.data;
+    const val = parseInt(stopNum) || null;
+    await dbPatch('stride_runs', 'id', runId, { tour_stop_id: val === 0 ? null : val });
+    await sendMessage(chatId, `✅ *Run updated!* Tour Stop set to: ${val === 0 ? 'None' : val}`);
+    await clearSession();
+    await handleEditPickField(chatId, runId);
 }
 
 async function handleEditDate(chatId, date) {
@@ -1010,7 +1037,8 @@ async function createStep1(chatId) {
 }
 
 async function createStep1b(chatId, hour) {
-    await setSession('picking_minutes', { hour });
+    const session = await getSession();
+    await setSession('picking_minutes', { ...session.data, hour });
     const h = parseInt(hour);
     const label = h === 0 ? '12 AM' : h === 12 ? '12 PM' : h < 12 ? `${h} AM` : `${h-12} PM`;
     await sendMessage(chatId, `✅ Hour: *${label}*\n\n⏱️ *Minutes?*`, {
@@ -1022,7 +1050,8 @@ async function createStep1b(chatId, hour) {
 }
 
 async function createStep2(chatId, hour, min) {
-    await setSession('picking_date', { time: `${hour}:${min}` });
+    const session = await getSession();
+    await setSession('picking_date', { ...session.data, time: `${hour}:${min}` });
     const dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
     const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
     const days = [];
@@ -1168,6 +1197,8 @@ export default async function handler(req, res) {
             else if (data === 'edit_field_datetime') await handleEditDateTime(chatId);
             else if (data === 'edit_field_location') await handleEditLocation(chatId);
             else if (data === 'edit_field_maps') await handleEditMaps(chatId);
+            else if (data === 'edit_field_tour') await handleEditTour(chatId);
+            else if (data.startsWith('edit_stop_save_')) await handleEditTourSave(chatId, data.replace('edit_stop_save_', ''));
             else if (data.startsWith('edit_hour_')) await handleEditHour(chatId, data.replace('edit_hour_', ''));
             else if (data.startsWith('edit_min_')) await handleEditMinutes(chatId, data.replace('edit_min_', ''));
             else if (data.startsWith('edit_date_')) await handleEditDate(chatId, data.replace('edit_date_', ''));
