@@ -182,9 +182,63 @@ async function sendMenu(chatId, msg = "👟 <b>Stride Rite Admin Bot</b>\nHey Ha
             [{ text: "📈 Growth Graph", callback_data: "cmd_growth" }, { text: "✏️ Edit a Run", callback_data: "cmd_edit_list" }],
             [{ text: "📸 Add to Gallery", callback_data: "cmd_gallery_start" }, { text: "🛍️ VIP Shop Admin", callback_data: "cmd_shop_menu" }],
             [{ text: "🚫 Cancel a Run", callback_data: "cmd_cancel_list" }, { text: "🗑️ Delete a Run", callback_data: "cmd_delete_list" }],
-            [{ text: "🆕 Create New Run", callback_data: "create_setup_start" }]
+            [{ text: "🗺️ Tour Map Editor", callback_data: "cmd_tour_editor" }, { text: "🆕 Create New Run", callback_data: "create_setup_start" }]
         ]
     });
+}
+
+// ─── TOUR EDITOR ─────────────────────────────────────────────────────────────
+async function handleTourEditorStart(chatId) {
+    const stops = await dbGet('stride_tour_stops');
+    if (!stops || stops.length === 0) { await sendMessage(chatId, "❌ No tour stops found in database."); return; }
+    
+    // Sort array safely
+    const sortedStops = stops.sort((a,b) => a.id - b.id);
+    const rows = [];
+    for (let i = 0; i < sortedStops.length; i += 2) {
+        const batch = sortedStops.slice(i, i+2);
+        rows.push(batch.map(s => ({ text: `Stop ${s.id}: ${s.name}`, callback_data: `tour_edit_pick_${s.id}` })));
+    }
+    rows.push([{ text: "↩️ Back", callback_data: "cmd_menu" }]);
+
+    await sendMessage(chatId, "🗺️ *Tour Map Editor*\n\nWhich Stop do you want to modify on the Dashboard Map?", { inline_keyboard: rows });
+}
+
+async function handleTourEditorPick(chatId, stopId) {
+    const stopRes = await dbGet('stride_tour_stops', `id=eq.${stopId}`);
+    if (!stopRes || stopRes.length === 0) return;
+    const stop = stopRes[0];
+    
+    await setSession('tour_edit_action', { stopId });
+    await sendMessage(chatId, `🗺️ *Editing Stop ${stop.id}*\n\n*Current Name:* ${stop.name}\n*Location:* ${stop.lat}, ${stop.lng}\n\nWhat do you want to change?`, {
+        inline_keyboard: [
+            [{ text: "✏️ Change Name", callback_data: `tour_edit_name_${stop.id}` }],
+            [{ text: "📍 Change Location", callback_data: `tour_edit_loc_${stop.id}` }],
+            [{ text: "↩️ Back", callback_data: "cmd_tour_editor" }]
+        ]
+    });
+}
+
+async function handleTourEditorWaitName(chatId, stopId) {
+    await setSession('tour_edit_waiting_name', { stopId });
+    await sendMessage(chatId, `✏️ *Type the new name for Stop ${stopId}:*`);
+}
+
+async function handleTourEditorWaitLoc(chatId, stopId) {
+    await setSession('tour_edit_waiting_loc', { stopId });
+    await sendMessage(chatId, `📍 *Type/paste the Google Maps link for Stop ${stopId}:*`);
+}
+
+async function resolveGoogleMapsLink(shortUrl) {
+    try {
+        const resFollow = await fetch(shortUrl, { redirect: 'follow' });
+        const finalUrl = resFollow.url;
+        const match = finalUrl.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+        if (match) {
+            return { lat: parseFloat(match[1]), lng: parseFloat(match[2]) };
+        }
+    } catch(e) { console.error("Maps resolve error:", e); }
+    return null;
 }
 
 // ─── GALLERY ─────────────────────────────────────────────────────────────────
@@ -1253,6 +1307,10 @@ export default async function handler(req, res) {
             else if (data.startsWith('shop_prd_tgl_')) await handleShopProductToggle(chatId, data.replace('shop_prd_tgl_', ''));
             else if (data.startsWith('shop_prd_del_')) await handleShopProductDelete(chatId, data.replace('shop_prd_del_', ''));
             else if (data === 'cmd_edit_list') await handleEditList(chatId);
+            else if (data === 'cmd_tour_editor') await handleTourEditorStart(chatId);
+            else if (data.startsWith('tour_edit_pick_')) await handleTourEditorPick(chatId, data.replace('tour_edit_pick_', ''));
+            else if (data.startsWith('tour_edit_name_')) await handleTourEditorWaitName(chatId, data.replace('tour_edit_name_', ''));
+            else if (data.startsWith('tour_edit_loc_')) await handleTourEditorWaitLoc(chatId, data.replace('tour_edit_loc_', ''));
             else if (data.startsWith('edit_pick_')) await handleEditPickField(chatId, data.replace('edit_pick_', ''));
             else if (data === 'edit_field_datetime') await handleEditDateTime(chatId);
             else if (data === 'edit_field_location') await handleEditLocation(chatId);
@@ -1488,6 +1546,22 @@ export default async function handler(req, res) {
             await clearSession();
             await sendMessage(chatId, `✅ *GPX Map cleared.*`);
             await sendMenu(chatId, "What else?");
+        } else if (session.state === 'tour_edit_waiting_name') {
+            await dbPatch('stride_tour_stops', 'id', session.data.stopId, { name: text });
+            await clearSession();
+            await sendMessage(chatId, `✅ *Stop ${session.data.stopId} Name updated!*`);
+            await handleTourEditorStart(chatId);
+        } else if (session.state === 'tour_edit_waiting_loc') {
+            await sendMessage(chatId, "⏳ Extracting coordinates from map link...");
+            const coords = await resolveGoogleMapsLink(text);
+            if (!coords) {
+                await sendMessage(chatId, "❌ Failed to extract latitude and longitude. Please make sure you sent a valid Google Maps link.");
+                return;
+            }
+            await dbPatch('stride_tour_stops', 'id', session.data.stopId, { lat: coords.lat, lng: coords.lng });
+            await clearSession();
+            await sendMessage(chatId, `✅ *Stop ${session.data.stopId} Location updated!* (${coords.lat}, ${coords.lng})\nRefresh your site map to see it connect.`);
+            await handleTourEditorStart(chatId);
         } else {
             if (cmd === '/start' || cmd === '/help' || cmd === '/menu') {
                 await sendMenu(chatId, `👟 <b>Stride Rite Admin Bot</b>\n\nHey Haleem! Your Chat ID is <code>${chatId}</code>.\nWhat do you want to do?`);
