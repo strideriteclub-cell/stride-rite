@@ -164,19 +164,28 @@
 
     <script src="app.js?v=23"></script>
     <script>
-        const user = AuthService.getCurrentUser();
-        if (!user) window.location.href = 'index.html';
-        
-        document.getElementById('welcomeUser').innerText = `Welcome back, ${user.name.split(' ')[0]}!`;
+        let user;
+        const AuthService = {
+            getCurrentUser: () => {
+                const session = localStorage.getItem('stride_user');
+                return session ? JSON.parse(session) : null;
+            }
+        };
 
         let runSelections = {};
 
         async function initDashboard() {
-            await renderRuns();
-        }
-
-        async function renderRuns() {
+            user = AuthService.getCurrentUser();
+            if (!user) { window.location.href = 'index.html'; return; }
+            
+            const welcomeUser = document.getElementById('welcomeUser');
+            if (welcomeUser) welcomeUser.innerText = `Welcome back, ${user.full_name.split(' ')[0]}!`;
+            
             const container = document.getElementById('runsContainer');
+            const welcomeMsg = document.getElementById('welcomeMsg');
+            if (welcomeMsg) welcomeMsg.innerText = `Focus on Today's Goal, ${user.full_name.split(' ')[0]}`;
+            
+            // Re-check for existing registrations to keep list current
             const [runs, myRegs] = await Promise.all([
                 AppService.getRuns(),
                 AppService.getUserRegistrations(user.id)
