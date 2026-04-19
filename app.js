@@ -227,7 +227,7 @@ const AppService = {
         } catch (e) { console.error("AutoExport failed", e); }
     },
 
-    registerForRun: async (runId, distance, level) => {
+    registerForRun: async (runId, distance, level, fullName, phoneNumber) => {
         const currentUser = AuthService.getCurrentUser();
         if (!currentUser) return false;
         const existing = await dbGet('stride_registrations', `run_id=eq.${runId}&user_id=eq.${currentUser.id}`);
@@ -239,26 +239,29 @@ const AppService = {
             run_id: runId,
             user_id: currentUser.id,
             distance: distance,
-            level: level
+            level: level,
+            user_full_name: fullName || currentUser.name,
+            phone_number: phoneNumber || null
         };
         const result = await dbInsert('stride_registrations', newRegistration);
         if (result !== null) {
             const runDetails = await dbGet('stride_runs', `id=eq.${runId}`);
             if (runDetails && runDetails.length > 0) {
-                AppService.sendTelegramAlert(currentUser, distance, level, runDetails[0], isFirstTimer);
+                AppService.sendTelegramAlert(currentUser, distance, level, runDetails[0], isFirstTimer, phoneNumber);
             }
             return true;
         }
         return false;
     },
 
-    sendTelegramAlert: async (user, distance, level, run, isFirstTimer = false) => {
+    sendTelegramAlert: async (user, distance, level, run, isFirstTimer = false, phoneNumber = null) => {
         const botToken = '8682463984:AAHA2PWT7WtQRskETmOanj0k2b45ZgGfYIs';
         const chatId = '1538316434';
         const cleanTimestamp = run.date_label.split('||')[0];
         const age = user.birthdate ? calculateAge(user.birthdate) : (user.age || '?');
         const firstTimerBadge = isFirstTimer ? '\n\n🎉 *FIRST TIMER! Welcome them warmly!*' : '';
-        const text = `${isFirstTimer ? '🌟' : '🚨'} *${isFirstTimer ? 'First-Time' : 'New'} Runner Alert!*\n\n*${user.name}* (${age}${user.gender === 'Male' ? 'M' : 'F'}) just registered for the *${distance}*!\n📧 *Email:* ${user.email}\n🏃 *Level:* ${level || user.level}\n📅 *Run:* ${cleanTimestamp}${firstTimerBadge}`;
+        const phoneLine = phoneNumber ? `\n📞 *Phone:* \`${phoneNumber}\`` : '';
+        const text = `${isFirstTimer ? '🌟' : '🚨'} *${isFirstTimer ? 'First-Time' : 'New'} Runner Alert!*\n\n*${user.name}* (${age}${user.gender === 'Male' ? 'M' : 'F'}) just registered for the *${distance}*!${phoneLine}\n📧 *Email:* ${user.email}\n🏃 *Level:* ${level || user.level}\n📅 *Run:* ${cleanTimestamp}${firstTimerBadge}`;
         try {
             await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
                 method: 'POST',
