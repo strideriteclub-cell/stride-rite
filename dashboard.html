@@ -144,9 +144,14 @@
                     const igLink = igHandle
                         ? ' <a href="https://instagram.com/' + igHandle + '" target="_blank" title="@' + igHandle + '" style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;background:rgba(88,74,220,0.15);border:1px solid rgba(88,74,220,0.3);border-radius:50%;color:var(--neon-accent);vertical-align:middle;margin-left:4px;">' + igIconSvg + '</a>'
                         : '';
-                    const stopLabel = run.tour_stop_id
-                        ? 'Stop ' + String(run.tour_stop_id).padStart(2,'0') + ': ' + (run.tour_stop_name || run.location)
-                        : run.location;
+                    const isTour = !!run.tour_stop_id;
+                    const stopName = run.tour_stop_name || run.location;
+                    const topLabel = isTour ? `🎯 TOUR STAGE ${String(run.tour_stop_id).padStart(2,'0')}` : `📍 COMMUNITY RUN`;
+                    const mainTitle = isTour ? `Stop ${run.tour_stop_id}: The ${stopName} Run` : run.date_label;
+                    const subTitle = isTour 
+                        ? `📅 ${run.date_label} <br> 📍 <a href="${run.location_link}" target="_blank" style="color:var(--text-muted);text-decoration:underline;">${run.location}</a>` 
+                        : `📍 <a href="${run.location_link}" target="_blank" style="color:var(--text-muted);text-decoration:underline;">${run.location}</a>`;
+                        
                     return '<div class="glass-card run-card ' + (isReg?'registered':'') + '">'
                         + (isReg ? '<span class="registered-badge">✓ Registered</span>' : '')
                         + '<div style="display:flex;align-items:center;gap:12px;margin-bottom:1rem;padding-bottom:1rem;border-bottom:1px solid rgba(255,255,255,0.05);">'
@@ -154,9 +159,9 @@
                         + '<div><div style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;font-weight:700;">Hosted By</div>'
                         + '<div style="font-weight:700;color:#fff;">' + (run.partner_name || 'Stride Rite') + ' × Stride Rite' + igLink + '</div></div>'
                         + '</div>'
-                        + '<div style="font-family:Outfit;font-weight:800;color:var(--neon-accent);letter-spacing:2px;text-transform:uppercase;margin-bottom:0.8rem;font-size:1.05rem;">' + stopLabel + '</div>'
-                        + '<div class="run-date">' + run.date_label + '</div>'
-                        + '<div class="run-loc">📍 <a href="' + run.location_link + '" target="_blank" style="color:var(--text-muted);text-decoration:underline;">' + run.location + '</a></div>'
+                        + '<div style="font-family:Outfit;font-weight:800;color:var(--neon-accent);letter-spacing:2px;text-transform:uppercase;margin-bottom:0.8rem;font-size:0.9rem;">' + topLabel + '</div>'
+                        + '<div class="run-date" style="font-size:2rem; line-height:1.1; margin-bottom:1rem;">' + mainTitle + '</div>'
+                        + '<div class="run-loc" style="line-height:1.6;">' + subTitle + '</div>'
                         + (!isReg
                             ? '<div class="dist-selector" style="margin-top:1rem;">'
                               + ['2K','5K','8K'].map(d => '<button class="dist-btn ' + (dist===d?'active':'') + '" onclick="selectDist(\'' + run.id + '\',\'' + d + '\')">' + d + '</button>').join('')
