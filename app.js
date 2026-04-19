@@ -309,9 +309,11 @@ const AppService = {
         const currentYear = now.getFullYear();
 
         const progress = TOUR_CONFIG.map(stop => {
-            const runForStop = rawRuns.find(r => {
-                if (!r.tour_stop_id || r.tour_stop_id != stop.id) return false;
-                const runDate = new Date(r.iso_date || (r.date_label.includes('||') ? r.date_label.split('||')[1] : null));
+            const runForStop = (rawRuns || []).find(r => {
+                if (!r.tour_stop_id || Number(r.tour_stop_id) !== Number(stop.id)) return false;
+                const dateStr = r.iso_date || (r.date_label && r.date_label.includes('||') ? r.date_label.split('||')[1] : null);
+                if (!dateStr) return false;
+                const runDate = new Date(dateStr);
                 return runDate.getMonth() === currentMonth && runDate.getFullYear() === currentYear;
             });
 
