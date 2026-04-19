@@ -297,19 +297,31 @@
                 return;
             }
 
+            // DIAGNOSTIC LOG (For Haleem)
+            console.log("Total Runs fetched:", window.lastFetchedRuns.length);
+            console.log("Tour Stops found:", window.lastFetchedRuns.filter(r => r.tour_stop_id).length);
+            console.log("Registrations found:", window.myRegistrations.length);
+
             // Find the first tour stop that isn't registered yet
-            const nextStop = window.lastFetchedRuns.find(r => r.tour_stop_id && !window.myRegistrations.includes(r.id)) 
+            let nextStop = window.lastFetchedRuns.find(r => r.tour_stop_id && !window.myRegistrations.includes(r.id)) 
                            || window.lastFetchedRuns.find(r => r.tour_stop_id);
 
+            // FALLBACK: If NO tour stops tagged in DB yet, show the first upcoming normal run
             if (!nextStop) {
-                Swal.fire({ title: 'Next Stop', text: 'No upcoming Tour stops found in the list.', background: '#1a1a1f', color: '#fff' });
+                console.log("Fallng back to normal upcoming run...");
+                nextStop = window.lastFetchedRuns[0];
+            }
+
+            if (!nextStop) {
+                Swal.fire({ title: 'Next Stop', text: 'No upcoming runs found in the list.', background: '#1a1a1f', color: '#fff' });
                 return;
             }
 
+            const isTour = !!nextStop.tour_stop_id;
             const isReg = window.myRegistrations.includes(nextStop.id);
 
             Swal.fire({
-                title: `<div style="font-family:'Outfit'; font-size:1.5rem; color:#fff;">📍 Stop 0${nextStop.tour_stop_id}: ${nextStop.location}</div>`,
+                title: `<div style="font-family:'Outfit'; font-size:1.5rem; color:#fff;">📍 ${isTour ? `Stop 0${nextStop.tour_stop_id}` : 'Upcoming Run'}: ${nextStop.location}</div>`,
                 html: `
                     <div style="text-align: left; background: #0d0d11; border-radius: 12px; padding: 1.5rem; margin-top: 10px; border: 1px solid rgba(255,255,255,0.05);">
                         <div style="display:flex; align-items:center; gap:12px; margin-bottom:1.5rem; padding-bottom:1rem; border-bottom:1px solid rgba(255,255,255,0.1);">
