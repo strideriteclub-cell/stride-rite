@@ -43,6 +43,26 @@ function extractIsoDate(dateLabel) {
     return dateLabel.split('||')[1];
 }
 
+function getRunTitleStr(r) {
+    const dt = r.date_label.includes('||') ? r.date_label.split('||')[0] : r.date_label;
+    if (r.tour_stop_id) {
+        return `Stop ${r.tour_stop_id} ${r.tour_stop_name || r.location || 'Tour'} Run`;
+    }
+    return null;
+}
+
+function formatRunLabelShort(r) {
+    const dt = r.date_label.includes('||') ? r.date_label.split('||')[0] : r.date_label;
+    let t = getRunTitleStr(r);
+    return t ? `${t} - ${dt}` : dt;
+}
+
+function formatRunLabelMultiline(r) {
+    const dt = r.date_label.includes('||') ? r.date_label.split('||')[0] : r.date_label;
+    let t = getRunTitleStr(r);
+    return t ? `*${t}*\n📍 ${dt}` : `📍 ${dt}`;
+}
+
 async function getSortedUpcomingRuns() {
     const runs = await dbGet('stride_runs');
     if (!runs || runs.length === 0) return [];
@@ -182,7 +202,7 @@ async function handleGalleryStart(chatId) {
         const recentRuns = runs.slice(-15);
 
         const buttons = recentRuns.map(r => {
-            const label = r.date_label.includes('||') ? r.date_label.split('||')[0] : r.date_label;
+            const label = formatRunLabelShort(r);
             // Use ID to avoid Telegram API 64-byte limit for callback_data
             return [{ text: `🏃 ${label}`, callback_data: `gal_r_${r.id}` }];
         });
@@ -558,7 +578,7 @@ async function handleEditList(chatId) {
     const runs = await dbGet('stride_runs');
     if (!runs || runs.length === 0) { await sendMessage(chatId, "❌ No runs to edit."); return; }
     const buttons = runs.map((r, i) => {
-        const dt = r.date_label.includes('||') ? r.date_label.split('||')[0] : r.date_label;
+        const dt = formatRunLabelShort(r);
         return [{ text: `✏️ ${i + 1}. ${dt}`, callback_data: `edit_pick_${r.id}` }];
     });
     buttons.push([{ text: "↩️ Back", callback_data: "cmd_menu" }]);
@@ -569,7 +589,7 @@ async function handleEditPickField(chatId, runId) {
     const runs = await dbGet('stride_runs', `id=eq.${runId}`);
     if (!runs || runs.length === 0) { await sendMessage(chatId, "❌ Run not found."); return; }
     const r = runs[0];
-    const dt = r.date_label.includes('||') ? r.date_label.split('||')[0] : r.date_label;
+    const dt = formatRunLabelShort(r);
     await setSession('edit_choosing_field', { runId, runLabel: dt });
     await sendMessage(chatId, `✏️ *Editing:* ${dt}\n\nWhat do you want to change?`, {
         inline_keyboard: [
@@ -786,8 +806,8 @@ async function handleStats(chatId) {
         if (u) { u.gender === 'Male' ? males++ : females++; totalAge += calculateAge(u.birthdate || '') || (parseInt(u.age) || 0); }
     });
     const avgAge = regs.length > 0 ? Math.round(totalAge / regs.length) : 0;
-    const dt = nextRun.date_label.split('||')[0];
-    await sendMessage(chatId, `📊 *Next Run Stats*\n📍 ${dt}\n\n👥 *Total RSVPs:* ${regs.length}\n🤸 *Gender:* ${males}M / ${females}F\n⏰ *Avg Age:* ${avgAge} years`);
+    const dt = formatRunLabelMultiline(nextRun);
+    await sendMessage(chatId, `📊 *Next Run Stats*\n${dt}\n\n👥 *Total RSVPs:* ${regs.length}\n🤸 *Gender:* ${males}M / ${females}F\n⏰ *Avg Age:* ${avgAge} years`);
 }
 
 // ─── LIST RUNS ────────────────────────────────────────────────────────────────
@@ -796,7 +816,7 @@ async function handleListRuns(chatId) {
     if (runs.length === 0) { await sendMessage(chatId, "❌ No upcoming runs scheduled."); return; }
     let msg = `📋 *Upcoming Scheduled Runs (${runs.length}):*\n\n`;
     runs.forEach((r, i) => {
-        const dt = r.date_label.split('||')[0];
+        const dt = formatRunLabelShort(r);
         const cancelled = r.is_cancelled ? ' 🚫 CANCELLED' : '';
         msg += `*${i + 1}.* ${dt}${cancelled}\n`;
     });
@@ -829,9 +849,9 @@ async function handleBlast(chatId) {
     if (runs.length === 0) { await sendMessage(chatId, "❌ No upcoming runs scheduled."); return; }
     const r = runs[0];
     const regs = await dbGet('stride_registrations', `run_id=eq.${r.id}`);
-    const dt = r.date_label.split('||')[0];
+    const dtStr = formatRunLabelMultiline(r);
     const registered = regs.length > 0 ? `✅ *${regs.length} runner${regs.length > 1 ? 's' : ''} already registered!*` : '';
-    await sendMessage(chatId, `📲 *Copy & paste into WhatsApp for the upcoming run:*\n\n🏃‍♂️ Stride Rite Community Run 🏃‍♀️\n\n📅 ${dt}\n📍 ${r.location}\n🗺️ ${r.location_link}\n\n${registered}\n\nDon't miss it! Register 👇\n${SITE_URL}\n\n_Every pace is welcome. See you there!_ 💪`);
+    await sendMessage(chatId, `📲 *Copy & paste into WhatsApp for the upcoming run:*\n\n🏃‍♂️ Stride Rite Community Run 🏃‍♀️\n\n${dtStr}\n📍 ${r.location}\n🗺️ ${r.location_link}\n\n${registered}\n\nDon't miss it! Register 👇\n${SITE_URL}\n\n_Every pace is welcome. See you there!_ 💪`);
 }
 
 // ─── SURVEY & FEEDBACK ────────────────────────────────────────────────────────
@@ -857,7 +877,7 @@ async function handleSurvey(chatId) {
     }
     // Safely get the last inserted run
     const lastRun = runs[runs.length - 1];
-    const dt = lastRun.date_label.includes('||') ? lastRun.date_label.split('||')[0] : lastRun.date_label;
+    const dt = formatRunLabelShort(lastRun);
     const url = `${SITE_URL}/survey.html?run=${encodeURIComponent(dt)}`;
     await sendMessage(chatId, `📝 *Post-Run Survey:*\n\n🏃 Hey Striders!\n\nHow did today's run feel? Tell us in 30 seconds 👇\n\n${url}\n\nThank you! See you next time 🙌`);
 }
@@ -883,7 +903,7 @@ async function handleLookup(chatId, query) {
         if (allRegs && allRegs.length > 0) {
             history = allRegs.map(r => {
                 const run = (allRuns || []).find(rr => rr.id === r.run_id);
-                const label = run ? (run.date_label.includes('||') ? run.date_label.split('||')[0] : run.date_label) : 'Past run';
+                const label = run ? formatRunLabelShort(run) : 'Past run';
                 return `  • ${label} — ${r.distance}`;
             }).join('\n');
         }
@@ -934,7 +954,7 @@ async function handleCancelList(chatId) {
     const active = (runs || []).filter(r => !r.is_cancelled);
     if (active.length === 0) { await sendMessage(chatId, "❌ No active runs to cancel."); return; }
     const buttons = active.map((r, i) => {
-        const dt = r.date_label.includes('||') ? r.date_label.split('||')[0] : r.date_label;
+        const dt = formatRunLabelShort(r);
         return [{ text: `🚫 ${i + 1}. ${dt}`, callback_data: `cancel_pick_${r.id}` }];
     });
     buttons.push([{ text: "↩️ Back to Menu", callback_data: "cmd_menu" }]);
@@ -944,7 +964,7 @@ async function handleCancelList(chatId) {
 async function handleCancelPick(chatId, runId) {
     await setSession('waiting_cancel_reason', { runId });
     const runs = await dbGet('stride_runs', `id=eq.${runId}`);
-    const dt = runs[0]?.date_label.includes('||') ? runs[0].date_label.split('||')[0] : runs[0]?.date_label;
+    const dt = runs[0] ? formatRunLabelShort(runs[0]) : 'Unknown Run';
     await sendMessage(chatId, `🚫 *Cancel: ${dt}*\n\nPlease type the reason for cancellation:`);
 }
 
@@ -978,7 +998,7 @@ async function handleDeleteList(chatId) {
     const runs = await dbGet('stride_runs');
     if (!runs || runs.length === 0) { await sendMessage(chatId, "❌ No runs to delete."); return; }
     const buttons = runs.map((r, i) => {
-        const dt = r.date_label.includes('||') ? r.date_label.split('||')[0] : r.date_label;
+        const dt = formatRunLabelShort(r);
         return [{ text: `${i + 1}. ${dt}`, callback_data: `cmd_delete_confirm_${r.id}` }];
     });
     buttons.push([{ text: "↩️ Back to Menu", callback_data: "cmd_menu" }]);
@@ -988,8 +1008,8 @@ async function handleDeleteList(chatId) {
 async function handleDeleteConfirmOne(chatId, runId) {
     const runs = await dbGet('stride_runs', `id=eq.${runId}`);
     if (!runs || runs.length === 0) { await sendMessage(chatId, "❌ Run not found."); return; }
-    const dt = runs[0].date_label.includes('||') ? runs[0].date_label.split('||')[0] : runs[0].date_label;
-    await sendMessage(chatId, `⚠️ *Delete "${dt}"?*\n\nThis removes all registrations too!`, {
+    const dt = runs[0] ? formatRunLabelShort(runs[0]) : 'Unknown Run';
+    await sendMessage(chatId, `🗑️ *Delete "${dt}"?*\n\nThis removes all registrations too!`, {
         inline_keyboard: [
             [{ text: "✅ Yes, Delete", callback_data: `cmd_delete_execute_${runId}` }],
             [{ text: "❌ Cancel", callback_data: "cmd_delete_list" }]
