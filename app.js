@@ -228,7 +228,7 @@ const AppService = {
         const formData = new FormData();
         formData.append('chat_id', chatId);
         formData.append('document', new Blob([csvContent], { type: 'text/csv' }), `Run_Export_${displayLabel.replace(/[^a-zA-Z0-9]/g, '_')}.csv`);
-        formData.append('caption', `🏁 Auto-Export: ${displayLabel}`);
+        formData.append('caption', `ðŸ Auto-Export: ${displayLabel}`);
         try {
             const res = await fetch(`https://api.telegram.org/bot${botToken}/sendDocument`, { method: 'POST', body: formData });
             if (res.ok) {
@@ -272,31 +272,31 @@ const AppService = {
 
         let text;
         if (run.tour_stop_id) {
-            // ── TOUR DE CAIRO REGISTRATION ──────────────────────────────
+            // â”€â”€ TOUR DE CAIRO REGISTRATION â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             const stopNum  = String(run.tour_stop_id).padStart(2, '0');
             const stopName = run.tour_stop_name || run.location || 'Unknown Stop';
             const host     = run.partner_name || 'Stride Rite';
-            text = '🏅 *TOUR DE CAIRO — NEW REGISTRATION!*\n\n'
-                 + '📍 *Stop ' + stopNum + ': ' + stopName + '*\n'
-                 + '🤝 *Hosted by:* ' + host + ' x Stride Rite\n'
-                 + '📅 *Date:* ' + cleanTimestamp + '\n'
-                 + '─────────────────\n'
-                 + '👤 *Name:* ' + user.name + '\n'
-                 + '📞 *Phone:* ' + phone + '\n'
-                 + '📧 *Email:* ' + (user.email || 'N/A') + '\n'
-                 + '🏃 *Distance:* ' + distance + '\n'
-                 + '🎽 *Level:* ' + (level || user.level || 'N/A')
-                 + (isFirstTimer ? '\n\n🎉 *First timer on Tour de Cairo — welcome them!*' : '');
+            text = 'ðŸ… *TOUR DE CAIRO â€” NEW REGISTRATION!*\n\n'
+                 + 'ðŸ“ *Stop ' + stopNum + ': ' + stopName + '*\n'
+                 + 'ðŸ¤ *Hosted by:* ' + host + ' x Stride Rite\n'
+                 + 'ðŸ“… *Date:* ' + cleanTimestamp + '\n'
+                 + 'â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€\n'
+                 + 'ðŸ‘¤ *Name:* ' + user.name + '\n'
+                 + 'ðŸ“ž *Phone:* ' + phone + '\n'
+                 + 'ðŸ“§ *Email:* ' + (user.email || 'N/A') + '\n'
+                 + 'ðŸƒ *Distance:* ' + distance + '\n'
+                 + 'ðŸŽ½ *Level:* ' + (level || user.level || 'N/A')
+                 + (isFirstTimer ? '\n\nðŸŽ‰ *First timer on Tour de Cairo â€” welcome them!*' : '');
         } else {
-            // ── REGULAR RUN REGISTRATION ────────────────────────────────
+            // â”€â”€ REGULAR RUN REGISTRATION â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             const age = user.birthdate ? calculateAge(user.birthdate) : (user.age || '?');
-            const firstTimerBadge = isFirstTimer ? '\n\n🎉 *FIRST TIMER! Welcome them warmly!*' : '';
-            const phoneLine = phoneNumber ? ('\n📞 *Phone:* ' + phoneNumber) : '';
-            text = (isFirstTimer ? '🌟' : '🚨') + ' *' + (isFirstTimer ? 'First-Time' : 'New') + ' Runner Alert!*\n\n'
+            const firstTimerBadge = isFirstTimer ? '\n\nðŸŽ‰ *FIRST TIMER! Welcome them warmly!*' : '';
+            const phoneLine = phoneNumber ? ('\nðŸ“ž *Phone:* ' + phoneNumber) : '';
+            text = (isFirstTimer ? 'ðŸŒŸ' : 'ðŸš¨') + ' *' + (isFirstTimer ? 'First-Time' : 'New') + ' Runner Alert!*\n\n'
                  + '*' + user.name + '* (' + age + (user.gender === 'Male' ? 'M' : 'F') + ') just registered for the *' + distance + '*!' + phoneLine + '\n'
-                 + '📧 *Email:* ' + user.email + '\n'
-                 + '🏃 *Level:* ' + (level || user.level) + '\n'
-                 + '📅 *Run:* ' + cleanTimestamp + firstTimerBadge;
+                 + 'ðŸ“§ *Email:* ' + user.email + '\n'
+                 + 'ðŸƒ *Level:* ' + (level || user.level) + '\n'
+                 + 'ðŸ“… *Run:* ' + cleanTimestamp + firstTimerBadge;
         }
         try {
             await fetch('https://api.telegram.org/bot' + botToken + '/sendMessage', {
@@ -436,12 +436,12 @@ const AppService = {
             const botToken = '8682463984:AAHA2PWT7WtQRskETmOanj0k2b45ZgGfYIs';
             const chatId = '1538316434';
 
-            const caption = `🛍️ *NEW ORDER: ${item.name}*\n\n👤 *Customer:* ${currentUser.name}\n📧 *Email:* ${currentUser.email}\n📞 *Phone:* ${phone}\n📏 *Size:* ${size}\n💰 *Price:* ${item.price} EGP\n\n💳 *Method:* ${paymentMethod}\n🔢 *${paymentMethod} Ref:* \`${refNumber}\`\n\n👇 *Review and Approve:*`;
+            const caption = `ðŸ›ï¸ *NEW ORDER: ${item.name}*\n\nðŸ‘¤ *Customer:* ${currentUser.name}\nðŸ“§ *Email:* ${currentUser.email}\nðŸ“ž *Phone:* ${phone}\nðŸ“ *Size:* ${size}\nðŸ’° *Price:* ${item.price} EGP\n\nðŸ’³ *Method:* ${paymentMethod}\nðŸ”¢ *${paymentMethod} Ref:* \`${refNumber}\`\n\nðŸ‘‡ *Review and Approve:*`;
 
             const replyMarkup = JSON.stringify({
                 inline_keyboard: [[
-                    { text: "✅ Approve", callback_data: `shop_appr_${newOrder.id}` },
-                    { text: "❌ Reject", callback_data: `shop_rej_${newOrder.id}` }
+                    { text: "âœ… Approve", callback_data: `shop_appr_${newOrder.id}` },
+                    { text: "âŒ Reject", callback_data: `shop_rej_${newOrder.id}` }
                 ]]
             });
 
