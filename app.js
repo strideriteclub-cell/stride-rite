@@ -91,7 +91,16 @@ async function dbDelete(table, matchColumn, matchValue) {
     }
 }
 
-const KEYS = { SESSION: "stride_current_user" };
+const KEYS = { SESSION: "stride_user" };
+
+// Anti-crash Migration for old session keys
+(function() {
+    const oldKey = "stride_current_user";
+    const newKey = "stride_user";
+    if (localStorage.getItem(oldKey) && !localStorage.getItem(newKey)) {
+        localStorage.setItem(newKey, localStorage.getItem(oldKey));
+    }
+})();
 
 // --- AUTH LOGIC ---
 const AuthService = {
