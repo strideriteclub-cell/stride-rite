@@ -11,6 +11,15 @@ const dbHeaders = {
     'Prefer': 'return=representation'
 };
 
+function esc(str) {
+    if (!str) return '';
+    return str.toString()
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+}
+
+
 function calculateAge(birthdate) {
     if (!birthdate) return '?';
     const birth = new Date(birthdate);
@@ -900,8 +909,7 @@ async function handleCancelExecute(chatId, runId, reason) {
 \`${registeredEmails.join(',')}\`
 
 Suggested message:
-_Hey Striders! Unfortunately the ${dt} run has been cancelled due to ${reason}. We apologize and look forward to seeing you at the next run! 💪_`);
-<i>Hey Striders! Unfortunately the ${dt} run has been cancelled due to ${reason}. We apologize and look forward to seeing you at the next run! 💪</i>`);
+<i>Hey Striders! Unfortunately the ${esc(dt)} run has been cancelled due to ${esc(reason)}. We apologize and look forward to seeing you at the next run! 💪</i>`);
 }
 
 // ─── DELETE LIST ──────────────────────────────────────────────────────────────
@@ -931,7 +939,7 @@ async function handleDeleteConfirmOne(chatId, runId) {
 // ─── CREATE FLOW ──────────────────────────────────────────────────────────────
 async function createSetup(chatId) {
     await setSession('setup_type', { step: 1 });
-    await sendMessage(chatId, "🆕 *Create New Run*\n\nIs this a Tour de Cairo run (Stops 1-8)?", {
+    await sendMessage(chatId, "🆕 <b>Create New Run</b>\n\nIs this a Tour de Cairo run (Stops 1-8)?", {
         inline_keyboard: [
             [{ text: "Yes, Tour de Cairo Stop", callback_data: "create_tour_yes" }],
             [{ text: "No, Normal Run", callback_data: "create_tour_no" }],
@@ -951,12 +959,12 @@ async function createTourStopSetup(chatId) {
         ]);
     }
     rows.push([{ text: "↩️ Back", callback_data: "create_setup_start" }]);
-    await sendMessage(chatId, "*Step 1*: Which Tour Stop number is this?", { inline_keyboard: rows });
+    await sendMessage(chatId, "<b>Step 1</b>: Which Tour Stop number is this?", { inline_keyboard: rows });
 }
 
 async function createPartnerSetup(chatId, stopNum) {
     await setSession('setup_partner', { stopNum });
-    await sendMessage(chatId, `✅ Stop ${stopNum}\n\n*Step 2*: Who is hosting this run?`, {
+    await sendMessage(chatId, `✅ Stop ${esc(stopNum)}\n\n<b>Step 2</b>: Who is hosting this run?`, {
         inline_keyboard: [
             [{ text: "🤝 Stride Rite x Partner", callback_data: "create_partner_yes" }],
             [{ text: "👟 Stride Rite Only", callback_data: "create_partner_no" }],
@@ -971,7 +979,7 @@ async function createPartnerName(chatId, isPartner, initData) {
         await createStep1(chatId); 
     } else {
         await setSession('partner_name', { ...initData, isPartner: true });
-        await sendMessage(chatId, "🤝 *Partner Details*\n\nPlease type the Partner Club Name:");
+        await sendMessage(chatId, "🤝 <b>Partner Details</b>\n\nPlease type the Partner Club Name:");
     }
 }
 
@@ -997,7 +1005,7 @@ async function createStep1(chatId) {
     rows.push(special);
     for (let i = 0; i < pmHours.length; i += 4) rows.push(pmHours.slice(i, i+4));
     rows.push([{ text: "↩️ Back", callback_data: "cmd_menu" }]);
-    await sendMessage(chatId, "🆕 *Create New Run — Step 1/5*\n\n⏰ What *hour* will the run start?", { inline_keyboard: rows });
+    await sendMessage(chatId, "🆕 <b>Create New Run — Step 1/5</b>\n\n⏰ What <b>hour</b> will the run start?", { inline_keyboard: rows });
 }
 
 async function createStep1b(chatId, hour) {
@@ -1024,19 +1032,19 @@ async function createStep2(chatId, hour, min) {
     const rows = [];
     for (let i = 0; i < days.length; i += 2) rows.push(days.slice(i, i+2));
     rows.push([{ text: "↩️ Back", callback_data: "create_step1" }]);
-    await sendMessage(chatId, `✅ Time: *${formatTime(`${hour}:${min}`)}*\n\n*Step 2/5* — 📅 Pick the run date:`, { inline_keyboard: rows });
+    await sendMessage(chatId, `✅ Time: <b>${esc(formatTime(`${hour}:${min}`))}</b>\n\n<b>Step 2/5</b> — 📅 Pick the run date:`, { inline_keyboard: rows });
 }
 
 async function createStep3(chatId, date, sessionData) {
     await setSession('waiting_maps_link', { ...sessionData, date });
     const d = new Date(date);
     const label = d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
-    await sendMessage(chatId, `✅ *${label}* at *${formatTime(sessionData.time)}*\n\n*Step 3/5* — 📍 Send the *Google Maps link* for the location:`);
+    await sendMessage(chatId, `✅ <b>${esc(label)}</b> at <b>${esc(formatTime(sessionData.time))}</b>\n\n<b>Step 3/5</b> — 📍 Send the <b>Google Maps link</b> for the location:`);
 }
 
 async function createStep4(chatId, mapsLink, sessionData) {
     await setSession('waiting_location_name', { ...sessionData, mapsLink });
-    await sendMessage(chatId, `✅ Maps link saved!\n\n*Step 4/6* — 🏷️ What's the *location name?*\nExample: _Gateway Mall, Al Rehab City_`);
+    await sendMessage(chatId, `✅ Maps link saved!\n\n<b>Step 4/6</b> — 🏷️ What's the <b>location name?</b>\nExample: <i>Gateway Mall, Al Rehab City</i>`);
 }
 
 async function createStep5(chatId, locationName, sessionData) {
@@ -1051,7 +1059,7 @@ async function createConfirm(chatId, locationName, routeMap, routeType, sessionD
     const dateObj = new Date(`${fullData.date}T${fullData.time}`);
     const fd = dateObj.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
     await sendMessage(chatId,
-        `📋 *Step 6/6 — Confirm New Run*\n\n📅 *${fd}*\n⏰ *${formatTime(fullData.time)}*\n📍 *${fullData.locationName}*\n🗺️ ${fullData.mapsLink}\n\n*Route Preview attached!* Looks good?`,
+        `📋 <b>Step 6/6 — Confirm New Run</b>\n\n📅 <b>${esc(fd)}</b>\n⏰ <b>${esc(formatTime(fullData.time))}</b>\n📍 <b>${esc(fullData.locationName)}</b>\n🗺️ ${esc(fullData.mapsLink)}\n\n<b>Route Preview attached!</b> Looks good?`,
         { inline_keyboard: [[{ text: "✅ Create Run!", callback_data: "create_confirm_yes" }], [{ text: "❌ Cancel", callback_data: "cmd_menu" }]] }
     );
 }
@@ -1212,7 +1220,7 @@ export default async function handler(req, res) {
                         image_url: imgUrl,
                         is_active: true
                     });
-                    await sendMessage(chatId, "✅ *Product successfully added to the VIP Shop!*");
+                    await sendMessage(chatId, "✅ <b>Product successfully added to the VIP Shop!</b>");
                     await clearSession();
                     await handleShopProductMenu(chatId);
                 } else if (session.state === 'shop_edit_item' && session.data.field === 'photo') {
@@ -1221,7 +1229,7 @@ export default async function handler(req, res) {
                     await fetch(`${SUPABASE_URL}/rest/v1/shop_items?id=eq.${session.data.productId}`, {
                         method: 'PATCH', headers: dbHeaders, body: JSON.stringify({ image_url: imgUrl })
                     });
-                    await sendMessage(chatId, "✅ *Photo successfully updated!*");
+                    await sendMessage(chatId, "✅ <b>Photo successfully updated!</b>");
                     await clearSession();
                     await handleShopProductEditMenu(chatId, session.data.productId);
                 } else {
@@ -1267,17 +1275,17 @@ export default async function handler(req, res) {
             const step = session.data.step;
             if (step === 'name') {
                 await setSession('shop_add_item', { ...session.data, step: 'price', name: text });
-                await sendMessage(chatId, "🛍️ *Add New Product (Step 2/4)*\n\nWhat is the price in EGP? (e.g., 300)");
+                await sendMessage(chatId, "🛍️ <b>Add New Product (Step 2/4)</b>\n\nWhat is the price in EGP? (e.g., 300)");
                 res.status(200).send('ok'); return;
             }
             if (step === 'price') {
                 await setSession('shop_add_item', { ...session.data, step: 'sizes', price: text });
-                await sendMessage(chatId, "🛍️ *Add New Product (Step 3/4)*\n\nWhat sizes are available? (e.g., 'S, M, L, XL, XXL')");
+                await sendMessage(chatId, "🛍️ <b>Add New Product (Step 3/4)</b>\n\nWhat sizes are available? (e.g., 'S, M, L, XL, XXL')");
                 res.status(200).send('ok'); return;
             }
             if (step === 'sizes') {
                 await setSession('shop_add_item', { ...session.data, step: 'photo', sizes: text });
-                await sendMessage(chatId, "🛍️ *Add New Product (Step 4/4)*\n\n📸 Now send the *product photo* from your gallery:");
+                await sendMessage(chatId, "🛍️ <b>Add New Product (Step 4/4)</b>\n\n📸 Now send the <b>product photo</b> from your gallery:");
                 res.status(200).send('ok'); return;
             }
             if (step === 'photo') {
@@ -1299,7 +1307,8 @@ export default async function handler(req, res) {
             await fetch(`${SUPABASE_URL}/rest/v1/shop_items?id=eq.${productId}`, {
                 method: 'PATCH', headers: dbHeaders, body: JSON.stringify(updateData)
             });
-            await sendMessage(chatId, `✅ *Product ${field} successfully updated!*`);
+            await sendMessage(chatId, `✅ <b>Product ${esc(field)} successfully updated!</b>`);
+
             await clearSession();
             await handleShopProductEditMenu(chatId, productId);
             res.status(200).send('ok'); return;
