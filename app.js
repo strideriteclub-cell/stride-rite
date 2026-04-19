@@ -311,6 +311,7 @@ const AppService = {
     getTourProgress: async (userId) => {
         const rawRuns = await dbGet('stride_runs');
         const userRegs = await dbGet('stride_registrations', `user_id=eq.${userId}`);
+        const now = new Date();
         
         const progress = TOUR_CONFIG.map(stop => {
             const runForStop = (rawRuns || []).find(r => {
