@@ -894,7 +894,13 @@ async function handleExport(chatId) {
         }
     });
     const dt = nextRun.date_label.split('||')[0];
-    await sendDocument(chatId, csv, `Stride_Rite_${dt.replace(/[^a-zA-Z0-9]/g, '_')}.csv`);
+    let hypeFilename = `Stride_Rite_Manifest_${dt.replace(/[^a-zA-Z0-9]/g, '_')}.csv`;
+    if (nextRun.tour_stop_id) {
+        const stopName = (nextRun.tour_stop_name || nextRun.location).toUpperCase().replace(/\s+/g, '_');
+        hypeFilename = `MISSION_ROSTER_STAGE_${nextRun.tour_stop_id}_${stopName}_RESTRICTED.csv`;
+    }
+    
+    await sendDocument(chatId, csv, hypeFilename);
 }
 
 // ─── WHATSAPP BLAST ───────────────────────────────────────────────────────────
