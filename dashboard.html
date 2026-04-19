@@ -5,9 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Member Dashboard | Stride Rite</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=23">
-    
-    <!-- Leaflet & GPX Map Libraries -->
+    <link rel="stylesheet" href="styles.css?v=24">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-gpx/1.7.0/gpx.min.js"></script>
@@ -18,53 +16,33 @@
         .welcome-text { color: var(--text-muted); font-size: 1.1rem; }
         .section-title { font-family: 'Outfit'; font-size: 1.8rem; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 12px; }
         .runs-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1.5rem; }
-        
-        .run-card { 
-            padding: 2.5rem; 
-            border-bottom: 4px solid var(--neon-accent); 
-            transition: transform 0.3s;
-            position: relative;
-        }
+        .run-card { padding: 2.5rem; border-bottom: 4px solid var(--neon-accent); transition: transform 0.3s; position: relative; }
         .run-card.registered { border-bottom-color: #22c55e; }
         .run-card:hover { transform: translateY(-5px); }
         .run-date { font-weight: 800; font-size: 1.6rem; color: white; margin-bottom: 0.5rem; }
         .run-loc { color: var(--text-muted); font-size: 0.95rem; margin-bottom: 1.5rem; display: flex; align-items: flex-start; gap: 6px; }
-        
-        .registered-badge {
-            background: rgba(34, 197, 94, 0.15);
-            color: #22c55e;
-            padding: 6px 12px;
-            border-radius: 50px;
-            font-size: 0.75rem;
-            font-weight: 800;
-            text-transform: uppercase;
-            display: inline-block;
-            margin-bottom: 1rem;
-        }
+        .registered-badge { background: rgba(34, 197, 94, 0.15); color: #22c55e; padding: 6px 12px; border-radius: 50px; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; display: inline-block; margin-bottom: 1rem; }
 
-        /* Tour Map Styles */
-        .leaflet-tile { display: none; } 
-        .leaflet-control-attribution, .leaflet-control-zoom { display:none !important; }
-        .leaflet-container { background: transparent !important; }
+        /* Tour Map — hide tiles ONLY within this element */
+        #tourMap .leaflet-tile { display: none; }
+        #tourMap .leaflet-control-attribution, #tourMap .leaflet-control-zoom { display: none !important; }
+        #tourMap .leaflet-container { background: transparent !important; }
 
-        #tourMap {
-            width: 100%; height: 100%;
-            background-image: url('cairo_map_bg.png');
-            background-size: cover;
-            background-position: center;
-        }
-        
-        .tour-map-bg { position: absolute; inset: 0; pointer-events: none; z-index: 400; background:rgba(26, 26, 31, 0.4); }
-        .m-wrap { position:relative; width:0; height:0; opacity: 0; transform: scale(0); transition: opacity 0.4s, transform 0.4s; }
+        .tour-map-overlay { position: absolute; inset: 0; pointer-events: none; z-index: 400; background: rgba(26,26,31,0.4); }
+        .m-wrap { position: absolute; width: 0; height: 0; opacity: 0; transform: scale(0); transition: opacity 0.4s, transform 0.4s; }
         .m-wrap.visible { opacity: 1; transform: scale(1); }
-        .m-core { position:absolute; width:14px; height:14px; background:var(--peach-accent); border-radius:50%; border:2px solid #1a1a1f; transform:translate(-50%,-50%); top:0; left:0; z-index:2; }
-        .m-label { position:absolute; transform:translateX(-50%); top:14px; left:0; background:rgba(26,26,31,0.95); border:1px solid var(--peach-accent); padding:4px 10px; border-radius:4px; white-space:nowrap; z-index:3; font-family:'Outfit'; font-weight:800; font-size:10px; color:var(--peach-accent); }
+        .m-core { position: absolute; width: 14px; height: 14px; background: var(--peach-accent, #ff7300); border-radius: 50%; border: 2px solid #1a1a1f; transform: translate(-50%,-50%); top: 0; left: 0; z-index: 2; }
+        .m-label { position: absolute; transform: translateX(-50%); top: 14px; left: 0; background: rgba(26,26,31,0.95); border: 1px solid var(--neon-accent, #ff6b35); padding: 4px 10px; border-radius: 4px; white-space: nowrap; z-index: 3; font-family:'Outfit'; font-weight: 800; font-size: 10px; color: var(--neon-accent, #ff6b35); }
 
-        .side-progress { position: absolute; left: 0; top: 0; width: 100%; height: 3px; background: rgba(255,255,255,0.05); z-index: 450; }
-        .side-progress-fill { position: absolute; top: 0; left: 0; height: 100%; width: 0%; background: var(--peach-accent); transition: width 0.6s ease; }
-        .side-list { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: row; gap: 40px; z-index: 500; }
-        .list-item { width: 28px; height: 28px; background: #1a1a1f; border: 2px solid var(--peach-accent); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--peach-accent); font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 12px; }
-        .list-item.unlocked { background: #22c55e; border-color: #22c55e; color: #1a1a1f; }
+        /* Modal Registration Inputs */
+        .reg-input { width: 100%; box-sizing: border-box; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.12); padding: 10px 14px; border-radius: 8px; color: #fff; font-size: 0.9rem; font-family: 'Inter', sans-serif; transition: border-color 0.2s; }
+        .reg-input:focus { outline: none; border-color: var(--neon-accent, #ff6b35); }
+        .dist-opt { flex: 1; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); color: #fff; padding: 9px; border-radius: 6px; font-weight: 800; font-size: 0.85rem; cursor: pointer; transition: all 0.2s; }
+        .dist-opt.active { background: var(--neon-accent, #ff6b35) !important; color: #000 !important; border-color: var(--neon-accent, #ff6b35) !important; }
+        .dist-opt:hover:not(.active) { background: rgba(255,255,255,0.1); }
+
+        /* IG icon SVG */
+        .ig-svg path { fill: currentColor; }
     </style>
 </head>
 <body>
@@ -86,17 +64,18 @@
 
         <div id="advisorContainer"></div>
 
+        <!-- Tour de Cairo Section -->
         <section style="margin-bottom: 3rem;">
             <div class="glass-card" style="padding: 0; overflow: hidden; position: relative; border-bottom: 4px solid var(--neon-accent);">
-                <div style="padding: 2rem; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center;">
+                <div style="padding: 2rem; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
                     <div>
                         <h2 class="section-title" style="margin-bottom: 0;">🗺️ Tour de Cairo</h2>
-                        <div style="display: flex; gap: 10px; margin-top: 5px;">
-                            <p style="color: var(--text-muted); font-size: 0.9rem;">8 Runs · 8 Districts · 1 City</p>
+                        <div style="display: flex; gap: 10px; margin-top: 5px; align-items: center;">
+                            <p style="color: var(--text-muted); font-size: 0.9rem; margin: 0;">8 Runs · 8 Districts · 1 City</p>
                             <button onclick="showTourInfo()" style="background: none; border: none; color: var(--neon-accent); font-size: 0.8rem; text-decoration: underline; cursor: pointer; padding: 0;">What is this?</button>
                         </div>
                     </div>
-                    <button class="btn btn-primary btn-sm" onclick="spotlightNextStop()">🚀 Register for next Stop</button>
+                    <button class="btn btn-primary btn-sm" id="registerNextBtn" onclick="spotlightNextStop()">🚀 Register for next Stop</button>
                 </div>
                 <div style="position: relative; height: 500px; width: 100%; background: #1a1a1f; overflow: hidden;">
                     <div id="tourMap" style="width: 100%; height: 100%;"></div>
@@ -104,6 +83,7 @@
             </div>
         </section>
 
+        <!-- Upcoming Runs -->
         <section>
             <h2 class="section-title">🗓 Upcoming Community Runs</h2>
             <div class="runs-grid" id="runsContainer">
@@ -112,7 +92,7 @@
         </section>
     </div>
 
-    <script src="app.js?v=23"></script>
+    <script src="app.js?v=24"></script>
     <script>
         let user = null;
         let runSelections = {};
@@ -125,6 +105,7 @@
             await initTourMap();
         });
 
+        // ── Load Dashboard Cards ──────────────────────────────────────────
         async function initDashboard() {
             const container = document.getElementById('runsContainer');
             try {
@@ -133,139 +114,246 @@
                 window.myRegistrations = myRegs;
 
                 if (!runs || runs.length === 0) {
-                    container.innerHTML = `<p style="padding:3rem; text-align:center; color:var(--text-muted); grid-column:1/-1;">No community runs scheduled.</p>`;
+                    container.innerHTML = `<p style="padding:3rem; text-align:center; color:var(--text-muted); grid-column:1/-1;">No community runs scheduled yet.</p>`;
                     return;
                 }
 
                 container.innerHTML = runs.map(run => {
                     const isReg = myRegs.includes(run.id);
                     const currentDist = runSelections[run.id] || '5K';
-                    
-                    return `
-                        <div class="glass-card run-card ${isReg ? 'registered' : ''}">
-                            ${isReg ? '<span class="registered-badge">✓ Registered</span>' : ''}
-                            
-                            <div style="display:flex; align-items:center; gap:12px; margin-bottom:1rem; padding-bottom:1rem; border-bottom:1px solid rgba(255,255,255,0.05);">
-                                ${run.partner_logo ? `<img src="${run.partner_logo}" style="width:40px; height:40px; border-radius:8px; object-fit:cover;">` : '<div style="width:40px; height:40px; background:var(--neon-accent); border-radius:8px; display:flex; align-items:center; justify-content:center; color:#000; font-weight:800;">S.</div>'}
-                                <div>
-                                    <div style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px; font-weight:700;">Hosted By</div>
-                                    <div style="font-weight:700; color:#fff; display:flex; align-items:center; gap:6px;">
-                                        ${run.partner_name || 'Stride Rite'} x Stride Rite
-                                        ${run.partner_ig ? `<a href="https://instagram.com/${run.partner_ig.replace('@', '')}" target="_blank" style="color:var(--neon-accent);"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.153.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg></a>` : ''}
-                                    </div>
+                    return `<div class="glass-card run-card ${isReg ? 'registered' : ''}">
+                        ${isReg ? '<span class="registered-badge">✓ Registered</span>' : ''}
+                        <div style="display:flex;align-items:center;gap:12px;margin-bottom:1rem;padding-bottom:1rem;border-bottom:1px solid rgba(255,255,255,0.05);">
+                            ${run.partner_logo
+                                ? `<div style="width:40px;height:40px;border-radius:8px;background:#0d0d11;display:flex;align-items:center;justify-content:center;border:1px solid rgba(255,255,255,0.07);flex-shrink:0;"><img src="${run.partner_logo}" style="max-width:38px;max-height:38px;object-fit:contain;"></div>`
+                                : `<div style="width:40px;height:40px;background:var(--neon-accent);border-radius:8px;display:flex;align-items:center;justify-content:center;color:#000;font-weight:800;flex-shrink:0;">S.</div>`}
+                            <div>
+                                <div style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;font-weight:700;">Hosted By</div>
+                                <div style="font-weight:700;color:#fff;display:flex;align-items:center;gap:6px;">
+                                    ${run.partner_name || 'Stride Rite'} × Stride Rite
+                                    ${run.partner_ig ? `<a href="https://instagram.com/${run.partner_ig.replace('@','')}" target="_blank" style="color:var(--neon-accent);line-height:0;"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg></a>` : ''}
                                 </div>
                             </div>
-    
-                            <div style="font-family:'Outfit'; font-weight:800; color:var(--neon-accent); letter-spacing:2px; text-transform:uppercase; margin-bottom:0.8rem; font-size:1.1rem;">
-                                ${run.tour_stop_id ? `Stop 0${run.tour_stop_id}: ${run.tour_stop_name || run.location}` : run.location}
-                            </div>
-                            
-                            <div class="run-date">${run.date_label.split('||')[0]}</div>
-                            <div class="run-loc">📍 <a href="${run.location_link}" target="_blank" style="color:var(--text-muted); text-decoration:underline;">${run.location}</a></div>
-                            
-                            ${!isReg ? `
-                                <div class="dist-selector" style="margin-top:1rem;">
-                                    ${['2K','5K','8K'].map(d => `<button class="dist-btn ${currentDist === d ? 'active' : ''}" onclick="selectDist('${run.id}','${d}')">${d}</button>`).join('')}
-                                </div>
-                                <button class="btn btn-primary btn-block" onclick="joinRun('${run.id}')">Join Mission</button>
-                            ` : `<button class="btn btn-secondary btn-block" disabled style="background:rgba(34,197,94,0.1); color:#22c55e; border-color:#22c55e;">You're Registered ✓</button>`}
                         </div>
-                    `;
+                        <div style="font-family:'Outfit';font-weight:800;color:var(--neon-accent);letter-spacing:2px;text-transform:uppercase;margin-bottom:0.8rem;font-size:1.1rem;">
+                            ${run.tour_stop_id ? `Stop ${String(run.tour_stop_id).padStart(2,'0')}: ${run.tour_stop_name || run.location}` : run.location}
+                        </div>
+                        <div class="run-date">${run.date_label}</div>
+                        <div class="run-loc">📍 <a href="${run.location_link}" target="_blank" style="color:var(--text-muted);text-decoration:underline;">${run.location}</a></div>
+                        ${!isReg ? `
+                            <div class="dist-selector" style="margin-top:1rem;">
+                                ${['2K','5K','8K'].map(d => `<button class="dist-btn ${currentDist===d?'active':''}" onclick="selectDist('${run.id}','${d}')">${d}</button>`).join('')}
+                            </div>
+                            <button class="btn btn-primary btn-block" onclick="joinRun('${run.id}')">Join Mission</button>
+                        ` : `<button class="btn btn-secondary btn-block" disabled style="background:rgba(34,197,94,0.1);color:#22c55e;border-color:#22c55e;cursor:default;">You're Registered ✓</button>`}
+                    </div>`;
                 }).join('');
+
                 if (runs.length > 0) loadAIAdvisor(runs[0]);
-            } catch (error) { container.innerHTML = `<p style="color:#ff4d4d; padding:2rem;">Dashboard connection failed.</p>`; }
+            } catch (err) {
+                console.error(err);
+                container.innerHTML = `<p style="color:#ff4d4d;padding:2rem;">Dashboard connection failed.</p>`;
+            }
         }
 
+        // ── Spotlight Modal ───────────────────────────────────────────────
         window.spotlightNextStop = async () => {
             if (!window.lastFetchedRuns) return;
-            let nextStop = window.lastFetchedRuns.find(r => r.tour_stop_id && !window.myRegistrations.includes(r.id)) || window.lastFetchedRuns.find(r => r.tour_stop_id) || window.lastFetchedRuns[0];
+            const nextStop =
+                window.lastFetchedRuns.find(r => r.tour_stop_id && !window.myRegistrations.includes(r.id)) ||
+                window.lastFetchedRuns.find(r => r.tour_stop_id) ||
+                window.lastFetchedRuns[0];
             if (!nextStop) return;
 
-            const isTour = !!nextStop.tour_stop_id;
-            const isReg = window.myRegistrations.includes(nextStop.id);
+            const isTour  = !!nextStop.tour_stop_id;
+            const isReg   = window.myRegistrations.includes(nextStop.id);
+            const igIcon  = `<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>`;
+
+            const partnerIgBadge = nextStop.partner_ig
+                ? `<a href="https://instagram.com/${nextStop.partner_ig.replace('@','')}" target="_blank" style="position:absolute;bottom:-6px;right:-6px;background:var(--neon-accent,#ff6b35);color:#000;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;">${igIcon}</a>` : '';
+
+            const strideIgBadge = `<a href="https://instagram.com/strideriteclub" target="_blank" style="position:absolute;bottom:-6px;right:-6px;background:#fff;color:#000;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;">${igIcon}</a>`;
+
+            const regFormHTML = !isReg ? `
+                <div style="padding-top:1.25rem;border-top:1px solid rgba(255,255,255,0.08);margin-top:1rem;">
+                    <div style="font-size:0.7rem;color:var(--neon-accent,#ff6b35);font-weight:800;margin-bottom:0.75rem;letter-spacing:1.5px;">📝 REGISTER FOR THIS MISSION</div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+                        <input id="reg-name" class="reg-input" type="text" value="${user.name}" placeholder="Full Name">
+                        <input id="reg-phone" class="reg-input" type="tel" placeholder="Phone Number (e.g. 010...)">
+                    </div>
+                    <div style="font-size:0.7rem;color:rgba(255,255,255,0.4);font-weight:600;margin-bottom:8px;letter-spacing:1px;">YOUR TARGET DISTANCE:</div>
+                    <div style="display:flex;gap:8px;" id="dist-row">
+                        <button class="dist-opt" data-dist="2K" onclick="selectModalDist(this)">2K</button>
+                        <button class="dist-opt active" data-dist="5K" onclick="selectModalDist(this)">5K</button>
+                        <button class="dist-opt" data-dist="8K" onclick="selectModalDist(this)">8K</button>
+                    </div>
+                </div>` : '';
 
             Swal.fire({
-                title: `<div style="font-family:'Outfit'; font-size:1.5rem; color:#fff;">📍 ${isTour ? `Stop 0${nextStop.tour_stop_id}: ${nextStop.tour_stop_name || nextStop.location}` : 'Upcoming Mission'}</div>`,
+                title: `<div style="font-family:'Outfit';font-size:1.4rem;color:#fff;font-weight:800;">📍 ${isTour ? `Stop ${String(nextStop.tour_stop_id).padStart(2,'0')}: ${nextStop.tour_stop_name || nextStop.location}` : 'Upcoming Mission'}</div>`,
                 html: `
-                    <div style="text-align: left; background: #0d0d11; border-radius: 12px; padding: 1.5rem; margin-top: 10px; border: 1px solid rgba(255,255,255,0.05);">
-                        <div style="display:flex; align-items:center; justify-content:center; gap:25px; margin-bottom:1.5rem; padding-bottom:1rem; border-bottom:1px solid rgba(255,255,255,0.1);">
+                    <div style="text-align:left;background:#0d0d11;border-radius:12px;padding:1.25rem;border:1px solid rgba(255,255,255,0.06);">
+
+                        <!-- Dual Brand Header -->
+                        <div style="display:flex;align-items:center;justify-content:center;gap:24px;margin-bottom:1.25rem;padding-bottom:1rem;border-bottom:1px solid rgba(255,255,255,0.08);">
                             <div style="text-align:center;">
-                                <div style="position:relative; display:inline-block;">
-                                    <img src="${nextStop.partner_logo || 'https://via.placeholder.com/60/1a1a1f/ffffff?text=Host'}" style="width:60px; height:60px; border-radius:12px; object-fit:cover;">
-                                    ${nextStop.partner_ig ? `<a href="https://instagram.com/${nextStop.partner_ig.replace('@','')}" target="_blank" style="position:absolute; bottom:-5px; right:-5px; background:var(--neon-accent); color:#000; width:22px; height:22px; border-radius:50%; display:flex; align-items:center; justify-content:center;"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg></a>` : ''}
+                                <div style="width:60px;height:60px;background:#1a1a1f;border-radius:12px;display:flex;align-items:center;justify-content:center;position:relative;border:1px solid rgba(255,255,255,0.07);margin:0 auto;">
+                                    <img src="${nextStop.partner_logo || 'https://via.placeholder.com/50/1a1a1f/888?text=+'}" style="max-width:48px;max-height:48px;object-fit:contain;">
+                                    ${partnerIgBadge}
                                 </div>
-                                <div style="font-size:0.8rem; color:#fff; font-weight:700; margin-top:5px;">${nextStop.partner_name || 'Host'}</div>
+                                <div style="font-size:0.75rem;color:#fff;font-weight:700;margin-top:8px;">${nextStop.partner_name || 'Host'}</div>
                             </div>
-                            <div style="font-family:'Outfit'; font-weight:800; font-size:1.5rem; color:rgba(255,255,255,0.2);">X</div>
+                            <div style="font-family:'Outfit';font-weight:800;font-size:1.4rem;color:rgba(255,255,255,0.15);">×</div>
                             <div style="text-align:center;">
-                                <div style="position:relative; display:inline-block;">
-                                    <div style="width:60px; height:60px; border-radius:12px; border:2px solid var(--neon-accent); display:flex; align-items:center; justify-content:center; font-family:'Outfit'; font-weight:800; font-size:2rem; color:var(--neon-accent); background:#000;">S.</div>
-                                    <a href="https://instagram.com/strideriteclub" target="_blank" style="position:absolute; bottom:-5px; right:-5px; background:#fff; color:#000; width:22px; height:22px; border-radius:50%; display:flex; align-items:center; justify-content:center;"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg></a>
+                                <div style="width:60px;height:60px;border-radius:12px;border:2px solid var(--neon-accent,#ff6b35);display:flex;align-items:center;justify-content:center;font-family:'Outfit';font-weight:800;font-size:1.8rem;color:var(--neon-accent,#ff6b35);background:#000;position:relative;margin:0 auto;">
+                                    S.${strideIgBadge}
                                 </div>
-                                <div style="font-size:0.8rem; color:#fff; font-weight:700; margin-top:5px;">Stride Rite</div>
+                                <div style="font-size:0.75rem;color:#fff;font-weight:700;margin-top:8px;">Stride Rite</div>
                             </div>
                         </div>
-                        <div style="margin-bottom:1.5rem;">
-                            <div style="font-family:'Barlow Condensed',sans-serif; font-weight:800; color:var(--neon-accent); letter-spacing:2px; font-size:0.85rem; margin-bottom:0.5rem;">MISSION BRIEFING</div>
-                            <div style="color:#fff; font-size:1.1rem; font-weight:600;">📅 ${nextStop.date_label.split('||')[0]}</div>
-                            <div style="color:var(--text-muted); font-size:0.9rem;">📍 Meeting Point: <span style="color:#fff;">${nextStop.location}</span></div>
+
+                        <!-- Mission Details -->
+                        <div style="margin-bottom:1rem;">
+                            <div style="font-size:0.7rem;color:var(--neon-accent,#ff6b35);font-weight:800;letter-spacing:2px;margin-bottom:0.5rem;">MISSION BRIEFING</div>
+                            <div style="color:#fff;font-size:1rem;font-weight:600;margin-bottom:4px;">📅 ${nextStop.date_label}</div>
+                            <div style="color:rgba(255,255,255,0.55);font-size:0.9rem;">📍 Meeting Point: <span style="color:#fff;">${nextStop.location}</span></div>
+                            ${nextStop.location_link ? `<a href="${nextStop.location_link}" target="_blank" style="font-size:0.8rem;color:var(--neon-accent,#ff6b35);text-decoration:none;display:inline-block;margin-top:4px;">🗺 Open in Google Maps →</a>` : ''}
                         </div>
-                        <div id="spotlight-map" style="width: 100%; height: 320px; border-radius: 12px; background:#000;"></div>
+
+                        <!-- Satellite Map -->
+                        <div id="spotlight-map" style="width:100%;height:250px;border-radius:10px;background:#111;overflow:hidden;"></div>
+
+                        <!-- Registration Form (only if not already registered) -->
+                        ${regFormHTML}
                     </div>
                 `,
-                width: 600, background: '#141419', color: '#fff',
-                showConfirmButton: !isReg, confirmButtonText: '🚀 Join Official Mission', confirmButtonColor: 'var(--neon-accent)',
-                showCancelButton: true, cancelButtonText: isReg ? 'Close' : 'Discard',
+                width: 620,
+                background: '#141419',
+                color: '#fff',
+                showConfirmButton: !isReg,
+                confirmButtonText: '🚀 Commit to Mission',
+                confirmButtonColor: 'var(--neon-accent, #ff6b35)',
+                showCancelButton: true,
+                cancelButtonText: isReg ? 'Close' : 'Discard',
+                preConfirm: () => {
+                    if (isReg) return true;
+                    const name  = document.getElementById('reg-name').value.trim();
+                    const phone = document.getElementById('reg-phone').value.trim();
+                    const active = document.querySelector('#dist-row .dist-opt.active');
+                    const dist  = active ? active.dataset.dist : null;
+                    if (!name || !phone || !dist) {
+                        Swal.showValidationMessage('Please fill in your name, phone number, and select a distance.');
+                        return false;
+                    }
+                    return { name, phone, dist };
+                },
                 didOpen: () => {
-                    const map = L.map('spotlight-map').setView([30.0444, 31.2357], 13);
-                    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: 'Esri' }).addTo(map);
+                    // Init satellite map
+                    const map = L.map('spotlight-map', { zoomControl: true }).setView([30.0444, 31.2357], 13);
+                    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                        attribution: 'Esri',
+                        maxZoom: 19
+                    }).addTo(map);
                     if (nextStop.route_preview_url && nextStop.route_type === 'gpx') {
-                        new L.GPX(nextStop.route_preview_url, { async: true, polyline_options: { color: '#ff7300', weight: 4 }, marker_options: { startIconUrl: 'https://cdn-icons-png.flaticon.com/512/684/684908.png', endIconUrl: 'https://cdn-icons-png.flaticon.com/512/61/61041.png', iconSize:[32,32] } }).on('loaded', e => map.fitBounds(e.target.getBounds())).addTo(map);
-                    } else if (nextStop.route_preview_url) {
-                        document.getElementById('spotlight-map').innerHTML = `<img src="${nextStop.route_preview_url}" style="width:100%; height:100%; object-fit:cover; border-radius:12px;">`;
+                        new L.GPX(nextStop.route_preview_url, {
+                            async: true,
+                            polyline_options: { color: '#ff7300', weight: 4, opacity: 0.9 },
+                            marker_options: {
+                                startIconUrl: 'https://cdn-icons-png.flaticon.com/512/684/684908.png',
+                                endIconUrl: 'https://cdn-icons-png.flaticon.com/512/61/61041.png',
+                                iconSize: [28, 28]
+                            }
+                        }).on('loaded', e => map.fitBounds(e.target.getBounds(), { padding: [20, 20] })).addTo(map);
                     }
                 }
-            }).then(r => { if(r.isConfirmed) window.joinRun(nextStop.id); });
+            }).then(result => {
+                if (result.isConfirmed && !isReg) {
+                    const { name, phone, dist } = result.value;
+                    joinRun(nextStop.id, dist, name, phone);
+                }
+            });
         };
 
+        // Helper: toggle distance option in modal
+        window.selectModalDist = (btn) => {
+            document.querySelectorAll('#dist-row .dist-opt').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+        };
+
+        // ── Simple card join (from run card) ─────────────────────────────
         window.selectDist = (rId, dist) => { runSelections[rId] = dist; initDashboard(); };
-        window.joinRun = async (rId) => {
-            Swal.fire({ title: 'Registering...', background:'#141419', didOpen: () => Swal.showLoading() });
-            if(await AppService.registerForRun(rId, runSelections[rId] || '5K', user.level || 'Beginner')) {
-                Swal.fire({ icon:'success', title:'Registered!', background:'#141419', color:'#fff' });
-                initDashboard();
+
+        window.joinRun = async (rId, dist, fullName, phoneNumber) => {
+            const finalDist = dist || runSelections[rId] || '5K';
+            const finalName = fullName || user.name;
+            Swal.fire({ title: 'Registering...', background: '#141419', didOpen: () => Swal.showLoading() });
+            const ok = await AppService.registerForRun(rId, finalDist, user.level || 'Beginner', finalName, phoneNumber);
+            if (ok) {
+                Swal.fire({ icon: 'success', title: 'Mission Confirmed!', text: 'See you there! 🏃', background: '#141419', color: '#fff' });
+                await initDashboard();
+            } else {
+                Swal.fire({ icon: 'error', title: 'Oops!', text: 'Registration failed or you are already registered.', background: '#141419', color: '#fff' });
             }
         };
 
+        // ── Weather Advisor ───────────────────────────────────────────────
         async function loadAIAdvisor(run) {
             try {
-                const res = await fetch(`https://api.weatherapi.com/v1/current.json?key=686edc30f7764d08ada12150261604&q=${encodeURIComponent(run.location)}`);
+                const res  = await fetch(`https://api.weatherapi.com/v1/current.json?key=686edc30f7764d08ada12150261604&q=${encodeURIComponent(run.location)}`);
                 const data = await res.json();
-                document.getElementById('advisorContainer').innerHTML = `<div class="advisor-card"><img src="${data.current.condition.icon}" style="width:64px;"><div style="flex:1;"><div style="color:var(--neon-accent); font-weight:800; font-size:0.75rem;">🌤 AI WEATHER ADVISOR</div><div style="color:white; font-weight:700;">${data.current.temp_c}°C - ${data.current.condition.text}</div></div></div>`;
-            } catch (e) {}
+                document.getElementById('advisorContainer').innerHTML = `
+                    <div class="advisor-card" style="margin-bottom:2rem;">
+                        <img src="${data.current.condition.icon}" style="width:56px;">
+                        <div style="flex:1;">
+                            <div style="color:var(--neon-accent);font-weight:800;font-size:0.75rem;text-transform:uppercase;letter-spacing:1px;">🌤 Weather for Next Run</div>
+                            <div style="color:white;font-weight:700;margin-top:2px;">${data.current.temp_c}°C — ${data.current.condition.text}</div>
+                        </div>
+                    </div>`;
+            } catch (e) { /* silent */ }
         }
 
+        // ── Animated Tour Map ─────────────────────────────────────────────
         async function initTourMap() {
-            const tourMap = L.map('tourMap', { zoomControl: false, attributionControl: false }).setView([30.035, 31.4775], 9.7);
-            document.getElementById('tourMap').insertAdjacentHTML('afterbegin', '<div class="tour-map-bg"></div><div class="side-progress"><div class="side-progress-fill" id="progressFill"></div></div><div class="side-list" id="sideList"></div>');
+            const mapEl = document.getElementById('tourMap');
+            const tourMap = L.map(mapEl, { zoomControl: false, attributionControl: false }).setView([30.035, 31.4775], 9.7);
+
             const stops = await AppService.getTourProgress(user.id);
-            const sideList = document.getElementById('sideList');
-            stops.forEach((s,i) => sideList.insertAdjacentHTML('beforeend', `<div class="list-item ${s.status==='unlocked'?'unlocked':''}" id="item-${i}">${i+1}</div>`));
+            if (!stops || stops.length === 0) return;
+
             const polyline = L.polyline([], { color: '#ff6b35', weight: 2, dashArray: '6 8' }).addTo(tourMap);
-            
-            async function startTour() {
-                const fill = document.getElementById('progressFill');
-                for (let i=0; i<stops.length; i++) {
+
+            // Add overlay + header dots
+            mapEl.insertAdjacentHTML('afterbegin', `<div class="tour-map-overlay"></div>`);
+
+            async function animateStops() {
+                for (let i = 0; i < stops.length; i++) {
                     const s = stops[i];
-                    fill.style.width = `${(i/(stops.length-1))*100}%`;
-                    L.marker([s.lat, s.lng], { icon: L.divIcon({ html: `<div class="m-wrap ${s.status}" id="marker-${s.id}"><div class="m-core"></div><div class="m-label">0${s.id}</div></div>`, className:'' }) }).addTo(tourMap);
-                    setTimeout(() => document.getElementById(`marker-${s.id}`).classList.add('visible'), 40);
-                    if (i>0) polyline.addLatLng([s.lat, s.lng]);
+                    const icon = L.divIcon({
+                        html: `<div class="m-wrap" id="mwrap-${s.id}"><div class="m-core"></div><div class="m-label">${String(s.id).padStart(2,'0')}</div></div>`,
+                        className: ''
+                    });
+                    L.marker([s.lat, s.lng], { icon }).addTo(tourMap);
+                    requestAnimationFrame(() => {
+                        const el = document.getElementById(`mwrap-${s.id}`);
+                        if (el) el.classList.add('visible');
+                    });
+                    if (i > 0) polyline.addLatLng([s.lat, s.lng]);
                     await new Promise(r => setTimeout(r, 300));
                 }
             }
-            const observer = new IntersectionObserver(e => { if(e[0].isIntersecting) { startTour(); observer.disconnect(); } }, { threshold:0.1 });
-            observer.observe(document.getElementById('tourMap'));
+
+            const observer = new IntersectionObserver(entries => {
+                if (entries[0].isIntersecting) { animateStops(); observer.disconnect(); }
+            }, { threshold: 0.1 });
+            observer.observe(mapEl);
+        }
+
+        function showTourInfo() {
+            Swal.fire({
+                title: '<span style="font-family:Outfit;color:#fff;">🏅 Tour de Cairo</span>',
+                html: '<p style="color:rgba(255,255,255,0.7);text-align:left;">Tour de Cairo is Stride Rite\'s flagship 8-stop running tour across Cairo\'s most iconic neighbourhoods. Register for each stop to earn your Community Runner badge and celebrate the city one run at a time.</p>',
+                background: '#141419', color: '#fff', confirmButtonColor: 'var(--neon-accent,#ff6b35)'
+            });
         }
     </script>
 </body>
