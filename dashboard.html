@@ -24,9 +24,7 @@
         .registered-badge { background: rgba(34, 197, 94, 0.15); color: #22c55e; padding: 6px 12px; border-radius: 50px; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; display: inline-block; margin-bottom: 1rem; }
 
         /* Tour Map — hide tiles ONLY within this element */
-        #tourMap .leaflet-tile { display: none; }
         #tourMap .leaflet-control-attribution, #tourMap .leaflet-control-zoom { display: none !important; }
-        #tourMap .leaflet-container { background: transparent !important; }
 
         .tour-map-overlay { position: absolute; inset: 0; pointer-events: none; z-index: 400; background: rgba(26,26,31,0.4); }
         .m-wrap { position: absolute; width: 0; height: 0; opacity: 0; transform: scale(0); transition: opacity 0.4s, transform 0.4s; }
@@ -215,7 +213,7 @@
                         <!-- Mission Details -->
                         <div style="margin-bottom:1rem;">
                             <div style="font-size:0.7rem;color:var(--neon-accent,#ff6b35);font-weight:800;letter-spacing:2px;margin-bottom:0.5rem;">MISSION BRIEFING</div>
-                            <div style="color:#fff;font-size:1rem;font-weight:600;margin-bottom:4px;">📅 ${nextStop.date_label}</div>
+                            <div style="color:#fff;font-size:1rem;font-weight:600;margin-bottom:4px;">📅 ${(nextStop.date_label||'').split('||')[0]}</div>
                             <div style="color:rgba(255,255,255,0.55);font-size:0.9rem;">📍 Meeting Point: <span style="color:#fff;">${nextStop.location}</span></div>
                             ${nextStop.location_link ? `<a href="${nextStop.location_link}" target="_blank" style="font-size:0.8rem;color:var(--neon-accent,#ff6b35);text-decoration:none;display:inline-block;margin-top:4px;">🗺 Open in Google Maps →</a>` : ''}
                         </div>
@@ -317,12 +315,17 @@
             const mapEl = document.getElementById('tourMap');
             const tourMap = L.map(mapEl, { zoomControl: false, attributionControl: false }).setView([30.035, 31.4775], 9.7);
 
+            // Dark satellite tile layer for the background map
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                maxZoom: 19
+            }).addTo(tourMap);
+
             const stops = await AppService.getTourProgress(user.id);
             if (!stops || stops.length === 0) return;
 
-            const polyline = L.polyline([], { color: '#ff6b35', weight: 2, dashArray: '6 8' }).addTo(tourMap);
+            const polyline = L.polyline([], { color: '#ff6b35', weight: 2.5, dashArray: '6 8', opacity: 0.85 }).addTo(tourMap);
 
-            // Add overlay + header dots
+            // Semi-transparent overlay so markers pop
             mapEl.insertAdjacentHTML('afterbegin', `<div class="tour-map-overlay"></div>`);
 
             async function animateStops() {
