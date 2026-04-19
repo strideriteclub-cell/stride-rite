@@ -147,6 +147,21 @@ const AuthService = {
     }
 };
 
+const TOUR_STOPS_COUNT = 8;
+const TOUR_CONFIG = [
+    { id: 1, name: 'Al Rehab',    lat: 30.062, lng: 31.594, small: true },
+    { id: 2, name: 'Madinaty',    lat: 30.101, lng: 31.646, up: true },
+    { id: 3, name: 'New Administrative Capital', lat: 30.013, lng: 31.800, left: true },
+    { id: 4, name: 'New Cairo',   lat: 30.025, lng: 31.462 },
+    { id: 5, name: 'Zamalek',     lat: 30.062, lng: 31.222 },
+    { id: 6, name: 'Maadi',       lat: 29.959, lng: 31.250 },
+    { id: 7, name: 'Giza',        lat: 29.987, lng: 31.141 },
+    { id: 8, name: 'Heliopolis',  lat: 30.089, lng: 31.319, up: true, path: [
+        [29.987, 31.141], [30.025, 31.160], [30.055, 31.185], [30.080, 31.205],
+        [30.095, 31.222], [30.098, 31.245], [30.095, 31.275], [30.089, 31.319]
+    ]}
+];
+
 // --- APP SERVICE ---
 const AppService = {
     getRuns: async () => {
@@ -284,6 +299,34 @@ const AppService = {
         }).filter(r => r !== null && r.is_completed);
     },
 
+    getTourProgress: async (userId) => {
+        const rawRuns = await dbGet('stride_runs');
+        const userRegs = await dbGet('stride_registrations', `user_id=eq.${userId}`);
+        
+        // Filter to current month tour stops
+        const now = new Date();
+        const currentMonth = now.getMonth();
+        const currentYear = now.getFullYear();
+
+        const progress = TOUR_CONFIG.map(stop => {
+            const runForStop = rawRuns.find(r => {
+                if (!r.tour_stop_id || r.tour_stop_id != stop.id) return false;
+                const runDate = new Date(r.iso_date || (r.date_label.includes('||') ? r.date_label.split('||')[1] : null));
+                return runDate.getMonth() === currentMonth && runDate.getFullYear() === currentYear;
+            });
+
+            const registration = runForStop ? userRegs.find(reg => reg.run_id === runForStop.id) : null;
+
+            return {
+                ...stop,
+                status: registration ? 'unlocked' : (runForStop ? 'active' : 'locked'),
+                runId: runForStop ? runForStop.id : null
+            };
+        });
+
+        return progress;
+    },
+
     getUserStats: async (userId) => {
         const pastRuns = await AppService.getPastUserRuns(userId);
         let totalKms = 0;
@@ -292,10 +335,16 @@ const AppService = {
             const num = parseFloat(distStr.replace(/[^\d.]/g, ''));
             if (!isNaN(num)) totalKms += num;
         });
+
+        const tourProgress = await AppService.getTourProgress(userId);
+        const unlockedCount = tourProgress.filter(s => s.status === 'unlocked').length;
+
         return {
             totalRuns: pastRuns.length,
             totalKms: totalKms.toFixed(1),
-            pastRuns: pastRuns
+            pastRuns: pastRuns,
+            tourProgress: tourProgress,
+            completionRate: Math.round((unlockedCount / TOUR_STOPS_COUNT) * 100)
         };
     },
 
