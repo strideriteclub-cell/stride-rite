@@ -29,8 +29,8 @@
         /* Animated stop markers */
         .m-wrap { position: absolute; width: 0; height: 0; opacity: 0; transform: scale(0); transition: opacity 0.4s, transform 0.4s; }
         .m-wrap.visible { opacity: 1; transform: scale(1); }
-        .m-core { position: absolute; width: 14px; height: 14px; background: var(--neon-accent); border-radius: 50%; border: 2px solid #1a1a1f; transform: translate(-50%,-50%); top: 0; left: 0; z-index: 2; }
-        .m-label { position: absolute; transform: translateX(-50%); top: 14px; left: 0; background: rgba(10,10,15,0.95); border: 1px solid var(--neon-accent); padding: 3px 8px; border-radius: 4px; white-space: nowrap; z-index: 3; font-family:'Outfit'; font-weight: 800; font-size: 10px; color: var(--neon-accent); }
+        .m-core { position: absolute; width: 14px; height: 14px; background: #ff6b35; border-radius: 50%; border: 2px solid #1a1a1f; transform: translate(-50%,-50%); top: 0; left: 0; z-index: 2; }
+        .m-label { position: absolute; transform: translateX(-50%); top: 14px; left: 0; background: rgba(10,10,15,0.95); border: 1px solid #ff6b35; padding: 3px 8px; border-radius: 4px; white-space: nowrap; z-index: 3; font-family:'Outfit'; font-weight: 800; font-size: 10px; color: #ff6b35; }
         .tour-map-overlay { position: absolute; inset: 0; pointer-events: none; z-index: 400; background: rgba(10,10,15,0.35); }
 
         /* Modal inputs */
@@ -390,7 +390,7 @@
             const stops = await AppService.getTourProgress(user.id);
             if (!stops || stops.length === 0) return;
 
-            const polyline = L.polyline([], { color: 'var(--neon-accent)', weight: 2.5, dashArray: '6 8', opacity: 0.8 }).addTo(tourMap);
+            const polyline = L.polyline([], { color: '#ff6b35', weight: 2.5, dashArray: '6 8', opacity: 0.8 }).addTo(tourMap);
 
             async function animateStops() {
                 for (let i = 0; i < stops.length; i++) {
