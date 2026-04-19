@@ -88,7 +88,7 @@ async function clearSession() { await setSession('idle', {}); }
 
 // ─── TELEGRAM ─────────────────────────────────────────────────────────────────
 async function sendMessage(chatId, text, replyMarkup = null) {
-    const body = { chat_id: chatId, text, parse_mode: 'Markdown' };
+    const body = { chat_id: chatId, text, parse_mode: 'HTML' };
     if (replyMarkup) body.reply_markup = replyMarkup;
     const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
@@ -141,7 +141,7 @@ async function checkBirthdays(chatId) {
 }
 
 // ─── MENU ─────────────────────────────────────────────────────────────────────
-async function sendMenu(chatId, msg = "👟 *Stride Rite Admin Bot*\nHey Haleem! What do you want to do?") {
+async function sendMenu(chatId, msg = "👟 <b>Stride Rite Admin Bot</b>\nHey Haleem! What do you want to do?") {
     await clearSession();
     await sendMessage(chatId, msg, {
         inline_keyboard: [
@@ -901,6 +901,7 @@ async function handleCancelExecute(chatId, runId, reason) {
 
 Suggested message:
 _Hey Striders! Unfortunately the ${dt} run has been cancelled due to ${reason}. We apologize and look forward to seeing you at the next run! 💪_`);
+<i>Hey Striders! Unfortunately the ${dt} run has been cancelled due to ${reason}. We apologize and look forward to seeing you at the next run! 💪</i>`);
 }
 
 // ─── DELETE LIST ──────────────────────────────────────────────────────────────
@@ -912,7 +913,7 @@ async function handleDeleteList(chatId) {
         return [{ text: `${i + 1}. ${dt}`, callback_data: `cmd_delete_confirm_${r.id}` }];
     });
     buttons.push([{ text: "↩️ Back to Menu", callback_data: "cmd_menu" }]);
-    await sendMessage(chatId, "🗑️ *Which run do you want to delete?*", { inline_keyboard: buttons });
+    await sendMessage(chatId, "🗑️ <b>Which run do you want to delete?</b>", { inline_keyboard: buttons });
 }
 
 async function handleDeleteConfirmOne(chatId, runId) {
@@ -1078,7 +1079,7 @@ async function createExecute(chatId) {
             partner_logo: d.partnerLogo || null
         });
         await clearSession();
-        await sendMessage(chatId, `🎉 *Run Created!*\n\n📅 ${fd}\n⏰ ${ft}\n📍 ${d.locationName}\n\nLive on the site now! 🚀`);
+        await sendMessage(chatId, `🎉 <b>Run Created!</b>\n\n📅 ${fd}\n⏰ ${ft}\n📍 ${d.locationName}\n\nLive on the site now! 🚀`);
         await sendMenu(chatId, "What else do you want to do?");
     } catch (e) {
         console.error(e);
@@ -1326,7 +1327,7 @@ export default async function handler(req, res) {
             await handleEditSaveMaps(chatId, text);
         } else {
             if (cmd === '/start' || cmd === '/help' || cmd === '/menu') {
-                await sendMenu(chatId, `👟 *Stride Rite Admin Bot*\n\nHey Haleem! Your Chat ID is \`${chatId}\`.\nWhat do you want to do?`);
+                await sendMenu(chatId, `👟 <b>Stride Rite Admin Bot</b>\n\nHey Haleem! Your Chat ID is <code>${chatId}</code>.\nWhat do you want to do?`);
             }
             else if (cmd === '/stats') await handleStats(chatId);
             else if (cmd === '/runs') await handleListRuns(chatId);
@@ -1349,7 +1350,8 @@ export default async function handler(req, res) {
         console.error(e);
         // CRITICAL: Notify the admin of the error so we can stop guessing
         try {
-            await sendMessage(ADMIN_CHAT_ID, `🚨 *Bot Error Reported:*\n\n\`\`\`\n${e.message}\n\`\`\`\n_Check Vercel logs for full stack trace._`);
+            const safeErr = e.message.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            await sendMessage(ADMIN_CHAT_ID, `🚨 <b>Bot Error Reported:</b>\n\n<code>\n${safeErr}\n</code>\n<i>Check Vercel logs for full stack trace.</i>`);
         } catch (inner) { console.error("Double Fail:", inner); }
         res.status(500).send('Error');
     }
