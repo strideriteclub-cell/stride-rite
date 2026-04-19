@@ -151,8 +151,8 @@ async function sendMenu(chatId, msg = "👟 *Stride Rite Admin Bot*\nHey Haleem!
             [{ text: "🔍 Runner Lookup", callback_data: "cmd_lookup_start" }, { text: "📣 Broadcast", callback_data: "cmd_broadcast_start" }],
             [{ text: "📈 Growth Graph", callback_data: "cmd_growth" }, { text: "✏️ Edit a Run", callback_data: "cmd_edit_list" }],
             [{ text: "📸 Add to Gallery", callback_data: "cmd_gallery_start" }, { text: "🛍️ VIP Shop Admin", callback_data: "cmd_shop_menu" }],
-            [{ text: "🚫 Cancel a Run", callback_data: "cmd_cancel_list" }, { text: "🗑️ Delete a Run", callback_data: "cmd_delete_list" }],
-            [{ text: "🆕 Create New Run", callback_data: "create_step1" }]
+            [{text: "🚫 Cancel a Run", callback_data: "cmd_cancel_list"}, {text: "🗑️ Delete a Run", callback_data: "cmd_delete_list"}],
+            [{text: "🆕 Create New Run", callback_data: "create_setup_start"}]
         ]
     });
 }
@@ -928,8 +928,66 @@ async function handleDeleteConfirmOne(chatId, runId) {
 }
 
 // ─── CREATE FLOW ──────────────────────────────────────────────────────────────
+async function createSetup(chatId) {
+    await setSession('setup_type', { step: 1 });
+    await sendMessage(chatId, "🆕 *Create New Run*\n\nIs this a Tour de Cairo run (Stops 1-8)?", {
+        inline_keyboard: [
+            [{ text: "Yes, Tour de Cairo Stop", callback_data: "create_tour_yes" }],
+            [{ text: "No, Normal Run", callback_data: "create_tour_no" }],
+            [{ text: "↩️ Back", callback_data: "cmd_menu" }]
+        ]
+    });
+}
+
+async function createTourStopSetup(chatId) {
+    const rows = [];
+    for(let i=1; i<=8; i+=4) {
+        rows.push([
+            { text: `Stop ${i}`, callback_data: `create_stop_${i}` },
+            { text: `Stop ${i+1}`, callback_data: `create_stop_${i+1}` },
+            { text: `Stop ${i+2}`, callback_data: `create_stop_${i+2}` },
+            { text: `Stop ${i+3}`, callback_data: `create_stop_${i+3}` }
+        ]);
+    }
+    rows.push([{ text: "↩️ Back", callback_data: "create_setup_start" }]);
+    await sendMessage(chatId, "*Step 1*: Which Tour Stop number is this?", { inline_keyboard: rows });
+}
+
+async function createPartnerSetup(chatId, stopNum) {
+    await setSession('setup_partner', { stopNum });
+    await sendMessage(chatId, `✅ Stop ${stopNum}\n\n*Step 2*: Who is hosting this run?`, {
+        inline_keyboard: [
+            [{ text: "🤝 Stride Rite x Partner", callback_data: "create_partner_yes" }],
+            [{ text: "👟 Stride Rite Only", callback_data: "create_partner_no" }],
+            [{ text: "↩️ Back", callback_data: "create_tour_yes" }]
+        ]
+    });
+}
+
+async function createPartnerName(chatId, isPartner, initData) {
+    if (!isPartner) {
+        await setSession('picking_time', { ...initData, isPartner: false });
+        await createStep1(chatId); 
+    } else {
+        await setSession('partner_name', { ...initData, isPartner: true });
+        await sendMessage(chatId, "🤝 *Partner Details*\n\nPlease type the Partner Club Name:");
+    }
+}
+
+async function createPartnerIg(chatId, partnerName, sessionData) {
+    await setSession('partner_ig', { ...sessionData, partnerName });
+    await sendMessage(chatId, `✅ Name: ${partnerName}\n\nPlease type their Instagram Link (or @handle):`);
+}
+
+async function createPartnerLogo(chatId, partnerIg, sessionData) {
+    await setSession('partner_logo', { ...sessionData, partnerIg });
+    await sendMessage(chatId, `✅ IG: ${partnerIg}\n\n📸 Send their Logo image directly in this chat:`);
+}
+
 async function createStep1(chatId) {
-    await clearSession();
+    const existing = await getSession();
+    const baseData = (existing.state.startsWith('partner_') || existing.state.startsWith('picking_') || existing.state.startsWith('setup_')) ? existing.data : {};
+    await setSession('picking_time', baseData);
     const amHours = [4,5,6,7,8,9,10,11].map(h => ({ text: `${h} AM`, callback_data: `create_hour_${String(h).padStart(2,'0')}` }));
     const pmHours = [1,2,3,4,5,6,7,8,9,10,11].map(h => ({ text: `${h} PM`, callback_data: `create_hour_${String(h+12).padStart(2,'0')}` }));
     const special = [{ text: "12 PM", callback_data: "create_hour_12" }, { text: "12 AM", callback_data: "create_hour_00" }];
@@ -1013,7 +1071,11 @@ async function createExecute(chatId) {
             location: d.locationName, location_link: d.mapsLink,
             description: 'Every pace is welcome!', created_by: 'admin-1',
             route_preview_url: previewVal,
-            route_type: previewVal ? d.routeType : 'image'
+            route_type: previewVal ? d.routeType : 'image',
+            tour_stop_id: d.isTour ? parseInt(d.stopNum) : null,
+            partner_name: d.partnerName || null,
+            partner_ig: d.partnerIg || null,
+            partner_logo: d.partnerLogo || null
         });
         await clearSession();
         await sendMessage(chatId, `🎉 *Run Created!*\n\n📅 ${fd}\n⏰ ${ft}\n📍 ${d.locationName}\n\nLive on the site now! 🚀`);
@@ -1099,7 +1161,15 @@ export default async function handler(req, res) {
             else if (data.startsWith('edit_hour_')) await handleEditHour(chatId, data.replace('edit_hour_', ''));
             else if (data.startsWith('edit_min_')) await handleEditMinutes(chatId, data.replace('edit_min_', ''));
             else if (data.startsWith('edit_date_')) await handleEditDate(chatId, data.replace('edit_date_', ''));
-            else if (data === 'create_step1') await createStep1(chatId);
+            
+            // New Setup Overrides
+            else if (data === 'create_step1' || data === 'create_setup_start') await createSetup(chatId);
+            else if (data === 'create_tour_yes') await createTourStopSetup(chatId);
+            else if (data === 'create_tour_no') { await setSession('picking_time', { isTour: false }); await createStep1(chatId); }
+            else if (data.startsWith('create_stop_')) await createPartnerSetup(chatId, data.replace('create_stop_', ''));
+            else if (data === 'create_partner_yes') { const s = await getSession(); await createPartnerName(chatId, true, { ...s.data, isTour: true }); }
+            else if (data === 'create_partner_no') { const s = await getSession(); await createPartnerName(chatId, false, { ...s.data, isTour: true }); }
+            
             else if (data.startsWith('create_hour_')) await createStep1b(chatId, data.replace('create_hour_', ''));
             else if (data.startsWith('create_min_')) {
                 const session = await getSession();
@@ -1121,6 +1191,11 @@ export default async function handler(req, res) {
                 const session = await getSession();
                 if (session.state === 'waiting_gallery_photo') {
                     await handleGalleryPhoto(chatId, body.message, session);
+                } else if (session.state === 'partner_logo') {
+                    const imgUrl = await uploadShopPhoto(chatId, body.message);
+                    if (!imgUrl) { await sendMessage(chatId, "❌ Failed to upload photo."); res.status(200).send('ok'); return; }
+                    await setSession('picking_time', { ...session.data, partnerLogo: imgUrl });
+                    await createStep1(chatId);
                 } else if (session.state === 'waiting_route_map') {
                     const imgUrl = await uploadShopPhoto(chatId, body.message);
                     if (!imgUrl) { await sendMessage(chatId, "❌ Failed to upload map photo. Type 'Skip' or try again."); res.status(200).send('ok'); return; }
@@ -1229,7 +1304,11 @@ export default async function handler(req, res) {
             res.status(200).send('ok'); return;
         }
 
-        if (session.state === 'waiting_maps_link') {
+        if (session.state === 'partner_name') {
+            await createPartnerIg(chatId, text, session.data);
+        } else if (session.state === 'partner_ig') {
+            await createPartnerLogo(chatId, text, session.data);
+        } else if (session.state === 'waiting_maps_link') {
             await createStep4(chatId, text, session.data);
         } else if (session.state === 'waiting_location_name') {
             await createStep5(chatId, text, session.data);
@@ -1261,7 +1340,7 @@ export default async function handler(req, res) {
             else if (cmd === '/broadcast') await handleBroadcastStart(chatId);
             else if (cmd === '/cancel') await handleCancelList(chatId);
             else if (cmd === '/delete') await handleDeleteList(chatId);
-            else if (cmd === '/create') await createStep1(chatId);
+            else if (cmd === '/create') await createSetup(chatId);
             else await sendMenu(chatId, "❓ Unknown command. Use the buttons below!");
         }
 
