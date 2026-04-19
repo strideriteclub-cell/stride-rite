@@ -114,6 +114,16 @@
         .m-wrap.locked { filter: grayscale(1); opacity: 0.5; }
         .m-wrap.locked .m-impact { display: none; }
 
+        @keyframes highlight-pulse {
+            0% { box-shadow: 0 0 0 0 rgba(255, 115, 0, 0.7); border-color: #ff7300; transform: scale(1); }
+            50% { box-shadow: 0 0 30px 10px rgba(255, 115, 0, 0.4); border-color: #fff; transform: scale(1.02); }
+            100% { box-shadow: 0 0 0 0 rgba(255, 115, 0, 0); border-color: var(--neon-accent); transform: scale(1); }
+        }
+        .highlight-active {
+            animation: highlight-pulse 2s ease-in-out infinite;
+            z-index: 100 !important;
+        }
+
     </style>
 </head>
 <body>
@@ -145,7 +155,7 @@
                             <button onclick="showTourInfo()" style="background: none; border: none; color: var(--peach-accent); font-size: 0.8rem; text-decoration: underline; cursor: pointer; padding: 0;">What is this?</button>
                         </div>
                     </div>
-                    <button class="btn btn-primary btn-sm" onclick="document.getElementById('runsContainer').scrollIntoView({behavior:'smooth'})">🚀 Register for next Stop</button>
+                    <button class="btn btn-primary btn-sm" onclick="scrollToNextStop()">🚀 Register for next Stop</button>
                 </div>
                 <div style="position: relative; height: 500px; width: 100%; background: #1a1a1f; overflow: hidden;">
                     <div id="tourMap" style="width: 100%; height: 100%;"></div>
@@ -277,6 +287,24 @@
                 container.innerHTML = `<p style="padding:3rem; text-align:center; color:#ff4d4d; grid-column:1/-1;">⚠️ Failed to load runs. Please refresh the page.</p>`;
             }
         }
+
+        window.scrollToNextStop = () => {
+            // Find all run cards
+            const cards = Array.from(document.querySelectorAll('.run-card'));
+            // Find the first one that has a Tour Stop badge AND is not registered yet
+            const target = cards.find(card => 
+                card.innerHTML.includes('Tour Stop') && 
+                !card.classList.contains('registered')
+            ) || cards.find(card => card.innerHTML.includes('Tour Stop')); // Fallback to any tour stop
+
+            if (target) {
+                target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                target.classList.add('highlight-active');
+                setTimeout(() => target.classList.remove('highlight-active'), 4000);
+            } else {
+                document.getElementById('runsContainer').scrollIntoView({ behavior: 'smooth' });
+            }
+        };
 
         window.viewRouteMap = (url, type, locLink, locName) => {
             if (type === 'link') {
