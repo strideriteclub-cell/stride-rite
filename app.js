@@ -169,7 +169,7 @@ const AuthService = {
 
 const TOUR_STOPS_COUNT = 8;
 const TOUR_CONFIG = [
-    { id: 1, name: 'Al Rehab',    lat: 30.062, lng: 31.594, small: true },
+    { id: 1, name: 'Al Rehab',    lat: 30.065846, lng: 31.504127, small: true },
     { id: 2, name: 'Madinaty',    lat: 30.101, lng: 31.646, up: true },
     { id: 3, name: 'New Administrative Capital', lat: 30.013, lng: 31.800, left: true },
     { id: 4, name: 'New Cairo',   lat: 30.025, lng: 31.462 },
