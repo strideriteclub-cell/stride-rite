@@ -1387,7 +1387,6 @@ export default async function handler(req, res) {
         } else if (session.state === 'waiting_route_map') {
             await createConfirm(chatId, session.data.locationName, text, 'link', session.data);
             res.status(200).send('ok'); return;
-        }
         } else if (session.state === 'waiting_lookup_name') {
             await handleLookup(chatId, text);
         } else if (session.state === 'waiting_broadcast_msg') {
