@@ -949,6 +949,7 @@ async function createSetup(chatId) {
 }
 
 async function createTourStopSetup(chatId) {
+    await setSession('setup_stop', { step: 1, isTour: true });
     const rows = [];
     for(let i=1; i<=8; i+=4) {
         rows.push([
@@ -963,7 +964,7 @@ async function createTourStopSetup(chatId) {
 }
 
 async function createPartnerSetup(chatId, stopNum) {
-    await setSession('setup_partner', { stopNum });
+    await setSession('setup_partner', { stopNum, isTour: true });
     await sendMessage(chatId, `✅ Stop ${esc(stopNum)}\n\n<b>Step 2</b>: Who is hosting this run?`, {
         inline_keyboard: [
             [{ text: "🤝 Stride Rite x Partner", callback_data: "create_partner_yes" }],
@@ -975,10 +976,10 @@ async function createPartnerSetup(chatId, stopNum) {
 
 async function createPartnerName(chatId, isPartner, initData) {
     if (!isPartner) {
-        await setSession('picking_time', { ...initData, isPartner: false });
+        await setSession('picking_time', { ...initData, isPartner: false, isTour: true });
         await createStep1(chatId); 
     } else {
-        await setSession('partner_name', { ...initData, isPartner: true });
+        await setSession('partner_name', { ...initData, isPartner: true, isTour: true });
         await sendMessage(chatId, "🤝 <b>Partner Details</b>\n\nPlease type the Partner Club Name:");
     }
 }
