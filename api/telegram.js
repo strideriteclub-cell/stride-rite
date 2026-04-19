@@ -574,9 +574,11 @@ async function handleEditPickField(chatId, runId) {
     await sendMessage(chatId, `✏️ *Editing:* ${dt}\n\nWhat do you want to change?`, {
         inline_keyboard: [
             [{ text: "⏰ Date & Time", callback_data: "edit_field_datetime" }],
-            [{ text: "📍 Location Name", callback_data: "edit_field_location" }],
+            [{ text: "📍 Location OR Tour Stop Name", callback_data: "edit_field_location" }],
             [{ text: "🗺️ Maps Link", callback_data: "edit_field_maps" }],
             [{ text: "📍 Tour Stop #", callback_data: "edit_field_tour" }],
+            [{ text: "🤝 Partner Info", callback_data: "edit_field_partner" }],
+            [{ text: "🗺️ Upload GPX Map", callback_data: "edit_field_gpx" }],
             [{ text: "↩️ Back", callback_data: "cmd_edit_list" }]
         ]
     });
@@ -667,7 +669,7 @@ async function handleEditDate(chatId, date) {
 async function handleEditLocation(chatId) {
     const session = await getSession();
     await setSession('edit_waiting_location', session.data);
-    await sendMessage(chatId, `📍 *New location name for:*\n${session.data.runLabel}\n\nType the new location name:`);
+    await sendMessage(chatId, `📍 *New Location / Tour Stop Name for:*\n${session.data.runLabel}\n\nType the new location name (this updates both Location and Tour Stop Name):`);
 }
 
 async function handleEditMaps(chatId) {
@@ -678,10 +680,41 @@ async function handleEditMaps(chatId) {
 
 async function handleEditSaveLocation(chatId, text) {
     const session = await getSession();
-    await dbPatch('stride_runs', 'id', session.data.runId, { location: text });
+    await dbPatch('stride_runs', 'id', session.data.runId, { location: text, tour_stop_name: text });
     await clearSession();
-    await sendMessage(chatId, `✅ *Location updated to:*\n📍 ${text}`);
+    await sendMessage(chatId, `✅ *Location / Tour Stop Name updated to:*\n📍 ${text}`);
     await sendMenu(chatId, "What else?");
+}
+
+async function handleEditPartner(chatId) {
+    const session = await getSession();
+    await setSession('edit_waiting_partner_name', session.data);
+    await sendMessage(chatId, `🤝 *Edit Partner Info for:*\n${session.data.runLabel}\n\nType the Partner Club Name (or 'None' to clear):`);
+}
+
+async function handleEditPartnerIgSetup(chatId, text) {
+    const session = await getSession();
+    if (text.toLowerCase() === 'none') {
+        await dbPatch('stride_runs', 'id', session.data.runId, { partner_name: null, partner_ig: null, partner_logo: null });
+        await clearSession();
+        await sendMessage(chatId, `✅ *Partner info cleared.*`);
+        await sendMenu(chatId, "What else?");
+        return;
+    }
+    await setSession('edit_waiting_partner_ig', { ...session.data, partnerName: text });
+    await sendMessage(chatId, `✅ Name: ${text}\n\nType their Instagram Link (or @handle):`);
+}
+
+async function handleEditPartnerLogoSetup(chatId, text) {
+    const session = await getSession();
+    await setSession('edit_waiting_partner_logo', { ...session.data, partnerIg: text });
+    await sendMessage(chatId, `✅ IG: ${text}\n\n📸 Send their Logo image directly in this chat, or type 'Skip':`);
+}
+
+async function handleEditGpx(chatId) {
+    const session = await getSession();
+    await setSession('edit_waiting_gpx', session.data);
+    await sendMessage(chatId, `🗺️ *Edit GPX Map for:*\n${session.data.runLabel}\n\nUpload the .gpx file, or type 'None' to remove existing map.`);
 }
 
 async function handleEditSaveMaps(chatId, text) {
@@ -1205,6 +1238,8 @@ export default async function handler(req, res) {
             else if (data === 'edit_field_location') await handleEditLocation(chatId);
             else if (data === 'edit_field_maps') await handleEditMaps(chatId);
             else if (data === 'edit_field_tour') await handleEditTour(chatId);
+            else if (data === 'edit_field_partner') await handleEditPartner(chatId);
+            else if (data === 'edit_field_gpx') await handleEditGpx(chatId);
             else if (data.startsWith('edit_stop_save_')) await handleEditTourSave(chatId, data.replace('edit_stop_save_', ''));
             else if (data.startsWith('edit_hour_')) await handleEditHour(chatId, data.replace('edit_hour_', ''));
             else if (data.startsWith('edit_min_')) await handleEditMinutes(chatId, data.replace('edit_min_', ''));
@@ -1244,6 +1279,13 @@ export default async function handler(req, res) {
                     if (!imgUrl) { await sendMessage(chatId, "❌ Failed to upload photo."); res.status(200).send('ok'); return; }
                     await setSession('picking_time', { ...session.data, partnerLogo: imgUrl });
                     await createStep1(chatId);
+                } else if (session.state === 'edit_waiting_partner_logo') {
+                    const imgUrl = await uploadShopPhoto(chatId, body.message);
+                    if (!imgUrl) { await sendMessage(chatId, "❌ Failed to upload logo."); res.status(200).send('ok'); return; }
+                    await dbPatch('stride_runs', 'id', session.data.runId, { partner_name: session.data.partnerName, partner_ig: session.data.partnerIg, partner_logo: imgUrl });
+                    await clearSession();
+                    await sendMessage(chatId, `✅ *Partner info updated (with Logo)!*`);
+                    await sendMenu(chatId, "What else?");
                 } else if (session.state === 'waiting_route_map') {
                     const imgUrl = await uploadShopPhoto(chatId, body.message);
                     if (!imgUrl) { await sendMessage(chatId, "❌ Failed to upload map photo. Type 'Skip' or try again."); res.status(200).send('ok'); return; }
@@ -1289,7 +1331,22 @@ export default async function handler(req, res) {
             if (chatId !== ADMIN_CHAT_ID) { res.status(200).send('ok'); return; }
             const session = await getSession();
 
-            if (session.state === 'waiting_route_map') {
+            if (session.state === 'edit_waiting_gpx') {
+                const doc = body.message.document;
+                if (!doc.file_name || !doc.file_name.toLowerCase().endsWith('.gpx')) {
+                    await sendMessage(chatId, "❌ Please send a valid `.gpx` file, or type 'None'.");
+                    res.status(200).send('ok'); return;
+                }
+                const fileUrl = await uploadRouteDocument(chatId, doc);
+                if (!fileUrl) {
+                    await sendMessage(chatId, "❌ Failed to upload GPX file. Try again or type 'None'.");
+                    res.status(200).send('ok'); return;
+                }
+                await dbPatch('stride_runs', 'id', session.data.runId, { route_preview_url: fileUrl, route_type: 'gpx' });
+                await clearSession();
+                await sendMessage(chatId, `✅ *GPX Map uploaded and saved!*`);
+                await sendMenu(chatId, "What else?");
+            } else if (session.state === 'waiting_route_map') {
                 const doc = body.message.document;
                 if (!doc.file_name || !doc.file_name.toLowerCase().endsWith('.gpx')) {
                     await sendMessage(chatId, "❌ Please send a valid `.gpx` file, or type 'Skip'.");
@@ -1397,6 +1454,20 @@ export default async function handler(req, res) {
             await handleEditSaveLocation(chatId, text);
         } else if (session.state === 'edit_waiting_maps') {
             await handleEditSaveMaps(chatId, text);
+        } else if (session.state === 'edit_waiting_partner_name') {
+            await handleEditPartnerIgSetup(chatId, text);
+        } else if (session.state === 'edit_waiting_partner_ig') {
+            await handleEditPartnerLogoSetup(chatId, text);
+        } else if (session.state === 'edit_waiting_partner_logo' && text.toLowerCase() === 'skip') {
+            await dbPatch('stride_runs', 'id', session.data.runId, { partner_name: session.data.partnerName, partner_ig: session.data.partnerIg, partner_logo: null });
+            await clearSession();
+            await sendMessage(chatId, `✅ *Partner info updated (No logo).*`);
+            await sendMenu(chatId, "What else?");
+        } else if (session.state === 'edit_waiting_gpx' && text.toLowerCase() === 'none') {
+            await dbPatch('stride_runs', 'id', session.data.runId, { route_preview_url: null, route_type: 'image' });
+            await clearSession();
+            await sendMessage(chatId, `✅ *GPX Map cleared.*`);
+            await sendMenu(chatId, "What else?");
         } else {
             if (cmd === '/start' || cmd === '/help' || cmd === '/menu') {
                 await sendMenu(chatId, `👟 <b>Stride Rite Admin Bot</b>\n\nHey Haleem! Your Chat ID is <code>${chatId}</code>.\nWhat do you want to do?`);
