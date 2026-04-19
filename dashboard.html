@@ -29,22 +29,36 @@
         /* Animated stop markers */
         .m-wrap { position: absolute; width: 0; height: 0; opacity: 0; transform: scale(0); transition: opacity 0.4s, transform 0.4s; }
         .m-wrap.visible { opacity: 1; transform: scale(1); }
-        .m-core { position: absolute; width: 14px; height: 14px; background: var(--neon-accent, #ff6b35); border-radius: 50%; border: 2px solid #1a1a1f; transform: translate(-50%,-50%); top: 0; left: 0; z-index: 2; }
-        .m-label { position: absolute; transform: translateX(-50%); top: 14px; left: 0; background: rgba(10,10,15,0.95); border: 1px solid var(--neon-accent, #ff6b35); padding: 3px 8px; border-radius: 4px; white-space: nowrap; z-index: 3; font-family:'Outfit'; font-weight: 800; font-size: 10px; color: var(--neon-accent, #ff6b35); }
+        .m-core { position: absolute; width: 14px; height: 14px; background: var(--neon-accent); border-radius: 50%; border: 2px solid #1a1a1f; transform: translate(-50%,-50%); top: 0; left: 0; z-index: 2; }
+        .m-label { position: absolute; transform: translateX(-50%); top: 14px; left: 0; background: rgba(10,10,15,0.95); border: 1px solid var(--neon-accent); padding: 3px 8px; border-radius: 4px; white-space: nowrap; z-index: 3; font-family:'Outfit'; font-weight: 800; font-size: 10px; color: var(--neon-accent); }
         .tour-map-overlay { position: absolute; inset: 0; pointer-events: none; z-index: 400; background: rgba(10,10,15,0.35); }
 
         /* Modal inputs */
         .reg-input { width: 100%; box-sizing: border-box; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.12); padding: 10px 14px; border-radius: 8px; color: #fff; font-size: 0.9rem; font-family: 'Inter', sans-serif; transition: border-color 0.2s; display: block; }
-        .reg-input:focus { outline: none; border-color: var(--neon-accent, #ff6b35); }
+        .reg-input:focus { outline: none; border-color: var(--neon-accent); }
         .reg-input::placeholder { color: rgba(255,255,255,0.3); }
         .dist-opt { flex: 1; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); color: rgba(255,255,255,0.7); padding: 10px; border-radius: 6px; font-weight: 800; font-size: 0.9rem; cursor: pointer; transition: all 0.2s; font-family: 'Outfit', sans-serif; }
-        .dist-opt.active { background: var(--neon-accent, #ff6b35) !important; color: #000 !important; border-color: var(--neon-accent, #ff6b35) !important; }
+        .dist-opt.active { background: var(--neon-accent) !important; color: #000 !important; border-color: var(--neon-accent) !important; }
         .dist-opt:hover:not(.active) { background: rgba(255,255,255,0.1); color: #fff; }
+
+        /* Custom Logo */
+        .custom-logo-container { display: flex; align-items: center; gap: 12px; }
+        .custom-logo { font-family: 'Outfit', sans-serif; font-size: 2rem; font-weight: 800; color: #fff; position: relative; }
+        .custom-logo .dot { position: absolute; top: 4px; right: -8px; width: 8px; height: 8px; background-color: var(--peach-accent); border-radius: 50%; }
+        .logo-text-stack { display: flex; flex-direction: column; line-height: 1; }
+        .logo-title { font-family: 'Outfit'; font-weight: 800; font-size: 1.2rem; }
+        .logo-subtitle { font-size: 0.6rem; color: var(--text-muted); text-transform: uppercase; border-top: 1px solid var(--neon-accent); padding-top: 2px; margin-top: 2px; }
     </style>
 </head>
 <body>
     <nav class="navbar">
-        <div style="font-family:'Outfit'; font-weight:800; font-size:1.5rem;">S<span style="color:var(--neon-accent);">.</span></div>
+        <div class="custom-logo-container">
+            <div class="custom-logo">S<span class="dot"></span></div>
+            <div class="logo-text-stack">
+                <span class="logo-title">STRIDE RITE</span>
+                <span class="logo-subtitle">Al Rehab Running Community</span>
+            </div>
+        </div>
         <div class="nav-links">
             <a href="shop.html">🛍 Shop</a>
             <a href="gallery.html">📸 Gallery</a>
@@ -203,7 +217,7 @@
         <div style="font-family:'Outfit',sans-serif; font-size:1.55rem; font-weight:800; color:#fff; line-height:1.1;">${stopName}</div>
       </div>
     </div>
-    <div style="margin-bottom:1rem;padding:8px 12px;background:linear-gradient(90deg,rgba(255,107,53,0.12),transparent);border-left:3px solid var(--neon-accent,#ff6b35);border-radius:0 6px 6px 0;font-size:0.82rem;color:rgba(255,255,255,0.7);font-style:italic;">
+    <div style="margin-bottom:1rem;padding:8px 12px;background:linear-gradient(90deg,rgba(88,74,220,0.12),transparent);border-left:3px solid var(--neon-accent);border-radius:0 6px 6px 0;font-size:0.82rem;color:rgba(255,255,255,0.7);font-style:italic;">
       🔥 This is your chance to add Stop ${stopNum} to your Tour de Cairo legacy. Lock in your spot!
     </div>` : `<div style="font-family:'Outfit',sans-serif; font-size:1.55rem; font-weight:800; color:#fff; margin-bottom:1rem;">${stopName}</div>`}
 
@@ -217,7 +231,7 @@
         <div style="font-weight:700;color:#fff;font-size:0.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${partnerName} × Stride Rite</div>
       </div>
       <div style="display:flex;gap:6px;flex-shrink:0;">
-        ${nextStop.partner_ig ? `<a href="https://instagram.com/${parseIgHandle(nextStop.partner_ig)||nextStop.partner_ig.replace('@','')}" target="_blank" title="Partner Instagram" style="width:26px;height:26px;background:rgba(255,107,53,0.12);border:1px solid rgba(255,107,53,0.25);border-radius:6px;display:flex;align-items:center;justify-content:center;color:var(--neon-accent,#ff6b35);text-decoration:none;">${igSvg}</a>` : ''}
+        ${nextStop.partner_ig ? `<a href="https://instagram.com/${parseIgHandle(nextStop.partner_ig)||nextStop.partner_ig.replace('@','')}" target="_blank" title="Partner Instagram" style="width:26px;height:26px;background:rgba(88,74,220,0.12);border:1px solid rgba(88,74,220,0.25);border-radius:6px;display:flex;align-items:center;justify-content:center;color:var(--neon-accent);text-decoration:none;">${igSvg}</a>` : ''}
       </div>
     </div>
   </div>
@@ -376,7 +390,7 @@
             const stops = await AppService.getTourProgress(user.id);
             if (!stops || stops.length === 0) return;
 
-            const polyline = L.polyline([], { color: '#ff6b35', weight: 2.5, dashArray: '6 8', opacity: 0.8 }).addTo(tourMap);
+            const polyline = L.polyline([], { color: 'var(--neon-accent)', weight: 2.5, dashArray: '6 8', opacity: 0.8 }).addTo(tourMap);
 
             async function animateStops() {
                 for (let i = 0; i < stops.length; i++) {
@@ -390,7 +404,7 @@
                         const el = document.getElementById('mwrap-' + s.id);
                         if (el) el.classList.add('visible');
                     }, 40);
-                    if (i > 0) polyline.addLatLng([s.lat, s.lng]);
+                    polyline.addLatLng([s.lat, s.lng]);
                     await new Promise(r => setTimeout(r, 280));
                 }
             }
