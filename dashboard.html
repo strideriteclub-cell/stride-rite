@@ -164,89 +164,96 @@
 
     <script src="app.js?v=23"></script>
     <script>
-        let user;
-        const AuthService = {
-            getCurrentUser: () => {
-                const session = localStorage.getItem('stride_user');
-                return session ? JSON.parse(session) : null;
+        // Use global user state immediately
+        const user = AuthService.getCurrentUser();
+        if (!user) { 
+            // Only redirect if we're not already on the homepage
+            if (!window.location.href.includes('index.html')) {
+                window.location.href = 'index.html'; 
             }
-        };
+        }
+
+        // Update UI immediately (Synchronous)
+        document.addEventListener('DOMContentLoaded', () => {
+            const welcomeUser = document.getElementById('welcomeUser');
+            if (welcomeUser && user) welcomeUser.innerText = `Welcome back, ${(user.name || 'Runner').split(' ')[0]}!`;
+            
+            const welcomeMsg = document.getElementById('welcomeMsg');
+            if (welcomeMsg && user) welcomeMsg.innerText = `Focus on Today's Goal, ${(user.name || 'Runner').split(' ')[0]}`;
+        });
 
         let runSelections = {};
 
         async function initDashboard() {
-            user = AuthService.getCurrentUser();
-            if (!user) { window.location.href = 'index.html'; return; }
-            
-            const welcomeUser = document.getElementById('welcomeUser');
-            if (welcomeUser) welcomeUser.innerText = `Welcome back, ${(user.name || 'Runner').split(' ')[0]}!`;
-            
+            if (!user) return;
             const container = document.getElementById('runsContainer');
-            const welcomeMsg = document.getElementById('welcomeMsg');
-            if (welcomeMsg) welcomeMsg.innerText = `Focus on Today's Goal, ${(user.name || 'Runner').split(' ')[0]}`;
             
-            // Re-check for existing registrations to keep list current
-            const [runs, myRegs] = await Promise.all([
-                AppService.getRuns(),
-                AppService.getUserRegistrations(user.id)
-            ]);
+            try {
+                const [runs, myRegs] = await Promise.all([
+                    AppService.getRuns(),
+                    AppService.getUserRegistrations(user.id)
+                ]);
 
-            if (!runs || runs.length === 0) {
-                container.innerHTML = `<p style="padding:3rem; text-align:center; color:var(--text-muted); grid-column:1/-1;">No community runs scheduled at the moment. Check back soon!</p>`;
-                return;
-            }
+                if (!runs || runs.length === 0) {
+                    container.innerHTML = `<p style="padding:3rem; text-align:center; color:var(--text-muted); grid-column:1/-1;">No community runs scheduled at the moment. Check back soon!</p>`;
+                    return;
+                }
 
-            container.innerHTML = runs.map(run => {
-                const isReg = myRegs.includes(run.id);
-                if (!runSelections[run.id]) runSelections[run.id] = '5K';
-                const currentDist = runSelections[run.id];
+                container.innerHTML = runs.map(run => {
+                    const isReg = myRegs.includes(run.id);
+                    if (!runSelections[run.id]) runSelections[run.id] = '5K';
+                    const currentDist = runSelections[run.id];
 
-                return `
-                    <div class="glass-card run-card ${isReg ? 'registered' : ''} animate-up">
-                        ${isReg ? '<span class="registered-badge">✓ Registered</span>' : ''}
-                        
-                        ${run.partner_name ? `
-                        <div style="display:flex; align-items:center; gap:12px; margin-bottom:1rem; padding-bottom:1rem; border-bottom:1px solid rgba(255,255,255,0.05);">
-                            ${run.partner_logo ? `<img src="${run.partner_logo}" style="width:40px; height:40px; border-radius:8px; object-fit:cover;">` : ''}
-                            <div>
-                                <div style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px; font-weight:700;">Hosted By</div>
-                                <div style="font-weight:700; color:#fff; display:flex; align-items:center; gap:6px;">
-                                    ${run.partner_name} x Stride Rite
-                                    ${run.partner_ig ? `<a href="https://instagram.com/${run.partner_ig.replace('@', '')}" target="_blank" style="color:var(--neon-accent);"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg></a>` : ''}
+                    return `
+                        <div class="glass-card run-card ${isReg ? 'registered' : ''} animate-up">
+                            ${isReg ? '<span class="registered-badge">✓ Registered</span>' : ''}
+                            
+                            ${run.partner_name ? `
+                            <div style="display:flex; align-items:center; gap:12px; margin-bottom:1rem; padding-bottom:1rem; border-bottom:1px solid rgba(255,255,255,0.05);">
+                                ${run.partner_logo ? `<img src="${run.partner_logo}" style="width:40px; height:40px; border-radius:8px; object-fit:cover;">` : ''}
+                                <div>
+                                    <div style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px; font-weight:700;">Hosted By</div>
+                                    <div style="font-weight:700; color:#fff; display:flex; align-items:center; gap:6px;">
+                                        ${run.partner_name} x Stride Rite
+                                        ${run.partner_ig ? `<a href="https://instagram.com/${run.partner_ig.replace('@', '')}" target="_blank" style="color:var(--neon-accent);"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg></a>` : ''}
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                        ` : ''}
-
-                        ${run.tour_stop_id ? `<div style="font-family:'Barlow Condensed', sans-serif; font-weight:800; color:var(--neon-accent); letter-spacing:3px; text-transform:uppercase; margin-bottom:0.5rem; display:inline-block; border:1px solid var(--neon-accent); opacity:0.8; padding:2px 8px; border-radius:4px; font-size:0.8rem;">Tour Stop 0${run.tour_stop_id}</div>` : ''}
-                        
-                        <div class="run-date">${run.date_label}</div>
-                        <div class="run-loc">
-                            <span>📍</span>
-                            <a href="${run.location_link}" target="_blank" style="color:var(--neon-accent); text-decoration:underline;">${run.location}</a>
-                        </div>
-                        
-                        ${!isReg ? `
-                            ${run.route_preview_url ? `<button class="btn btn-secondary btn-block" style="margin-bottom: 12px; border-style: dashed; opacity: 0.9;" onclick="viewRouteMap('${run.route_preview_url}', '${run.route_type}', '${run.location_link}', '${run.location}')">🗺️ View Route Preview</button>` : ''}
-                            <div style="font-size:0.8rem; color:var(--text-muted); margin-bottom:8px; font-weight:600;">SELECT DISTANCE:</div>
-                            <div class="dist-selector">
-                                <button class="dist-btn ${currentDist === '2K' ? 'active' : ''}" onclick="selectDist('${run.id}', '2K')">2K</button>
-                                <button class="dist-btn ${currentDist === '5K' ? 'active' : ''}" onclick="selectDist('${run.id}', '5K')">5K</button>
-                                <button class="dist-btn ${currentDist === '8K' ? 'active' : ''}" onclick="selectDist('${run.id}', '8K')">8K</button>
+                            ` : ''}
+    
+                            ${run.tour_stop_id ? `<div style="font-family:'Barlow Condensed', sans-serif; font-weight:800; color:var(--neon-accent); letter-spacing:3px; text-transform:uppercase; margin-bottom:0.5rem; display:inline-block; border:1px solid var(--neon-accent); opacity:0.8; padding:2px 8px; border-radius:4px; font-size:0.8rem;">Tour Stop 0${run.tour_stop_id}</div>` : ''}
+                            
+                            <div class="run-date">${run.date_label}</div>
+                            <div class="run-loc">
+                                <span>📍</span>
+                                <a href="${run.location_link}" target="_blank" style="color:var(--neon-accent); text-decoration:underline;">${run.location}</a>
                             </div>
-                            <button class="btn btn-primary btn-block" onclick="joinRun('${run.id}')">Confirm Registration</button>
-                        ` : `
-                            ${run.route_preview_url ? `<button class="btn btn-secondary btn-block" style="margin-bottom: 12px; border-style: dashed; opacity: 0.9;" onclick="viewRouteMap('${run.route_preview_url}', '${run.route_type}', '${run.location_link}', '${run.location}')">🗺️ View Route Preview</button>` : ''}
-                            <button class="btn btn-secondary btn-block" disabled style="opacity:0.8; cursor:default; background:rgba(34, 197, 94, 0.1); border-color:#22c55e; color:#22c55e;">
-                                You're all set! See you there.
-                            </button>
-                        `}
-                    </div>
-                `;
-            }).join('');
-
-            // Load weather advisory for the first run
-            if (runs.length > 0) loadAIAdvisor(runs[0]);
+                            
+                            ${!isReg ? `
+                                ${run.route_preview_url ? `<button class="btn btn-secondary btn-block" style="margin-bottom: 12px; border-style: dashed; opacity: 0.9;" onclick="viewRouteMap('${run.route_preview_url}', '${run.route_type}', '${run.location_link}', '${run.location}')">🗺️ View Route Preview</button>` : ''}
+                                <div style="font-size:0.8rem; color:var(--text-muted); margin-bottom:8px; font-weight:600;">SELECT DISTANCE:</div>
+                                <div class="dist-selector">
+                                    <button class="dist-btn ${currentDist === '2K' ? 'active' : ''}" onclick="selectDist('${run.id}', '2K')">2K</button>
+                                    <button class="dist-btn ${currentDist === '5K' ? 'active' : ''}" onclick="selectDist('${run.id}', '5K')">5K</button>
+                                    <button class="dist-btn ${currentDist === '8K' ? 'active' : ''}" onclick="selectDist('${run.id}', '8K')">8K</button>
+                                </div>
+                                <button class="btn btn-primary btn-block" onclick="joinRun('${run.id}')">Confirm Registration</button>
+                            ` : `
+                                ${run.route_preview_url ? `<button class="btn btn-secondary btn-block" style="margin-bottom: 12px; border-style: dashed; opacity: 0.9;" onclick="viewRouteMap('${run.route_preview_url}', '${run.route_type}', '${run.location_link}', '${run.location}')">🗺️ View Route Preview</button>` : ''}
+                                <button class="btn btn-secondary btn-block" disabled style="opacity:0.8; cursor:default; background:rgba(34, 197, 94, 0.1); border-color:#22c55e; color:#22c55e;">
+                                    You're all set! See you there.
+                                </button>
+                            `}
+                        </div>
+                    `;
+                }).join('');
+    
+                // Load weather advisory for the first run
+                if (runs.length > 0) loadAIAdvisor(runs[0]);
+            } catch (error) {
+                console.error("Dashboard failed to load runs:", error);
+                container.innerHTML = `<p style="padding:3rem; text-align:center; color:#ff4d4d; grid-column:1/-1;">⚠️ Failed to load runs. Please refresh the page.</p>`;
+            }
         }
 
         window.viewRouteMap = (url, type, locLink, locName) => {
@@ -296,7 +303,7 @@
 
         window.selectDist = (rId, dist) => {
             runSelections[rId] = dist;
-            renderRuns(); // Fast re-render
+            initDashboard(); // Fast re-render
         };
 
         window.joinRun = async (rId) => {
@@ -312,7 +319,7 @@
                     color: '#fff',
                     confirmButtonColor: 'var(--neon-accent)'
                 });
-                renderRuns();
+                initDashboard();
             } else {
                 Swal.fire({
                     icon: 'info',
@@ -377,6 +384,7 @@
         // TOUR MAP LOGIC
         // -------------------------
         async function initTourMap() {
+            if (!user) return;
             const mapContainer = document.getElementById('tourMap');
             if (!mapContainer) return;
             
