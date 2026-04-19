@@ -51,7 +51,7 @@
         .leaflet-control-attribution, .leaflet-control-zoom { display:none !important; }
         .tour-map-bg { 
             position: absolute; inset: 0; pointer-events: none; z-index: 400; background:rgba(26, 26, 31, 0.4); 
-            background-image: url('cairo_medium_density_wide_map_1776562543956.png');
+            background-image: url('cairo_map_bg.png');
             background-size: cover;
             background-position: center;
         }
@@ -134,12 +134,17 @@
                 <div style="padding: 2rem; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center;">
                     <div>
                         <h2 class="section-title" style="margin-bottom: 0;">🗺️ Tour de Cairo</h2>
-                        <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 0.5rem;">8 Runs · 8 Districts · 1 City</p>
+                        <div style="display: flex; gap: 10px; margin-top: 5px;">
+                            <p style="color: var(--text-muted); font-size: 0.9rem;">8 Runs · 8 Districts · 1 City</p>
+                            <button onclick="showTourInfo()" style="background: none; border: none; color: var(--peach-accent); font-size: 0.8rem; text-decoration: underline; cursor: pointer; padding: 0;">What is this?</button>
+                        </div>
                     </div>
+                    <button class="btn btn-primary btn-sm" onclick="document.getElementById('runsContainer').scrollIntoView({behavior:'smooth'})">🚀 Register for next Stop</button>
                 </div>
                 <div style="position: relative; height: 500px; width: 100%; background: #1a1a1f; overflow: hidden;">
                     <div id="tourMap" style="width: 100%; height: 100%;"></div>
                 </div>
+
             </div>
         </section>
 
@@ -362,11 +367,30 @@
             
             const tourMap = L.map('tourMap', {
                 zoomSnap: 0.1, zoomControl: false, scrollWheelZoom: false,
-                dragging: true, touchZoom: false, doubleClickZoom: false,
+                dragging: false, touchZoom: false, doubleClickZoom: false,
                 boxZoom: false, keyboard: false, attributionControl: false
             });
             
             tourMap.setView([30.035, 31.4775], 9.7);
+            
+            window.showTourInfo = () => {
+                Swal.fire({
+                    title: 'What is Tour de Cairo?',
+                    html: `
+                        <div style="text-align: left; font-size: 0.95rem; line-height: 1.6; color: #ccc;">
+                            <p><b>Tour de Cairo</b> is a premium monthly running series by Stride Rite. Every month, we host 8 community runs across 8 iconic districts of Cairo.</p>
+                            <p style="margin-top: 10px;">🏃 **The Goal**: Complete all 8 district runs in a single month to earn the exclusive **Monthly Finisher Medal** displayed on your profile.</p>
+                            <p style="margin-top: 10px;">🌍 **The Map**: Your dashboard map tracks your progress in real-time. Joined stops turn <span style="color:#22c55e;">Green</span>. Scheduled stops are <span style="color:#ff6b35;">Orange</span>.</p>
+                            <p style="margin-top: 10px;">🎁 **Rewards**: Finishers get early access to limited edition Stride Rite gear and VIP invites to community events.</p>
+                        </div>
+                    `,
+                    icon: 'info',
+                    background: '#1a1a1f',
+                    color: '#fff',
+                    confirmButtonColor: 'var(--peach-accent)',
+                    confirmButtonText: 'Got it, let\'s run!'
+                });
+            };
             
             // Add custom background overlay
             mapContainer.insertAdjacentHTML('afterbegin', '<div class="tour-map-bg"></div><div class="side-progress"><div class="side-progress-fill" id="progressFill"></div></div><div class="side-list" id="sideList"></div>');
