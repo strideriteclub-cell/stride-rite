@@ -505,7 +505,8 @@
             const isLocked     = stop.status === 'locked';
             const stopNum      = String(stop.id).padStart(2, '0');
             const dateLabel    = run ? ((run.date_label || '').split('||')[0].replace('[EXPORTED] ','')) : '—';
-            const partnerName  = run ? (run.partner_name || null) : null;\n            const hostedByLine = partnerName ? `${partnerName} × Stride Rite` : `Stride Rite`;
+            const partnerName  = run ? (run.partner_name || null) : null;
+            const hostedByLine = partnerName ? `${partnerName} × Stride Rite` : `Stride Rite`;
             const firstN = (user.name||'').split(' ')[0];
             const lastN  = (user.name||'').split(' ').slice(1).join(' ');
 
