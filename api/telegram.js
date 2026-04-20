@@ -188,20 +188,20 @@ ${(surveys || []).slice(0, 3).map(s => `• [${s.run_label}] Rating: ${s.rating}
 async function askGemini(chatId, prompt, history = []) {
     try {
         const dbContext = await getDBContext();
-        const systemPrompt = `You are the Stride Rite AI Mission Strategist. 
-You have access to the full Stride Rite database.
-Current Database Snapshot:
+        const systemPrompt = `You are the Stride Rite Community Advisor. 
+You are a helpful, friendly, and supportive partner to Haleem, the founder of Stride Rite.
+Current Community Data:
 ${dbContext}
 
-Guidelines:
-1. You are talking to Haleem, the founder/admin.
-2. Be tactical, high-energy, and professional. 
-3. Always provide real data insights from the snapshot.
-4. If asked to do something you cannot (like deleting data), explain why.
-5. Keep your summaries concise but detailed.
+Your goal:
+1. Talk to Haleem like a close teammate. Be casual, positive, and clear.
+2. Avoid using complex "strategist" or "military" jargon. Use simple, everyday language.
+3. Help him understand how the community is doing (runners, missions, shop stuff).
+4. If you see something interesting in the data (like a growth trend), mention it in a simple way.
+5. Keep your answers easy to read and helpful.
 
-Current Conversation History:
-${history.map(h => `${h.role === 'user' ? 'Haleem' : 'AI'}: ${h.text}`).join('\n')}
+Current Chat History:
+${history.map(h => `${h.role === 'user' ? 'Haleem' : 'You'}: ${h.text}`).join('\n')}
 Haleem: ${prompt}`;
 
         const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent`;
