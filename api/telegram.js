@@ -206,8 +206,9 @@ Current Chat Session:
 ${history.map(h => `${h.role === 'user' ? 'Haleem' : 'StrideBot'}: ${h.text}`).join('\n')}
 Haleem: ${prompt}`;
 
-        const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent`;
-        let res = await fetch(url + `?key=${GEMINI_API_KEY}`, {
+        // Switching back to v1beta as it's often more permissive for new keys
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+        let res = await fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ contents: [{ parts: [{ text: systemPrompt }] }] })
@@ -215,10 +216,10 @@ Haleem: ${prompt}`;
         
         let data = await res.json();
 
-        // FALLBACK: If 1.5-flash is not found, try the standard gemini-pro
+        // FALLBACK: Try gemini-1.5-flash-latest or gemini-pro if needed
         if (res.status === 404 || (data.error && data.error.message.includes('not found'))) {
-            const fallbackUrl = `https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent`;
-            res = await fetch(fallbackUrl + `?key=${GEMINI_API_KEY}`, {
+            const fallbackUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${GEMINI_API_KEY}`;
+            res = await fetch(fallbackUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ contents: [{ parts: [{ text: systemPrompt }] }] })
@@ -227,7 +228,10 @@ Haleem: ${prompt}`;
         }
 
         if (!res.ok) {
-            throw new Error(data.error?.message || "API connection dropped");
+            const errMsg = data.error?.message || "Unknown API Error";
+            if (errMsg.includes("API_KEY_INVALID")) throw new Error("Your API Key is invalid. Check for typos.");
+            if (errMsg.includes("not found")) throw new Error("This model isn't enabled for your key yet. Try enabling 'Generative Language API' in Google Console.");
+            throw new Error(errMsg);
         }
         const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
         
