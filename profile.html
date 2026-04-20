@@ -7,6 +7,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css?v=22">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         .profile-container { max-width: 900px; margin: 0 auto; padding: 2rem; margin-top: 100px; }
         .profile-header { display: flex; align-items: center; gap: 2rem; margin-bottom: 2rem; flex-wrap: wrap; }
@@ -19,6 +20,16 @@
         .stat-value { font-size: 3rem; font-weight: 800; font-family: 'Outfit'; line-height: 1; margin-bottom: 0.5rem; }
         .stat-label { color: var(--text-muted); text-transform: uppercase; letter-spacing: 2px; font-size: 0.75rem; font-weight: 600; }
         .history-title { font-family: 'Outfit'; font-size: 1.8rem; margin-bottom: 1.5rem; color: white; }
+
+        /* Bib Card Styles */
+        .bib-container { margin-bottom: 3rem; perspective: 1000px; }
+        .bib-card { background: white; color: #1a1a1f; border-radius: 12px; padding: 20px; position: relative; border: 12px solid #ff6b35; box-shadow: 0 20px 40px rgba(0,0,0,0.4); display: flex; flex-direction: column; align-items: center; text-align: center; overflow: hidden; width: 280px; margin: 0 auto; }
+        .bib-card::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 40px; background: #ff6b35; z-index: 0; }
+        .bib-logo { font-family: 'Outfit'; font-weight: 900; font-size: 1.4rem; color: white; position: relative; z-index: 1; margin-bottom: 15px; letter-spacing: -1px; }
+        .bib-number { font-family: 'Outfit'; font-size: 5rem; font-weight: 800; line-height: 1; margin: 10px 0; letter-spacing: -2px; color: #1a1a1f; z-index: 1; }
+        .bib-name { font-weight: 700; font-size: 1.1rem; text-transform: uppercase; letter-spacing: 1px; color: #1a1a1f; z-index: 1; margin-bottom: 12px; opacity: 0.9; }
+        .qr-wrap { background: white; padding: 10px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1); margin-top: 10px; z-index: 1; }
+        .bib-footer { margin-top: 15px; font-size: 0.65rem; font-weight: 700; color: rgba(0,0,0,0.4); text-transform: uppercase; letter-spacing: 2px; }
     </style>
 </head>
 <body>
@@ -39,6 +50,17 @@
                 <div style="margin-bottom:0.75rem;"><span class="badge" id="userLevelBadge">Beginner</span></div>
                 <div style="color:var(--text-muted); font-size:0.95rem;">📧 <span id="userEmail"></span></div>
             </div>
+        </div>
+
+        <div class="bib-container animate-up" id="bibSection" style="display: none; margin-top: 1rem;">
+            <div class="bib-card">
+                <div class="bib-logo">STRIDE RITE</div>
+                <div class="bib-name" id="bibName">RUNNER</div>
+                <div class="bib-number" id="bibNumber">000</div>
+                <div class="qr-wrap" id="qrcode" style="display: flex; justify-content: center;"></div>
+                <div class="bib-footer">Check-In Passport</div>
+            </div>
+            <p style="text-align:center; color:var(--text-muted); font-size:0.8rem; margin: 1rem 0;">Scan this QR code at the event check-in point 📍</p>
         </div>
 
         <div class="stats-grid">
@@ -76,8 +98,27 @@
             document.getElementById('totalKms').innerText = stats.totalKms;
             document.getElementById('tourProgress').innerText = `${stats.completionRate}%`;
 
-            // Render current month tour summary
-            if (stats.tourProgress) {
+            // If user has a bib, show the card
+            if (user.bib_number) {
+                document.getElementById('bibSection').style.display = 'block';
+                document.getElementById('bibNumber').innerText = user.bib_number;
+                document.getElementById('bibName').innerText = user.name;
+                
+                // Get most recent upcoming registration to use for QR
+                const regs = await dbGet('stride_registrations', `user_id=eq.${user.id}&order=registered_at.desc&limit=1`);
+                if (regs && regs.length > 0) {
+                    new QRCode(document.getElementById("qrcode"), {
+                        text: regs[0].id,
+                        width: 140,
+                        height: 140,
+                        colorDark : "#1a1a1f",
+                        colorLight : "#ffffff",
+                        correctLevel : QRCode.CorrectLevel.H
+                    });
+                } else {
+                    document.getElementById("qrcode").innerHTML = "<p style='font-size:0.7rem; color:#888; width:140px; padding:20px;'>Join a run to activate your QR check-in</p>";
+                }
+            }
                 const archiveSec = document.getElementById('tourArchiveSection');
                 const archiveCont = document.getElementById('tourArchiveContainer');
                 archiveSec.style.display = 'block';
