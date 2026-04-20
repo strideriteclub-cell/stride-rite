@@ -106,7 +106,7 @@
         </section>
     </div>
 
-    <script src="app.js?v=31"></script>
+    <script src="app.js?v=45"></script>
     <script>
         let user = null;
         let runSelections = {};
@@ -271,14 +271,6 @@
       <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
       Open Start Location in Google Maps →
     </a>` : ''}
-    <div style="margin-top:0.75rem;">
-      <div style="font-size:0.55rem;font-weight:700;letter-spacing:2px;color:rgba(255,255,255,0.3);text-transform:uppercase;margin-bottom:6px;">🏃 AVAILABLE DISTANCES</div>
-      <div style="display:flex;gap:6px;">
-        <span style="background:rgba(88,74,220,0.1);border:1px solid rgba(88,74,220,0.2);color:var(--neon-accent);padding:4px 14px;border-radius:20px;font-size:0.8rem;font-weight:800;">2K</span>
-        <span style="background:rgba(88,74,220,0.1);border:1px solid rgba(88,74,220,0.2);color:var(--neon-accent);padding:4px 14px;border-radius:20px;font-size:0.8rem;font-weight:800;">5K</span>
-        <span style="background:rgba(88,74,220,0.1);border:1px solid rgba(88,74,220,0.2);color:var(--neon-accent);padding:4px 14px;border-radius:20px;font-size:0.8rem;font-weight:800;">8K</span>
-      </div>
-    </div>
   </div>
 
   <!-- SATELLITE MAP -->
@@ -332,6 +324,10 @@
                 didOpen: () => {
                     const map = L.map('spotlight-map', { zoomControl: true }).setView([30.0444, 31.2357], 13);
                     L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19 }).addTo(map);
+                    
+                    // Fix for Leaflet maps not loading properly in modals
+                    setTimeout(() => map.invalidateSize(), 200);
+
                     if (nextStop.route_preview_url && nextStop.route_type === 'gpx') {
                         new L.GPX(nextStop.route_preview_url, {
                             async: true,
@@ -341,7 +337,10 @@
                                 endIconUrl: 'https://cdn-icons-png.flaticon.com/512/61/61041.png',
                                 iconSize: [28, 28]
                             }
-                        }).on('loaded', e => map.fitBounds(e.target.getBounds(), { padding:[20,20] })).addTo(map);
+                        }).on('loaded', e => {
+                            map.fitBounds(e.target.getBounds(), { padding:[20,20] });
+                            map.invalidateSize();
+                        }).addTo(map);
                     }
                 }
             }).then(result => {
