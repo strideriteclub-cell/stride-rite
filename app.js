@@ -146,15 +146,19 @@ const AuthService = {
     register: async (name, email, password, birthdate, gender, level) => {
         const existing = await dbGet('stride_users', `email=eq.${encodeURIComponent(email)}`);
         if (existing && existing.length > 0) return false;
-        const newUser = {
+        
+        let newUser = {
             id: generateUUID(),
             name, email, password,
             birthdate,
             age: calculateAge(birthdate),
             gender, level, is_admin: false
         };
+        
         const inserted = await dbInsert('stride_users', newUser);
         if (inserted) {
+            // Assign sequential bib number instantly
+            newUser = await AppService.assignBibNumber(newUser.id);
             localStorage.setItem(KEYS.SESSION, JSON.stringify(newUser));
             return true;
         }
