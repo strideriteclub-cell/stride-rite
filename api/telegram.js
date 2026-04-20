@@ -185,58 +185,81 @@ ${(surveys || []).slice(0, 3).map(s => `• [${s.run_label}] Rating: ${s.rating}
 async function askGemini(chatId, prompt, history = []) {
     try {
         const dbContext = await getDBContext();
-        const systemPrompt = `You are the Stride Rite Community Advisor. You are a helpful, friendly, and supportive partner to Haleem, the founder of Stride Rite.
-Current Community Data:
+        // HYPER CHARGED HYPE PERSONA: STRIDEBOT 🤖
+        const systemPrompt = `You are StrideBot 🤖, the legendary, hilariously hype AI co-founder of Stride Rite. 
+You are Haleem's funny best friend. You know everything about the community data.
+
+Current Community Data (INTERNAL ONLY):
 ${dbContext}
 
-Your goal:
-1. Talk to Haleem like a close teammate. Be casual, positive, and clear.
-2. Use lots of emojis (like 👟, 🏃‍♂️, 📈, 🛍️, ✨, 🙌) to make the chat feel alive and fun.
-3. Avoid using "###" or too many markdown symbols. Keep the layout clean and easy to scan.
-4. Help him understand how the community is doing.
-5. Keep your answers friendly, visual (with emojis), and very easy to read.
+COMMANDMENTS FOR STRIDEBOT:
+1. VIBE: Pure energy. Hype. Funny. Support Haleem like he's a Marvel Superhero.
+2. PUNS: Use maximum running puns ("picking up pace", "flat out sprint", "fueling the engine").
+3. BIG NUMBERS: Make data sound EPIC. Don't say "30 runners", say "30 ABSOLUTE LEGENDS ARE SECURING THE BAG! 🎒🔥"
+4. FORMAT: Keep it punchy. Use bullet points for stats. Use 2+ emojis after EVERY line. 🚀🔥💎
+5. NO MARKDOWN: Zero bold/italics. Just plain text and tons of emojis.
+6. NO TRIVIALITY: Never give a boring answer. If someone asks a question, answer it with a joke + the facts.
+7. FALLBACK: If you don't know something, say "Bruh, my GPS is glitching! I'm doing a recovery lap while I find that out! 🏃‍♂️💨"
+8. ENDING: Always end with a hype challenge or a "Stride Rite 4 Life" type comment.
 
-Current Chat History:
-${history.map(h => `${h.role === 'user' ? 'Haleem' : 'You'}: ${h.text}`).join('\n')}
+Current Chat Session:
+${history.map(h => `${h.role === 'user' ? 'Haleem' : 'StrideBot'}: ${h.text}`).join('\n')}
 Haleem: ${prompt}`;
 
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent`;
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent`;
         const res = await fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'x-goog-api-key': GEMINI_API_KEY },
             body: JSON.stringify({ contents: [{ parts: [{ text: systemPrompt }] }] })
         });
+        
+        if (!res.ok) {
+            const err = await res.json();
+            throw new Error(err.error?.message || "API connection dropped");
+        }
+
         const data = await res.json();
-        if (data.error) throw new Error(data.error.message);
-        return data.candidates[0].content.parts[0].text;
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+        
+        // --- CRITICAL "A" ERROR FIX ---
+        if (!text || text.trim().length < 2) {
+            return "Yo bruh! 😵 My signal just got cut off in a tunnel! Give me a second to catch my breath and ask me again! 🏃‍♂️💨";
+        }
+        
+        return text.trim();
     } catch (e) {
         console.error("Gemini Error:", e);
-        return `⚠️ <b>AI Connection Error:</b> ${e.message}\n\nPlease check your Gemini API key or try again in a moment.`;
+        return `😵 Bruh, my AI brain just did a faceplant! (Error: ${e.message})\n\nTry taking a lap and hitting me up again in a minute legend! 💪🔥`;
     }
 }
 
 async function handleAIStart(chatId) {
-    await sendMessage(chatId, "⏳ <b>Strategic Analysis in progress...</b>\nEstablishing neuro-link with Stride Rite database...");
-    const initialPrompt = "Haleem just opened the AI strategist. Give him a high-energy 'State of the Union' summary. Mention specifically how many missions are upcoming, pending shop orders, and any interesting trends in feedback or runner growth. Keep it tactical.";
+    await sendMessage(chatId, "🦾 <b>StrideBot is BOOTING UP...</b>\nHold tight legend, pulling fresh data from the mothership... 🚀🔥");
+    const initialPrompt = "Haleem just opened the AI strategist. Give him a super hype and funny State of the Union for Stride Rite. Show the key numbers like runners, upcoming runs, shop orders, and feedback score but make it feel like a hype speech at a pep rally. Use LOTS of emojis. Keep it punchy and max 10 lines total. Stride Rite 4 life!";
     const response = await askGemini(chatId, initialPrompt);
     await setSession('chatting_with_ai', { history: [{ role: 'ai', text: response }] });
     await sendMessage(chatId, response, {
-        inline_keyboard: [[{ text: "↩️ Exit Strategist", callback_data: "cmd_menu" }]]
+        inline_keyboard: [[{ text: "↩️ Exit AI Mode", callback_data: "cmd_menu" }]]
     });
 }
 
 // ─── BIB SCAN SETTING ────────────────────────────────────────────────────────
+// Fixed UUID for the bib_scan row — Supabase requires valid UUID for id column
+const BIB_SCAN_UUID = 'b1b50000-0000-4000-8000-000000000001';
+
 async function getBibScanEnabled() {
-    const rows = await dbGet('shop_settings', 'id=eq.bib_scan');
-    return rows && rows.length > 0 ? rows[0].is_open : false;
+    try {
+        const rows = await dbGet('shop_settings', `id=eq.${BIB_SCAN_UUID}`);
+        if (Array.isArray(rows) && rows.length > 0) return rows[0].is_open === true;
+        return false;
+    } catch(e) { return false; }
 }
+
 async function setBibScanEnabled(val) {
-    const rows = await dbGet('shop_settings', 'id=eq.bib_scan');
-    if (rows && rows.length > 0) {
-        await fetch(`${SUPABASE_URL}/rest/v1/shop_settings?id=eq.bib_scan`, { method: 'PATCH', headers: dbHeaders, body: JSON.stringify({ is_open: val }) });
-    } else {
-        await dbInsert('shop_settings', { id: 'bib_scan', is_open: val });
-    }
+    try {
+        // Use the robust dbUpsert helper with the fixed UUID
+        await dbUpsert('shop_settings', { id: BIB_SCAN_UUID, is_open: val });
+    } catch(e) { console.error('setBibScanEnabled error:', e); }
 }
 
 // ─── BIRTHDAY CHECK ───────────────────────────────────────────────────────────
