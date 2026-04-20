@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Shop | Stride Rite</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=22">
+    <link rel="stylesheet" href="styles.css?v=27">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
         .hero-banner {
@@ -50,7 +50,7 @@
         </div>
     </div>
 
-    <script src="app.js?v=22"></script>
+    <script src="app.js?v=32"></script>
     <script>
         let selectedItem = null;
         let selectedSize = '';
@@ -132,8 +132,12 @@
                         <div class="size-selector">${sizeHtml}</div>
 
                         <p style="font-weight:700; margin-top:15px; margin-bottom:8px; color:#fff; font-size:0.9rem;">2. Payment Info:</p>
-                        <div id="paymentInstructions" style="background:#1a1827; padding:10px; border-radius:8px; font-family:monospace; font-size:0.95rem; border:1px solid #333; margin-bottom:15px; text-align:center; color:var(--peach-accent);">
-                            🟣 InstaPay: 01128828954
+                        <div id="paymentInstructions" style="background:rgba(255,255,255,0.03); padding:1rem; border-radius:12px; border:1px solid rgba(255,255,255,0.1); margin-bottom:15px; text-align:center;">
+                            <div style="display:flex; justify-content:center; align-items:center; gap:8px;">
+                                <span id="paymentMethodIcon">🟣</span>
+                                <span style="letter-spacing:1px; font-weight:800; font-size:0.8rem;" id="paymentMethodLabel">INSTAPAY:</span>
+                                <code style="background:rgba(255,255,255,0.1); padding:4px 8px; border-radius:6px; color:#fff; font-family:monospace; font-size:1rem;" id="paymentHandle">01128828954</code>
+                            </div>
                         </div>
 
                         <p style="font-size: 0.85rem; color: #a1a1aa; margin-bottom: 10px;">3. Choose Your Method:</p>
@@ -210,20 +214,31 @@
             const bI = document.getElementById('btnInsta');
             const bT = document.getElementById('btnTelda');
             const label = document.getElementById('refLabel');
-            const inst = document.getElementById('paymentInstructions');
+            
+            const icon = document.getElementById('paymentMethodIcon');
+            const pLabel = document.getElementById('paymentMethodLabel');
+            const handle = document.getElementById('paymentHandle');
             const rcpt = document.getElementById('receiptContainer');
             
             if (method === 'InstaPay') {
                 bI.style.background = 'var(--peach-accent)'; bI.style.color = '#000';
                 bT.style.background = 'transparent'; bT.style.color = '#fff';
                 label.innerText = 'InstaPay Number:';
-                inst.innerHTML = '🟣 InstaPay: 01128828954';
+                
+                if (icon) icon.innerText = '🟣';
+                if (pLabel) pLabel.innerText = 'INSTAPAY:';
+                if (handle) handle.innerText = '01128828954';
+                
                 rcpt.style.display = 'block';
             } else {
                 bT.style.background = 'var(--peach-accent)'; bT.style.color = '#000';
                 bI.style.background = 'transparent'; bI.style.color = '#fff';
                 label.innerText = 'Telda Username:';
-                inst.innerHTML = '🔴 Telda: @ckh';
+                
+                if (icon) icon.innerText = '🔴';
+                if (pLabel) pLabel.innerText = 'TELDA:';
+                if (handle) handle.innerText = '@ckh';
+                
                 rcpt.style.display = 'none';
             }
         };
