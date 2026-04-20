@@ -1,11 +1,13 @@
+:root {
+    --bg-dark: #0d0c11;
+    --bg-card: rgba(255, 255, 255, 0.03);
+    --text-main: #ffffff;
+    --text-muted: #a1a1aa;
+    --neon-accent: #584adc;
+    --neon-glow: rgba(88, 74, 220, 0.2);
+    --peach-accent: #ff8b6a;
     --border-color: rgba(255, 255, 255, 0.1);
 }
-
-/* Custom Tactical Scrollbar */
-::-webkit-scrollbar { width: 8px; }
-::-webkit-scrollbar-track { background: var(--bg-dark); }
-::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; border: 2px solid var(--bg-dark); }
-::-webkit-scrollbar-thumb:hover { background: var(--neon-accent); }
 
 * {
     margin: 0;
