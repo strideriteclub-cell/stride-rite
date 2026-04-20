@@ -353,32 +353,51 @@ const AppService = {
         const userRegs = await dbGet('stride_registrations', `user_id=eq.${userId}`);
         const dbStops = await dbGet('stride_tour_stops');
         const now = new Date();
-        
+
         const currentTourConfig = DEFAULT_TOUR_CONFIG.map(def => {
             const override = (dbStops || []).find(s => Number(s.id) === Number(def.id));
-            if (override) {
-                return { ...def, name: override.name, lat: override.lat, lng: override.lng };
-            }
+            if (override) return { ...def, name: override.name, lat: override.lat, lng: override.lng };
             return def;
         });
 
         const progress = currentTourConfig.map(stop => {
-            const runForStop = (rawRuns || []).find(r => {
-                if (!r.tour_stop_id || Number(r.tour_stop_id) !== Number(stop.id)) return false;
-                if (r.date_label && r.date_label.includes('[EXPORTED]')) return false;
-                const dateStr = r.iso_date || (r.date_label && r.date_label.includes('||') ? r.date_label.split('||')[1] : null);
-                if (!dateStr) return false;
-                const runDate = new Date(dateStr);
-                return runDate >= now;
-            });
+            // Find any run linked to this stop (past or upcoming)
+            const runsForStop = (rawRuns || []).filter(r => r.tour_stop_id && Number(r.tour_stop_id) === Number(stop.id));
 
-            const registration = runForStop ? userRegs.find(reg => reg.run_id === runForStop.id) : null;
+            let status = 'locked';
+            let runId = null;
 
-            return {
-                ...stop,
-                status: registration ? 'unlocked' : (runForStop ? 'active' : 'locked'),
-                runId: runForStop ? runForStop.id : null
-            };
+            for (const r of runsForStop) {
+                const rawLabel = r.date_label || '';
+                const isExported = rawLabel.includes('[EXPORTED]');
+                const dateStr = r.iso_date ||
+                    (rawLabel.includes('||') ? rawLabel.split('||')[1] : null);
+                const runDate = dateStr ? new Date(dateStr) : null;
+
+                const userRegistered = userRegs.find(reg => reg.run_id === r.id);
+
+                // COMPLETED: run is in the past AND user was registered
+                if (userRegistered && (isExported || (runDate && runDate < now))) {
+                    status = 'completed';
+                    runId = r.id;
+                    break; // Completed wins over everything
+                }
+
+                // UPCOMING + registered
+                if (userRegistered && runDate && runDate >= now) {
+                    status = 'unlocked';
+                    runId = r.id;
+                    continue;
+                }
+
+                // UPCOMING but not registered
+                if (runDate && runDate >= now && status === 'locked') {
+                    status = 'active';
+                    runId = r.id;
+                }
+            }
+
+            return { ...stop, status, runId };
         });
 
         return progress;
