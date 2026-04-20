@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Stride Rite | Al Rehab Running Community</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=15">
+    <link rel="stylesheet" href="styles.css?v=31">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
         .custom-logo-container { display: flex; align-items: center; gap: 12px; }
@@ -97,7 +97,7 @@
         <p>&copy; 2026 Stride Rite | <a href="admin.html">Admin Portal</a></p>
     </footer>
 
-    <script src="app.js?v=21"></script>
+    <script src="app.js?v=31"></script>
     <script>
         window.addEventListener('load', () => {
             const targetDay = "SATURDAY";
@@ -128,7 +128,7 @@
                     <h2>You're ready to run!</h2>
                     <p style="margin-bottom: 2rem;">Joined the Stride Rite family.</p>
                     <a href="dashboard.html" class="btn btn-primary">View Dashboard</a><br><br>
-                    <a href="#" onclick="AuthService.logout()" style="color:var(--text-muted);">Log out</a>
+                    <a href="#" onclick="event.preventDefault(); AuthService.logout()" style="color:var(--text-muted);">Log out</a>
                 </div>`;
         }
         function switchAuth(type) {
@@ -158,7 +158,11 @@
                     document.getElementById('regPassword').value, document.getElementById('regBirthdate').value,
                     document.getElementById('regGender').value, document.getElementById('regLevel').value
                 );
-                if (success) Swal.fire({icon:'success', title:'Welcome!', background:'#141419', color:'#fff'}).then(()=>window.location.href='dashboard.html');
+                if (success) {
+                    Swal.fire({icon:'success', title:'Welcome!', background:'#141419', color:'#fff'}).then(()=>window.location.href='dashboard.html');
+                } else {
+                    Swal.fire({icon:'error', title:'Registration Failed', text:'That email might already be in use.', background:'#141419', color:'#fff'});
+                }
             });
         }
     </script>
