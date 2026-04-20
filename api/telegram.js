@@ -206,7 +206,6 @@ Current Chat Session:
 ${history.map(h => `${h.role === 'user' ? 'Haleem' : 'StrideBot'}: ${h.text}`).join('\n')}
 Haleem: ${prompt}`;
 
-        // Switching back to v1beta as it's often more permissive for new keys
         const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
         let res = await fetch(url, {
             method: 'POST',
@@ -215,23 +214,8 @@ Haleem: ${prompt}`;
         });
         
         let data = await res.json();
-
-        // FALLBACK: Try gemini-1.5-flash-latest or gemini-pro if needed
-        if (res.status === 404 || (data.error && data.error.message.includes('not found'))) {
-            const fallbackUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${GEMINI_API_KEY}`;
-            res = await fetch(fallbackUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ contents: [{ parts: [{ text: systemPrompt }] }] })
-            });
-            data = await res.json();
-        }
-
         if (!res.ok) {
-            const errMsg = data.error?.message || "Unknown API Error";
-            if (errMsg.includes("API_KEY_INVALID")) throw new Error("Your API Key is invalid. Check for typos.");
-            if (errMsg.includes("not found")) throw new Error("This model isn't enabled for your key yet. Try enabling 'Generative Language API' in Google Console.");
-            throw new Error(errMsg);
+            throw new Error(data.error?.message || "API connection dropped");
         }
         const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
         
@@ -255,25 +239,6 @@ async function handleAIStart(chatId) {
     await sendMessage(chatId, response, {
         inline_keyboard: [[{ text: "↩️ Exit AI Mode", callback_data: "cmd_menu" }]]
     });
-}
-
-// ─── BIB SCAN SETTING ────────────────────────────────────────────────────────
-// Fixed UUID for the bib_scan row — Supabase requires valid UUID for id column
-const BIB_SCAN_UUID = 'b1b50000-0000-4000-8000-000000000001';
-
-async function getBibScanEnabled() {
-    try {
-        const rows = await dbGet('shop_settings', `id=eq.${BIB_SCAN_UUID}`);
-        if (Array.isArray(rows) && rows.length > 0) return rows[0].is_open === true;
-        return false;
-    } catch(e) { return false; }
-}
-
-async function setBibScanEnabled(val) {
-    try {
-        // Use the robust dbUpsert helper with the fixed UUID
-        await dbUpsert('shop_settings', { id: BIB_SCAN_UUID, is_open: val });
-    } catch(e) { console.error('setBibScanEnabled error:', e); }
 }
 
 // ─── BIRTHDAY CHECK ───────────────────────────────────────────────────────────
@@ -398,7 +363,7 @@ async function resolveGoogleMapsLink(url) {
 // ─── GALLERY ─────────────────────────────────────────────────────────────────
 async function handleGalleryStart(chatId) {
     try {
-        const [runsRaw, bibEnabled] = await Promise.all([dbGet('stride_runs'), getBibScanEnabled()]);
+        const runsRaw = await dbGet('stride_runs');
         const runs = runsRaw;
         if (!Array.isArray(runs)) {
             console.error("Supabase Error:", runs);
@@ -410,11 +375,9 @@ async function handleGalleryStart(chatId) {
             return [{ text: `🏃 ${label}`, callback_data: `gal_r_${r.id}` }];
         });
         buttons.unshift([{ text: "📸 General / No specific run", callback_data: "gal_r_general" }]);
-        buttons.push([{ text: bibEnabled ? "🔵 Bib Scanner: ON  (tap to disable)" : "⚫ Bib Scanner: OFF (tap to enable)", callback_data: "gal_toggle_bib" }]);
-        buttons.push([{ text: "🏷️ Smart Tag Existing", callback_data: "gal_smart_tag" }]);
         buttons.push([{ text: "🗑️ Delete a Photo", callback_data: "cmd_gallery_delete" }]);
         buttons.push([{ text: "↩️ Back", callback_data: "cmd_menu" }]);
-        await sendMessage(chatId, `📸 <b>Gallery</b>\n\nAdd photos — pick which run they're from:\n\n${bibEnabled ? '🔵 AI Bib Scanner is <b>ON</b>' : '⚫ AI Bib Scanner is <b>OFF</b>'}`, { inline_keyboard: buttons });
+        await sendMessage(chatId, `📸 <b>Gallery</b>\n\nAdd photos — pick which run they're from:`, { inline_keyboard: buttons });
     } catch (e) {
         console.error("Gallery Fail:", e);
         await sendMessage(chatId, "❌ <b>Gallery Error:</b> Failed to load runs. Check your database connection.");
@@ -439,40 +402,13 @@ async function handleGalleryRunPicked(chatId, runId) {
     await sendMessage(chatId, msg);
 }
 
-async function detectBibsInImage(imgBuffer) {
-    try {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent`;
-        const res = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'x-goog-api-key': GEMINI_API_KEY },
-            body: JSON.stringify({
-                contents: [{ parts: [
-                    { text: "INSTRUCTIONS: You are a professional race timer for a running club called Stride Rite. Look EXTREMELY closely at this photo. Find EVERY runner bib number visible (numbers pinned to their shirts).\n\nIMPORTANT RULES:\n1. Only return numbers between 100 and 500. These are our valid bib ranges.\n2. Ignore any other numbers (year labels, distances, banner text, crowd signs).\n3. Return ONLY the valid bib numbers separated by commas (Example: 100, 201, 350).\n4. If no valid bibs are found, return 'none'.\n5. Do NOT include any sentences or explanations." },
-                    { inline_data: { mime_type: "image/jpeg", data: Buffer.from(imgBuffer).toString('base64') } }
-                ]}]
-            })
-        });
-        const data = await res.json();
-        if (data.error) throw new Error(data.error.message);
-        const text = data.candidates?.[0]?.content?.parts?.[0]?.text || 'none';
-        if (text.trim().toLowerCase() === 'none') return [];
-        const matches = text.match(/\d+/g);
-        return matches ? [...new Set(matches.map(s => s.trim()))] : [];
-    } catch (e) {
-        console.error("Bib detect error:", e);
-        throw e;
-    }
-}
-
 async function handleGalleryPhoto(chatId, message, session) {
     const photos = message.photo;
     const fileId = photos[photos.length - 1].file_id;
     const initialCaption = message.caption || '';
     const runLabel = session.data.runLabel || '';
 
-    // Check if bib scanner is enabled
-    const bibEnabled = await getBibScanEnabled();
-    await sendMessage(chatId, bibEnabled ? "⏳ Uploading photo & scanning for bib numbers..." : "⏳ Uploading photo...");
+    await sendMessage(chatId, "⏳ Uploading photo...");
 
     const fileRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getFile?file_id=${fileId}`);
     const fileData = await fileRes.json();
@@ -482,13 +418,7 @@ async function handleGalleryPhoto(chatId, message, session) {
     if (!imgRes.ok) { await sendMessage(chatId, "❌ Failed to download photo."); return; }
     const imgBuffer = await imgRes.arrayBuffer();
 
-    // AI Detect Bibs ONLY if enabled
-    let bibs = [];
-    if (bibEnabled) {
-        try { bibs = await detectBibsInImage(imgBuffer); } catch(e) { console.error("Bib detect fail:", e.message); }
-    }
-    const bibTags = bibs.length > 0 ? ` [BIBS:${bibs.join(',')}]` : '';
-    const caption = initialCaption + bibTags;
+    const caption = initialCaption;
 
     const fileName = `${Date.now()}.jpg`;
     const uploadRes = await fetch(`${SUPABASE_URL}/storage/v1/object/gallery/${fileName}`, {
@@ -1510,13 +1440,6 @@ export default async function handler(req, res) {
             }
             else if (data === 'cmd_gallery_start') await handleGalleryStart(chatId);
             else if (data.startsWith('gal_r_')) await handleGalleryRunPicked(chatId, data.replace('gal_r_', ''));
-            else if (data === 'gal_smart_tag') await handleGallerySmartTagAll(chatId);
-            else if (data === 'gal_toggle_bib' || data === 'gal_toggle_bib_menu') {
-                const current = await getBibScanEnabled();
-                await setBibScanEnabled(!current);
-                if (data === 'gal_toggle_bib_menu') await sendMenu(chatId);
-                else await handleGalleryStart(chatId);
-            }
             else if (data === 'cmd_ai_strat') await handleAIStart(chatId);
             else if (data === 'cmd_gallery_delete') await handleGalleryDeleteList(chatId);
             else if (data.startsWith('gal_tgl_del_')) {
