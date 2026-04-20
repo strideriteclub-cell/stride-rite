@@ -59,42 +59,26 @@
         }
         @keyframes shimmer { 100% { left: 200%; } }
         
-        .bib-logo { font-family: 'Outfit'; font-weight: 800; font-size: 0.9rem; color: #ff6b35; letter-spacing: 4px; margin-bottom: 25px; text-transform: uppercase; }
-        .bib-label { font-family: 'Outfit'; font-size: 0.6rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 2px; font-weight: 700; margin-bottom: 4px; }
-        .bib-name { font-family: 'Outfit'; font-weight: 800; font-size: 1.3rem; color: white; margin-bottom: 25px; line-height: 1.1; }
-        
-        .qr-section {
-            position: relative;
-            padding: 15px;
-            margin-bottom: 20px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            width: 100%;
-        }
-        .qr-corner { position: absolute; width: 24px; height: 24px; border: 2px solid #ff6b35; border-radius: 4px; }
-        .qr-tl { top: 0; left: 0; border-right: 0; border-bottom: 0; }
-        .qr-tr { top: 0; right: 0; border-left: 0; border-bottom: 0; }
-        .qr-bl { bottom: 0; left: 0; border-right: 0; border-top: 0; }
-        .qr-br { bottom: 0; right: 0; border-left: 0; border-top: 0; }
-        
-        .qr-wrap { 
-            background: white; 
-            padding: 8px; 
-            border-radius: 12px; 
-            box-shadow: 0 0 30px rgba(255, 107, 53, 0.1);
-        }
-        
+        .bib-logo { font-family: 'Outfit'; font-weight: 800; font-size: 1rem; color: #ff6b35; letter-spacing: 4px; margin-bottom: 40px; text-transform: uppercase; }
+        .bib-label { font-family: 'Outfit'; font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 3px; font-weight: 700; margin-bottom: 5px; }
+        .bib-name { font-family: 'Outfit'; font-weight: 800; font-size: 1.4rem; color: white; margin-bottom: 30px; line-height: 1.1; }
         .bib-number { 
             font-family: 'Outfit'; 
-            font-size: 4.5rem; 
+            font-size: 6rem; 
             font-weight: 900; 
             line-height: 1; 
             color: white; 
-            margin-bottom: 20px;
-            text-shadow: 0 0 20px rgba(255, 107, 53, 0.2);
+            margin-bottom: 40px; 
+            text-shadow: 0 0 20px rgba(255, 107, 53, 0.3);
         }
-        .bib-status { font-size: 0.7rem; font-weight: 800; color: #ff6b35; text-transform: uppercase; letter-spacing: 2px; }
+        .qr-wrap { 
+            background: white; 
+            padding: 12px; 
+            border-radius: 18px; 
+            box-shadow: 0 10px 20px rgba(0,0,0,0.5); 
+            margin-top: auto;
+        }
+        .bib-status { margin-top: 15px; font-size: 0.7rem; font-weight: 800; color: #ff6b35; text-transform: uppercase; letter-spacing: 2px; }
     </style>
 </head>
 <body>
@@ -123,16 +107,8 @@
                 <div class="bib-logo">Stride Rite</div>
                 <div class="bib-label">Verified Runner</div>
                 <div class="bib-name" id="bibName">RUNNER</div>
-                
-                <div class="qr-section">
-                    <div class="qr-corner qr-tl"></div>
-                    <div class="qr-corner qr-tr"></div>
-                    <div class="qr-corner qr-bl"></div>
-                    <div class="qr-corner qr-br"></div>
-                    <div class="qr-wrap" id="qrcode" style="display: flex; justify-content: center;"></div>
-                </div>
-
                 <div class="bib-number" id="bibNumber">000</div>
+                <div class="qr-wrap" id="qrcode" style="display: flex; justify-content: center;"></div>
                 <div class="bib-status">Digital Passport</div>
             </div>
             <p style="text-align:center; color:var(--text-muted); font-size:0.8rem; margin: 1rem 0;">Scan this QR code at the event check-in point 📍</p>
@@ -189,8 +165,8 @@
                 // Render LIFETIME QR Code based on the user's permanent Bib Number
                 new QRCode(document.getElementById("qrcode"), {
                     text: String(activeUser.bib_number),
-                    width: 180,
-                    height: 180,
+                    width: 140,
+                    height: 140,
                     colorDark : "#1a1a1f",
                     colorLight : "#ffffff",
                     correctLevel : QRCode.CorrectLevel.H
@@ -210,10 +186,8 @@
                         <div style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 2px; font-weight: 800; margin-bottom: 0.5rem;">${monthName} ${now.getFullYear()}</div>
                         <h3 style="font-family: 'Outfit'; font-size: 1.5rem; margin-bottom: 1rem;">Tour de Cairo</h3>
                         
-                        <div style="display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; margin-bottom: 0.5rem;">
-                            ${stats.tourProgress.map((p, i) => `
-                                <div style="height: 6px; border-radius: 2px; background: ${p.status === 'completed' ? (isComplete ? '#22c55e' : 'var(--peach-accent)') : 'rgba(255,255,255,0.05)'};"></div>
-                            `).join('')}
+                        <div style="height: 8px; background: rgba(255,255,255,0.05); border-radius: 10px; margin-bottom: 0.5rem; overflow: hidden;">
+                            <div style="width: ${stats.completionRate}%; height: 100%; background: ${isComplete ? '#22c55e' : 'var(--peach-accent)'}; border-radius: 10px;"></div>
                         </div>
                         <div style="display: flex; justify-content: space-between; font-size: 0.85rem;">
                              <span style="color: var(--text-muted);">${stats.tourProgress.filter(s => s.status === 'completed').length} / 8 Districts</span>
