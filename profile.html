@@ -22,14 +22,75 @@
         .history-title { font-family: 'Outfit'; font-size: 1.8rem; margin-bottom: 1.5rem; color: white; }
 
         /* Bib Card Styles */
-        .bib-container { margin-bottom: 3rem; perspective: 1000px; }
-        .bib-card { background: white; color: #1a1a1f; border-radius: 12px; padding: 20px; position: relative; border: 12px solid #ff6b35; box-shadow: 0 20px 40px rgba(0,0,0,0.4); display: flex; flex-direction: column; align-items: center; text-align: center; overflow: hidden; width: 280px; margin: 0 auto; }
-        .bib-card::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 40px; background: #ff6b35; z-index: 0; }
-        .bib-logo { font-family: 'Outfit'; font-weight: 900; font-size: 1.4rem; color: white; position: relative; z-index: 1; margin-bottom: 15px; letter-spacing: -1px; }
-        .bib-number { font-family: 'Outfit'; font-size: 5rem; font-weight: 800; line-height: 1; margin: 10px 0; letter-spacing: -2px; color: #1a1a1f; z-index: 1; }
-        .bib-name { font-weight: 700; font-size: 1.1rem; text-transform: uppercase; letter-spacing: 1px; color: #1a1a1f; z-index: 1; margin-bottom: 12px; opacity: 0.9; }
-        .qr-wrap { background: white; padding: 10px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1); margin-top: 10px; z-index: 1; }
-        .bib-footer { margin-top: 15px; font-size: 0.65rem; font-weight: 700; color: rgba(0,0,0,0.4); text-transform: uppercase; letter-spacing: 2px; }
+        .bib-container { margin-bottom: 3rem; position: relative; display: flex; justify-content: center; }
+        .bib-card { 
+            width: 300px; 
+            height: 480px; 
+            background: rgba(13, 12, 17, 0.85); 
+            backdrop-filter: blur(20px); 
+            border-radius: 30px; 
+            padding: 30px; 
+            position: relative; 
+            border: 2px solid rgba(255, 107, 53, 0.3); 
+            box-shadow: 0 0 40px rgba(255, 107, 53, 0.15), inset 0 0 20px rgba(255, 255, 255, 0.02); 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            overflow: hidden;
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .bib-card:hover { transform: scale(1.02); border-color: rgba(255, 107, 53, 0.6); }
+        .bib-card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle at center, rgba(255, 107, 53, 0.1) 0%, transparent 70%);
+            pointer-events: none;
+        }
+        .shimmer {
+            position: absolute;
+            top: 0; left: -100%;
+            width: 100%; height: 100%;
+            background: linear-gradient(120deg, transparent, rgba(255,255,255,0.05), transparent);
+            animation: shimmer 4s infinite;
+        }
+        @keyframes shimmer { 100% { left: 200%; } }
+        
+        .bib-logo { font-family: 'Outfit'; font-weight: 800; font-size: 0.9rem; color: #ff6b35; letter-spacing: 4px; margin-bottom: 25px; text-transform: uppercase; }
+        .bib-label { font-family: 'Outfit'; font-size: 0.6rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 2px; font-weight: 700; margin-bottom: 4px; }
+        .bib-name { font-family: 'Outfit'; font-weight: 800; font-size: 1.3rem; color: white; margin-bottom: 25px; line-height: 1.1; }
+        
+        .qr-section {
+            position: relative;
+            padding: 20px;
+            margin-bottom: 25px;
+        }
+        .qr-corner { position: absolute; width: 20px; height: 20px; border: 2px solid #ff6b35; border-radius: 4px; }
+        .qr-tl { top: 0; left: 0; border-right: 0; border-bottom: 0; }
+        .qr-tr { top: 0; right: 0; border-left: 0; border-bottom: 0; }
+        .qr-bl { bottom: 0; left: 0; border-right: 0; border-top: 0; }
+        .qr-br { bottom: 0; right: 0; border-left: 0; border-top: 0; }
+        
+        .qr-wrap { 
+            background: white; 
+            padding: 8px; 
+            border-radius: 12px; 
+            box-shadow: 0 0 30px rgba(255, 107, 53, 0.1);
+        }
+        
+        .bib-number { 
+            font-family: 'Outfit'; 
+            font-size: 4.5rem; 
+            font-weight: 900; 
+            line-height: 1; 
+            color: white; 
+            margin-bottom: 20px;
+            text-shadow: 0 0 20px rgba(255, 107, 53, 0.2);
+        }
+        .bib-status { font-size: 0.7rem; font-weight: 800; color: #ff6b35; text-transform: uppercase; letter-spacing: 2px; }
     </style>
 </head>
 <body>
@@ -54,18 +115,27 @@
 
         <div class="bib-container animate-up" id="bibSection" style="display: none; margin-top: 1rem;">
             <div class="bib-card">
-                <div class="bib-logo">STRIDE RITE</div>
+                <div class="shimmer"></div>
+                <div class="bib-logo">Stride Rite</div>
+                <div class="bib-label">Verified Runner</div>
                 <div class="bib-name" id="bibName">RUNNER</div>
+                
+                <div class="qr-section">
+                    <div class="qr-corner qr-tl"></div>
+                    <div class="qr-corner qr-tr"></div>
+                    <div class="qr-corner qr-bl"></div>
+                    <div class="qr-corner qr-br"></div>
+                    <div class="qr-wrap" id="qrcode" style="display: flex; justify-content: center;"></div>
+                </div>
+
                 <div class="bib-number" id="bibNumber">000</div>
-                <div class="qr-wrap" id="qrcode" style="display: flex; justify-content: center;"></div>
-                <div class="bib-footer">Check-In Passport</div>
+                <div class="bib-status">Digital Passport</div>
             </div>
             <p style="text-align:center; color:var(--text-muted); font-size:0.8rem; margin: 1rem 0;">Scan this QR code at the event check-in point 📍</p>
         </div>
 
-        <div class="stats-grid">
+        <div class="stats-grid" style="grid-template-columns: 1fr 1fr;">
             <div class="profile-stat-card"><div class="stat-value" id="totalRuns">0</div><div class="stat-label">Total Runs</div></div>
-            <div class="profile-stat-card peach"><div class="stat-value" id="totalKms">0.0</div><div class="stat-label">Total KM</div></div>
             <div class="profile-stat-card" style="border-bottom-color: #22c55e;">
                 <div class="stat-value" id="tourProgress">0%</div>
                 <div class="stat-label">Tour Progress</div>
@@ -95,7 +165,6 @@
         async function loadProfile() {
             const stats = await AppService.getUserStats(user.id);
             document.getElementById('totalRuns').innerText = stats.totalRuns;
-            document.getElementById('totalKms').innerText = stats.totalKms;
             document.getElementById('tourProgress').innerText = `${stats.completionRate}%`;
 
             // Auto-heal missing bib numbers (especially for new accounts)
@@ -141,7 +210,7 @@
                             <div style="width: ${stats.completionRate}%; height: 100%; background: ${isComplete ? '#22c55e' : 'var(--peach-accent)'}; border-radius: 10px;"></div>
                         </div>
                         <div style="display: flex; justify-content: space-between; font-size: 0.85rem;">
-                            <span style="color: var(--text-muted);">${stats.tourProgress.filter(s => s.status === 'unlocked').length} / 8 Districts</span>
+                             <span style="color: var(--text-muted);">${stats.tourProgress.filter(s => s.status === 'completed').length} / 8 Districts</span>
                             <span style="font-weight: 700; color: ${isComplete ? '#22c55e' : 'white'};">${isComplete ? 'COMPLETED' : 'IN PROGRESS'}</span>
                         </div>
                     </div>
