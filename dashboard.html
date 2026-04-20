@@ -106,7 +106,7 @@
         </section>
     </div>
 
-    <script src="app.js?v=45"></script>
+    <script src="app.js?v=48"></script>
     <script>
         let user = null;
         let runSelections = {};
@@ -598,13 +598,7 @@
                     <input id="sm-firstname" class="reg-input" type="text" placeholder="First Name" value="${firstN}">
                     <input id="sm-lastname"  class="reg-input" type="text" placeholder="Last Name"  value="${lastN}">
                   </div>
-                  <input id="sm-phone" class="reg-input" type="tel" placeholder="📞 Phone" style="margin-bottom:12px;">
-                  <div style="font-size:0.6rem;font-weight:700;letter-spacing:1.5px;color:rgba(255,255,255,0.35);text-transform:uppercase;margin-bottom:8px;">YOUR DISTANCE</div>
-                  <div style="display:flex;gap:8px;" id="sm-dist-row">
-                    <button class="dist-opt" data-dist="2K" onclick="selectModalDist(this)">2K</button>
-                    <button class="dist-opt active" data-dist="5K" onclick="selectModalDist(this)">5K</button>
-                    <button class="dist-opt" data-dist="8K" onclick="selectModalDist(this)">8K</button>
-                  </div>`;
+                  <input id="sm-phone" class="reg-input" type="tel" placeholder="📞 Phone" style="margin-bottom:12px;">`;
 
             const html = `
 <div style="font-family:'Inter',sans-serif;text-align:left;color:#fff;margin:-1rem -1rem -1.5rem;overflow:hidden;border-radius:14px;">
@@ -658,13 +652,33 @@
                     const fn    = (document.getElementById('sm-firstname').value || '').trim();
                     const ln    = (document.getElementById('sm-lastname').value  || '').trim();
                     const phone = (document.getElementById('sm-phone').value      || '').trim();
-                    const active = document.querySelector('#sm-dist-row .dist-opt.active');
-                    const dist  = active ? active.dataset.dist : null;
-                    if (!fn || !phone || !dist) {
-                        Swal.showValidationMessage('⚠️ Please enter your first name, phone number, and choose a distance.');
+                    if (!fn || !phone) {
+                        Swal.showValidationMessage('⚠️ Please enter your first name and phone number.');
                         return false;
                     }
-                    return { name: (fn + ' ' + ln).trim(), phone, dist };
+                    return { name: (fn + ' ' + ln).trim(), phone, dist: 'Open' };
+                },
+                didOpen: () => {
+                    const smMap = L.map('sm-map', { zoomControl: true }).setView([stop.lat, stop.lng], 13);
+                    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19 }).addTo(smMap);
+                    
+                    // Force size recalc for Leaflet in modal
+                    setTimeout(() => smMap.invalidateSize(), 200);
+
+                    if (stopRun && stopRun.route_preview_url && stopRun.route_type === 'gpx') {
+                        new L.GPX(stopRun.route_preview_url, {
+                            async: true,
+                            polyline_options: { color: '#ff7300', weight: 4, opacity: 0.9 },
+                            marker_options: {
+                                startIconUrl: 'https://cdn-icons-png.flaticon.com/512/684/684908.png',
+                                endIconUrl: 'https://cdn-icons-png.flaticon.com/512/61/61041.png',
+                                iconSize: [28, 28]
+                            }
+                        }).on('loaded', e => {
+                            smMap.fitBounds(e.target.getBounds(), { padding:[15,15] });
+                            smMap.invalidateSize();
+                        }).addTo(smMap);
+                    }
                 }
             }).then(result => {
                 if (result.isConfirmed && showRegBtn && result.value && typeof result.value === 'object') {
