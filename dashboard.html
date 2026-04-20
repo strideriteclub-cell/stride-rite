@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Member Dashboard | Stride Rite</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=25">
+    <link rel="stylesheet" href="styles.css?v=26">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-gpx/1.7.0/gpx.min.js"></script>
@@ -24,7 +24,7 @@
         .registered-badge { background: rgba(34,197,94,0.15); color: #22c55e; padding: 6px 12px; border-radius: 50px; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; display: inline-block; margin-bottom: 1rem; }
 
         /* Tour Map controls */
-        #tourMap { height: 450px; border-radius: 20px; overflow: hidden; position: relative; border: 1px solid var(--border-color); background: #0b0b0f; }
+        #tourMap { height: 480px; border-radius: 20px; overflow: hidden; position: relative; border: 1px solid var(--border-color); background: #0b0b0f; }
         #tourMap .leaflet-control-attribution, #tourMap .leaflet-control-zoom { display: none !important; }
 
         /* Animated stop markers */
@@ -34,7 +34,7 @@
         .m-core.completed { background: #22c55e; border-color: #16a34a; box-shadow: 0 0 10px rgba(34,197,94,0.6); }
         .m-label { position: absolute; transform: translateX(-50%); top: 14px; left: 0; background: rgba(10,10,15,0.95); border: 1px solid #ff6b35; padding: 3px 8px; border-radius: 4px; white-space: nowrap; z-index: 3; font-family:'Outfit'; font-weight: 800; font-size: 10px; color: #ff6b35; }
         .m-label.completed { border-color: #22c55e; color: #22c55e; }
-        .tour-map-overlay { position: absolute; inset: 0; pointer-events: none; z-index: 400; background: rgba(10,10,15,0.35); }
+        .tour-map-overlay { position: absolute; inset: 0; pointer-events: none; z-index: 400; background: radial-gradient(circle at center, transparent 30%, rgba(10,10,15,0.7) 100%); }
         @keyframes dash-flow { to { stroke-dashoffset: -24; } }
 
         /* Modal inputs */
@@ -91,9 +91,8 @@
                         </div>
                     </div>
                 </div>
-                <div style="position:relative; height:450px; width:100%; background:#000; overflow:hidden;">
-                    <div id="tourMap" style="width:100%; height:100%;"></div>
-                </div>
+                <!-- Fixed Map Container -->
+                <div id="tourMap"></div>
             </div>
         </section>
 
@@ -106,7 +105,7 @@
         </section>
     </div>
 
-    <script src="app.js?v=25"></script>
+    <script src="app.js?v=26"></script>
     <script>
         let user = null;
         let runSelections = {};
