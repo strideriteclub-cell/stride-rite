@@ -1475,6 +1475,14 @@ export default async function handler(req, res) {
         if (chatId !== ADMIN_CHAT_ID) { res.status(200).send('ok'); return; }
         const text = body.message.text.trim();
         const cmd = text.split(' ')[0].toLowerCase();
+
+        // ─── ESCAPE HATCH: /start always resets the session, no matter what ───
+        if (cmd === '/start' || cmd === '/menu' || cmd === '/help') {
+            await clearSession();
+            await sendMenu(chatId, `👟 <b>Stride Rite Admin Bot</b>\n\nHey Haleem! Your Chat ID is <code>${chatId}</code>.\nWhat do you want to do?`);
+            res.status(200).send('ok'); return;
+        }
+
         const session = await getSession();
 
         // Product addition flow
@@ -1583,8 +1591,8 @@ export default async function handler(req, res) {
             await sendMessage(chatId, "⏳ Extracting coordinates from map link...");
             const coords = await resolveGoogleMapsLink(text);
             if (!coords) {
-                await sendMessage(chatId, "❌ Failed to extract latitude and longitude. Please make sure you sent a valid Google Maps link.");
-                return;
+                await sendMessage(chatId, "❌ Failed to extract coordinates. Please send a full Google Maps link (tap Share → Copy Link).\n\nOr type /start to go back to the menu.");
+                res.status(200).send('ok'); return;
             }
             await dbPatch('stride_tour_stops', 'id', session.data.stopId, { lat: coords.lat, lng: coords.lng });
             await clearSession();
