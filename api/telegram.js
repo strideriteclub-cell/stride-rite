@@ -5,7 +5,7 @@ const BOT_TOKEN = '8682463984:AAHA2PWT7WtQRskETmOanj0k2b45ZgGfYIs';
 const ADMIN_CHAT_ID = '1538316434';
 const SITE_URL = 'https://stride-rite.vercel.app';
 // USE ENVIRONMENT VARIABLE FOR KEY PROTECTION
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY || 'AIzaSyAnJxWoxjwLYsr2Tw3GDM7FVf7VCXrMzJs';
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || 'AIzaSyAG0XFFc8zJOZnkSuYfPaTFhvLXyrh8G4E';
 
 const dbHeaders = {
     'apikey': SUPABASE_KEY,
@@ -207,18 +207,28 @@ ${history.map(h => `${h.role === 'user' ? 'Haleem' : 'StrideBot'}: ${h.text}`).j
 Haleem: ${prompt}`;
 
         const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent`;
-        const res = await fetch(url + `?key=${GEMINI_API_KEY}`, {
+        let res = await fetch(url + `?key=${GEMINI_API_KEY}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ contents: [{ parts: [{ text: systemPrompt }] }] })
         });
         
-        if (!res.ok) {
-            const err = await res.json();
-            throw new Error(err.error?.message || "API connection dropped");
+        let data = await res.json();
+
+        // FALLBACK: If 1.5-flash is not found, try the standard gemini-pro
+        if (res.status === 404 || (data.error && data.error.message.includes('not found'))) {
+            const fallbackUrl = `https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent`;
+            res = await fetch(fallbackUrl + `?key=${GEMINI_API_KEY}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ contents: [{ parts: [{ text: systemPrompt }] }] })
+            });
+            data = await res.json();
         }
 
-        const data = await res.json();
+        if (!res.ok) {
+            throw new Error(data.error?.message || "API connection dropped");
+        }
         const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
         
         // --- CRITICAL "A" ERROR FIX ---
