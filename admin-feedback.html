@@ -42,29 +42,11 @@
         </div>
     </div>
 
+    <script src="app.js?v=32"></script>
     <script>
-        const supabaseUrl = 'https://qcqyyfnsfyuaaaacddsm.supabase.co';
-        const supabaseKey = 'sb_publishable_uXs2e5aPzrIL_M2xsYDmWg_hPOUaG1l';
-
         async function loadFeedback() {
             try {
-                const [surveysRes, runsRes] = await Promise.all([
-                    fetch(`${supabaseUrl}/rest/v1/stride_surveys?order=created_at.desc`, { headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` } }),
-                    fetch(`${supabaseUrl}/rest/v1/stride_runs`, { headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` } })
-                ]);
-                
-                if(!surveysRes.ok) throw new Error("Failed to fetch surveys from DB");
-                
-                let surveys = await surveysRes.json();
-                const allRuns = (await runsRes.json()) || [];
-                
-                // Extract active run labels. The db stores it as 'Friday, May 8 - 3:30 PM||ISO...'
-                // but the survey only captures the first part.
-                const activeRunLabels = allRuns.map(r => r.date_label.includes('||') ? r.date_label.split('||')[0] : r.date_label);
-                
-                // Filter out feedback for runs that have been deleted
-                surveys = surveys.filter(s => activeRunLabels.includes(s.run_label));
-                
+                const surveys = await AppService.getSurveys();
                 const list = document.getElementById('feedbackList');
                 list.innerHTML = '';
                 
