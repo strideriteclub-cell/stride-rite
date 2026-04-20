@@ -422,7 +422,11 @@ async function detectBibsInImage(imgBuffer) {
         });
         const data = await res.json();
         const text = data.candidates?.[0]?.content?.parts?.[0]?.text || 'none';
-        return text.trim().toLowerCase() === 'none' ? [] : text.split(',').map(s => s.trim());
+        if (text.trim().toLowerCase() === 'none') return [];
+        
+        // Robust Extraction: Use regex to find all sequences of digits
+        const matches = text.match(/\d+/g);
+        return matches ? matches.map(s => s.trim()) : [];
     } catch (e) { console.error("Bib detect error:", e); return []; }
 }
 
