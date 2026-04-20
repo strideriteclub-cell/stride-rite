@@ -138,7 +138,24 @@
             }
         }
 
+        function playSuccessBeep() {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(1200, ctx.currentTime);
+                gain.gain.setValueAtTime(0.2, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + 0.1);
+                osc.start(ctx.currentTime);
+                osc.stop(ctx.currentTime + 0.1);
+            } catch (e) {}
+        }
+
         function showSuccess(runner) {
+            playSuccessBeep();
             Swal.fire({
                 title: '✅ CHECKED IN',
                 html: `<b>#${runner.bib} - ${runner.name}</b><br><span style="font-size:0.8rem;color:#888;">Time: ${runner.time}</span>`,
