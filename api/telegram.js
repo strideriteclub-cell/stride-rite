@@ -4,7 +4,8 @@ const SUPABASE_KEY = 'sb_publishable_uXs2e5aPzrIL_M2xsYDmWg_hPOUaG1l';
 const BOT_TOKEN = '8682463984:AAHA2PWT7WtQRskETmOanj0k2b45ZgGfYIs';
 const ADMIN_CHAT_ID = '1538316434';
 const SITE_URL = 'https://stride-rite.vercel.app';
-const GEMINI_API_KEY = 'AIzaSyBwfuRDM4E_ukO6wSo8BIvA0vpYshqkuJk';
+// USE ENVIRONMENT VARIABLE FOR KEY PROTECTION
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || 'AIzaSyAnJxWoxjwLYsr2Tw3GDM7FVf7VCXrMzJs';
 
 const dbHeaders = {
     'apikey': SUPABASE_KEY,
@@ -114,7 +115,6 @@ async function getSession() {
 }
 async function setSession(state, data = {}) {
     await dbUpsert('bot_sessions', { id: 'admin', state, data, updated_at: new Date().toISOString() });
-}
 async function clearSession() { await setSession('idle', {}); }
 
 // ─── TELEGRAM ─────────────────────────────────────────────────────────────────
@@ -124,10 +124,17 @@ async function sendMessage(chatId, text, replyMarkup = null) {
     const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
     });
-    if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(`Telegram API Error (sendMessage): ${errorData.description}`);
-    }
+    const data = await res.json();
+    if (!res.ok) throw new Error(`Telegram API Error (sendMessage): ${data.description}`);
+    return data.result;
+}
+async function editMessage(chatId, messageId, text, replyMarkup = null) {
+    const body = { chat_id: chatId, message_id: messageId, text, parse_mode: 'HTML' };
+    if (replyMarkup) body.reply_markup = replyMarkup;
+    const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/editMessageText`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+    });
+    return (await res.json()).result;
 }
 async function answerCallbackQuery(id) {
     const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/answerCallbackQuery`, {
