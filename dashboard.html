@@ -106,7 +106,7 @@
         </section>
     </div>
 
-    <script src="app.js?v=29"></script>
+    <script src="app.js?v=31"></script>
     <script>
         let user = null;
         let runSelections = {};
@@ -174,10 +174,8 @@
                         + '<div class="run-date" style="font-size:2rem; line-height:1.1; margin-bottom:1rem;">' + mainTitle + '</div>'
                         + '<div class="run-loc" style="line-height:1.6;">' + subTitle + '</div>'
                         + (!isReg
-                            ? '<div class="dist-selector" style="margin-top:1rem;">'
-                              + ['2K','5K','8K'].map(d => '<button class="dist-btn ' + (dist===d?'active':'') + '" onclick="selectDist(\'' + run.id + '\',\'' + d + '\')">' + d + '</button>').join('')
-                              + '</div><button class="btn btn-primary btn-block" onclick="joinRun(\'' + run.id + '\')">Join Mission</button>'
-                            : '<button class="btn btn-secondary btn-block" disabled style="background:rgba(34,197,94,0.1);color:#22c55e;border-color:#22c55e;cursor:default;margin-bottom:8px;">You\'re Registered ✓</button><div style="text-align:center;"><a href="#" onclick="event.preventDefault(); cancelRun(\'' + run.id + '\')" style="color:#ff4d4d;font-size:0.75rem;text-decoration:underline;">Cancel Registration</a></div>')
+                            ? '<button class="btn btn-primary btn-block" onclick="spotlightNextStop(\'' + run.id + '\')" style="margin-top:1rem;">Join Mission</button>'
+                            : '<button class="btn btn-secondary btn-block" disabled style="background:rgba(34,197,94,0.1);color:#22c55e;border-color:#22c55e;cursor:default;margin-bottom:8px;margin-top:1rem;">You\'re Registered ✓</button><div style="text-align:center;"><a href="#" onclick="event.preventDefault(); cancelRun(\'' + run.id + '\')" style="color:#ff4d4d;font-size:0.75rem;text-decoration:underline;">Cancel Registration</a></div>')
                         + '</div>';
                 }).join('');
 
@@ -191,17 +189,21 @@
         // ─────────────────────────────────────────────────────────────────
         // Station / Mission Briefing Spotlight
         // ─────────────────────────────────────────────────────────────────
-        window.spotlightNextStop = async () => {
+        window.spotlightNextStop = async (targetRunId) => {
             if (!window.lastFetchedRuns) { await initDashboard(); }
             if (!window.lastFetchedRuns || window.lastFetchedRuns.length === 0) {
                 Swal.fire({ title: 'No upcoming runs yet!', background:'#141419', color:'#fff' }); return;
             }
 
-            // Prefer next unregistered tour stop, else any tour stop, else first run
-            const nextStop =
-                window.lastFetchedRuns.find(r => r.tour_stop_id && !window.myRegistrations.includes(r.id)) ||
-                window.lastFetchedRuns.find(r => r.tour_stop_id) ||
-                window.lastFetchedRuns[0];
+            // Prefer directed active run, else unregistered tour stop, else any tour
+            let nextStop;
+            if (targetRunId) {
+                nextStop = window.lastFetchedRuns.find(r => r.id === targetRunId);
+            } else {
+                nextStop = window.lastFetchedRuns.find(r => r.tour_stop_id && !window.myRegistrations.includes(r.id)) ||
+                           window.lastFetchedRuns.find(r => r.tour_stop_id) ||
+                           window.lastFetchedRuns[0];
+            }
             if (!nextStop) return;
 
             const isReg     = window.myRegistrations.includes(nextStop.id);
@@ -300,12 +302,6 @@
       <input id="reg-lastname"  class="reg-input" type="text" placeholder="Last Name"  value="${lastN}">
     </div>
     <input id="reg-phone" class="reg-input" type="tel" placeholder="📞 Phone (e.g. 0100 000 0000)" style="margin-bottom:12px;">
-    <div style="font-size:0.6rem;font-weight:700;letter-spacing:1.5px;color:rgba(255,255,255,0.35);text-transform:uppercase;margin-bottom:8px;">YOUR DISTANCE</div>
-    <div style="display:flex;gap:8px;" id="dist-row">
-      <button class="dist-opt" data-dist="2K" onclick="selectModalDist(this)">2K</button>
-      <button class="dist-opt active" data-dist="5K" onclick="selectModalDist(this)">5K</button>
-      <button class="dist-opt" data-dist="8K" onclick="selectModalDist(this)">8K</button>
-    </div>
     `}
   </div>
 
@@ -327,13 +323,11 @@
                     const fn    = (document.getElementById('reg-firstname').value || '').trim();
                     const ln    = (document.getElementById('reg-lastname').value  || '').trim();
                     const phone = (document.getElementById('reg-phone').value      || '').trim();
-                    const active = document.querySelector('#dist-row .dist-opt.active');
-                    const dist  = active ? active.dataset.dist : null;
-                    if (!fn || !phone || !dist) {
-                        Swal.showValidationMessage('⚠️ Please enter your first name, phone number, and choose a distance.');
+                    if (!fn || !phone) {
+                        Swal.showValidationMessage('⚠️ Please enter your first name and phone number.');
                         return false;
                     }
-                    return { name: (fn + ' ' + ln).trim(), phone, dist };
+                    return { name: (fn + ' ' + ln).trim(), phone, dist: 'Open' };
                 },
                 didOpen: () => {
                     const map = L.map('spotlight-map', { zoomControl: true }).setView([30.0444, 31.2357], 13);
@@ -366,7 +360,7 @@
         window.selectDist = (rId, dist) => { runSelections[rId] = dist; initDashboard(); };
 
         window.joinRun = async (rId, dist, fullName, phoneNumber) => {
-            const finalDist = dist || runSelections[rId] || '5K';
+            const finalDist = dist || 'Open';
             const finalName = fullName || user.name;
             Swal.fire({ title: 'Locking in your spot...', background:'#141419', didOpen: () => Swal.showLoading() });
             const ok = await AppService.registerForRun(rId, finalDist, user.level || 'Beginner', finalName, phoneNumber);
