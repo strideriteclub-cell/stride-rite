@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Run Gallery | Stride Rite</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=22">
+    <link rel="stylesheet" href="styles.css?v=27">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
         .custom-logo-container { display: flex; align-items: center; gap: 12px; }
@@ -45,6 +45,13 @@
         <h1 style="font-size:2.2rem; margin-bottom:0.5rem;">📸 Run Memories</h1>
         <p style="color:var(--text-muted); margin-bottom:2rem;">Photos from our community runs</p>
 
+        <div style="margin-bottom: 1.5rem; max-width: 400px; position: relative;">
+            <input type="text" id="bibSearch" placeholder="🔍 Search Bib # (e.g. 45)" 
+                style="width: 100%; padding: 0.8rem 1.2rem; border-radius: 12px; background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); color: white; font-family: 'Inter', sans-serif; outline: none; transition: 0.3s;"
+                onkeyup="handleBibSearch(this.value)">
+            <div style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); font-size: 0.8rem; color: var(--neon-accent); pointer-events: none;">AI Powered</div>
+        </div>
+
         <div class="filter-bar" id="filterBar">
             <button class="filter-btn active" id="filterAll" onclick="filterGallery('all', this)">All Runs</button>
         </div>
@@ -56,7 +63,7 @@
         </div>
     </div>
 
-    <script src="app.js?v=22"></script>
+    <script src="app.js?v=32"></script>
     <script>
         let allPhotos = [];
 
@@ -105,7 +112,9 @@
         }
 
         function filterGallery(label, btn) {
-            // Update active button
+            // Reset search input when switching runs
+            document.getElementById('bibSearch').value = '';
+            
             document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
 
@@ -115,6 +124,33 @@
                 const filtered = allPhotos.filter(p => p.run_label === label);
                 renderPhotos(filtered);
             }
+        }
+
+        function handleBibSearch(query) {
+            if (!query) {
+                // If query cleared, go back to currently active run filter
+                const activeBtn = document.querySelector('.filter-btn.active');
+                if (activeBtn.id === 'filterAll') renderPhotos(allPhotos);
+                else {
+                    const label = activeBtn.textContent.replace('🏃 ', '');
+                    renderPhotos(allPhotos.filter(p => p.run_label === label));
+                }
+                return;
+            }
+
+            // AI Filter: Look for [BIBS:number] tags in the caption
+            const q = query.trim();
+            const filtered = allPhotos.filter(p => {
+                if (!p.caption) return false;
+                // Target format: [BIBS:12,45,67]
+                const bibMatch = p.caption.match(/\[BIBS:([\d,]+)\]/);
+                if (bibMatch) {
+                    const bibs = bibMatch[1].split(',');
+                    return bibs.includes(q);
+                }
+                return false;
+            });
+            renderPhotos(filtered);
         }
 
         function openPhoto(url, caption) {
