@@ -1,7 +1,6 @@
 // --- SUPABASE CONFIGURATION ---
 const SUPABASE_URL = 'https://qcqyyfnsfyuaaaacddsm.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_uXs2e5aPzrIL_M2xsYDmWg_hPOUaG1l';
-const TOUR_STOPS_COUNT = 8;
 
 const defaultHeaders = {
     'apikey': SUPABASE_KEY,
