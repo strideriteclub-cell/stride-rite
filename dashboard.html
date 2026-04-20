@@ -435,8 +435,8 @@
                         if (el) el.classList.add('visible');
                     }, 40);
 
-                    // Orange line: only draw from the last completed stop onward (no overlap with green)
-                    if (i >= lastCompletedIdx) {
+                    // Orange line: only draw from AFTER the last completed stop (green handles up to next stop)
+                    if (lastCompletedIdx === -1 || i >= lastCompletedIdx + 1) {
                         polylineAll.addLatLng([s.lat, s.lng]);
                     }
 
