@@ -126,6 +126,10 @@ const AuthService = {
         }
 
         if (userRecord) {
+            // Assign Bib Number if missing
+            if (!userRecord.bib_number) {
+                userRecord = await AppService.assignBibNumber(userRecord.id);
+            }
             localStorage.setItem(KEYS.SESSION, JSON.stringify(userRecord));
             try {
                 await fetch(`${SUPABASE_URL}/rest/v1/stride_users`, {
@@ -181,6 +185,15 @@ const DEFAULT_TOUR_CONFIG = [
 
 // --- APP SERVICE ---
 const AppService = {
+    assignBibNumber: async (userId) => {
+        const users = await dbGet('stride_users', 'select=bib_number&order=bib_number.desc&limit=1');
+        const maxBib = (users && users.length > 0) ? (users[0].bib_number || 99) : 99;
+        const nextBib = maxBib + 1;
+        
+        await dbUpdate('stride_users', 'id', userId, { bib_number: nextBib });
+        const updated = await dbGet('stride_users', `id=eq.${userId}`);
+        return updated[0];
+    },
     getRuns: async () => {
         const rawRuns = await dbGet('stride_runs');
         if (!rawRuns || rawRuns.length === 0) return [];
@@ -347,6 +360,47 @@ const AppService = {
                 is_completed: isExported
             };
         }).filter(r => r !== null && r.is_completed);
+    },
+
+    checkInRunner: async (runId, identifier) => {
+        // identifier can be bib_number (number) or registrationId (uuid)
+        let reg = null;
+        if (identifier.length > 10) { // Likely UUID (registration ID)
+            const rows = await dbGet('stride_registrations', `id=eq.${identifier}`);
+            if (rows && rows.length > 0) reg = rows[0];
+        } else { // Likely Bib Number
+            const users = await dbGet('stride_users', `bib_number=eq.${identifier}`);
+            if (users && users.length > 0) {
+                const regs = await dbGet('stride_registrations', `run_id=eq.${runId}&user_id=eq.${users[0].id}`);
+                if (regs && regs.length > 0) reg = regs[0];
+            }
+        }
+
+        if (!reg) throw new Error("Runner not found or not registered for this stop.");
+        if (reg.attended_at) throw new Error("This runner is already checked in!");
+
+        await dbUpdate('stride_registrations', 'id', reg.id, { attended_at: new Date().toISOString() });
+        
+        // Fetch full info for feedback
+        const userInfo = await dbGet('stride_users', `id=eq.${reg.user_id}`);
+        return {
+            name: userInfo[0].name,
+            bib: userInfo[0].bib_number,
+            time: new Date().toLocaleTimeString()
+        };
+    },
+
+    getAttendanceList: async (runId) => {
+        const regs = await dbGet('stride_registrations', `run_id=eq.${runId}&attended_at=not.is.null`);
+        const users = await dbGet('stride_users');
+        return regs.map(r => {
+            const u = users.find(user => user.id === r.user_id);
+            return {
+                name: u ? u.name : 'Unknown',
+                bib: u ? u.bib_number : '—',
+                time: new Date(r.attended_at).toLocaleTimeString()
+            };
+        }).sort((a,b) => b.time.localeCompare(a.time)); // Latest first
     },
 
     getTourProgress: async (userId) => {
