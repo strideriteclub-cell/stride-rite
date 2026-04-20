@@ -41,7 +41,8 @@
         .reg-input { width: 100%; box-sizing: border-box; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.12); padding: 10px 14px; border-radius: 8px; color: #fff; font-size: 0.9rem; font-family: 'Inter', sans-serif; transition: border-color 0.2s; display: block; }
         .reg-input:focus { outline: none; border-color: var(--neon-accent); }
         .reg-input::placeholder { color: rgba(255,255,255,0.3); }
-        .dist-opt { flex: 1; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); color: rgba(255,255,255,0.7); padding: 10px; border-radius: 6px; font-weight: 800; font-size: 0.9rem; cursor: pointer; transition: all 0.2s; font-family: 'Outfit', sans-serif; }
+        .dist-opt { flex: 1; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); color: rgba(255,255,255,0.7); padding: 10px; border-radius: 6px; font-weight: 800; font-size: 0.9rem; cursor: pointer; transition: all 0.2s; font-family: 'Outfit', sans-serif; outline: none; -webkit-tap-highlight-color: transparent; }
+        .dist-opt:focus { outline: none; }
         .dist-opt.active { background: var(--neon-accent) !important; color: #000 !important; border-color: var(--neon-accent) !important; }
         .dist-opt:hover:not(.active) { background: rgba(255,255,255,0.1); color: #fff; }
 
