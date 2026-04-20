@@ -248,6 +248,12 @@ a {
     cursor: pointer;
     transition: 0.3s;
     font-size: 0.85rem;
+    outline: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.dist-btn:focus {
+    outline: none;
 }
 
 .dist-btn.active {
