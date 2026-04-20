@@ -143,6 +143,48 @@ const AuthService = {
         return false;
     },
 
+    handleGoogleResponse: async (credential) => {
+        try {
+            // Decode the Google JWT (payload is the middle segment)
+            const base64Url = credential.split('.')[1];
+            const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+            const jsonPayload = decodeURIComponent(atob(base64).split('').map(c => {
+                return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+            }).join(''));
+
+            const googleUser = JSON.parse(jsonPayload);
+            const { name, email, sub: googleId } = googleUser;
+
+            // Check if user exists in our custom table
+            let users = await dbGet('stride_users', `email=eq.${encodeURIComponent(email)}`);
+            let userRecord;
+
+            if (users && users.length > 0) {
+                userRecord = users[0];
+            } else {
+                // First time logging in with Google -> Create profile
+                userRecord = {
+                    id: generateUUID(),
+                    name,
+                    email,
+                    password: 'GOOGLE_OAUTH_ACCOUNT', // Placeholder for custom table
+                    birthdate: null, age: '?', gender: 'Other', level: 'Beginner', is_admin: false
+                };
+                await dbInsert('stride_users', userRecord);
+            }
+
+            // Standard log-in flow: Assign Bib if missing, Save to local storage
+            if (!userRecord.bib_number) {
+                userRecord = await AppService.assignBibNumber(userRecord.id);
+            }
+            localStorage.setItem(KEYS.SESSION, JSON.stringify(userRecord));
+            return true;
+        } catch (e) {
+            console.error("Google handle error:", e);
+            return false;
+        }
+    },
+
     register: async (name, email, password, birthdate, gender, level) => {
         const existing = await dbGet('stride_users', `email=eq.${encodeURIComponent(email)}`);
         if (existing && existing.length > 0) return false;
