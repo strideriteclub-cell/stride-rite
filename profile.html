@@ -65,10 +65,10 @@
         
         .qr-section {
             position: relative;
-            padding: 20px;
-            margin-bottom: 25px;
+            padding: 15px;
+            margin-bottom: 20px;
         }
-        .qr-corner { position: absolute; width: 20px; height: 20px; border: 2px solid #ff6b35; border-radius: 4px; }
+        .qr-corner { position: absolute; width: 24px; height: 24px; border: 2px solid #ff6b35; border-radius: 4px; }
         .qr-tl { top: 0; left: 0; border-right: 0; border-bottom: 0; }
         .qr-tr { top: 0; right: 0; border-left: 0; border-bottom: 0; }
         .qr-bl { bottom: 0; left: 0; border-right: 0; border-top: 0; }
@@ -185,8 +185,8 @@
                 // Render LIFETIME QR Code based on the user's permanent Bib Number
                 new QRCode(document.getElementById("qrcode"), {
                     text: String(activeUser.bib_number),
-                    width: 140,
-                    height: 140,
+                    width: 180,
+                    height: 180,
                     colorDark : "#1a1a1f",
                     colorLight : "#ffffff",
                     correctLevel : QRCode.CorrectLevel.H
