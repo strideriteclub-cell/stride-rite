@@ -429,7 +429,8 @@
                         html: `<div class="m-wrap" id="mwrap-${s.id}"><div class="m-core ${coreClass}"></div><div class="m-label ${labelClass}">${String(s.id).padStart(2,'0')} \u2014 ${s.name}</div></div>`,
                         className: ''
                     });
-                    L.marker([s.lat, s.lng], { icon }).addTo(tourMap);
+                    const marker = L.marker([s.lat, s.lng], { icon }).addTo(tourMap);
+                    marker.on('click', () => showStopModal(s, stops));
                     setTimeout(() => {
                         const el = document.getElementById('mwrap-' + s.id);
                         if (el) el.classList.add('visible');
@@ -488,6 +489,122 @@
                 title: '<span style="font-family:Outfit;color:#fff;">🏅 Tour de Cairo</span>',
                 html: '<p style="color:rgba(255,255,255,0.65);text-align:left;line-height:1.7;">Tour de Cairo is Stride Rite\'s flagship 8-stop running series across Cairo\'s most iconic neighbourhoods. Complete every stop to earn your Tour Finisher badge and be celebrated by the community.</p>',
                 background:'#141419', color:'#fff', confirmButtonColor:'var(--neon-accent)'
+            });
+        }
+
+        async function showStopModal(stop, allStops) {
+            // Fetch full run data for this stop
+            let run = null;
+            if (stop.runId) {
+                const rows = await dbGet('stride_runs', `id=eq.${stop.runId}`);
+                if (rows && rows.length > 0) run = rows[0];
+            }
+
+            const isCompleted = stop.status === 'completed';
+            const isRegistered = stop.status === 'unlocked';
+            const isLocked     = stop.status === 'locked';
+            const stopNum      = String(stop.id).padStart(2, '0');
+            const dateLabel    = run ? ((run.date_label || '').split('||')[0].replace('[EXPORTED] ','')) : '—';
+            const partnerName  = run ? (run.partner_name || 'Stride Rite') : 'Stride Rite';
+            const firstN = (user.name||'').split(' ')[0];
+            const lastN  = (user.name||'').split(' ').slice(1).join(' ');
+
+            let statusBadge = '';
+            if (isCompleted) statusBadge = '<span style="font-size:0.6rem;font-weight:800;letter-spacing:2px;color:#22c55e;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.25);padding:4px 10px;border-radius:20px;">✅ COMPLETED</span>';
+            else if (isRegistered) statusBadge = '<span style="font-size:0.6rem;font-weight:800;letter-spacing:2px;color:#22c55e;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.25);padding:4px 10px;border-radius:20px;">✓ ALREADY REGISTERED</span>';
+            else if (isLocked) statusBadge = '<span style="font-size:0.6rem;font-weight:800;letter-spacing:2px;color:rgba(255,255,255,0.35);background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);padding:4px 10px;border-radius:20px;">🔒 NOT YET SCHEDULED</span>';
+
+            const bottomSection = isLocked
+                ? `<div style="text-align:center;padding:1.5rem;color:rgba(255,255,255,0.4);font-size:0.9rem;">🔒 This stop hasn't been scheduled yet.<br>Stay tuned — it's coming!</div>`
+                : isCompleted
+                ? `<div style="text-align:center;padding:1rem;background:rgba(34,197,94,0.06);border:1px solid rgba(34,197,94,0.18);border-radius:10px;">
+                    <div style="font-size:1.5rem;margin-bottom:6px;">🏅</div>
+                    <div style="font-weight:700;color:#22c55e;font-size:1rem;">You completed this stop!</div>
+                    <div style="font-size:0.8rem;color:rgba(255,255,255,0.4);margin-top:4px;">This milestone is part of your Tour de Cairo legacy 🏆</div>
+                  </div>`
+                : isRegistered
+                ? `<div style="text-align:center;padding:1rem;background:rgba(34,197,94,0.06);border:1px solid rgba(34,197,94,0.18);border-radius:10px;">
+                    <div style="font-weight:700;color:#22c55e;">You're registered for this stop! ✓</div>
+                    <div style="font-size:0.8rem;color:rgba(255,255,255,0.4);margin-top:4px;">See you on race day 🏃</div>
+                  </div>`
+                : `<div style="font-size:0.6rem;font-weight:800;letter-spacing:2px;color:var(--neon-accent);text-transform:uppercase;margin-bottom:0.9rem;">📋 YOUR DETAILS</div>
+                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+                    <input id="sm-firstname" class="reg-input" type="text" placeholder="First Name" value="${firstN}">
+                    <input id="sm-lastname"  class="reg-input" type="text" placeholder="Last Name"  value="${lastN}">
+                  </div>
+                  <input id="sm-phone" class="reg-input" type="tel" placeholder="📞 Phone" style="margin-bottom:12px;">
+                  <div style="font-size:0.6rem;font-weight:700;letter-spacing:1.5px;color:rgba(255,255,255,0.35);text-transform:uppercase;margin-bottom:8px;">YOUR DISTANCE</div>
+                  <div style="display:flex;gap:8px;" id="sm-dist-row">
+                    <button class="dist-opt" data-dist="2K" onclick="selectModalDist(this)">2K</button>
+                    <button class="dist-opt active" data-dist="5K" onclick="selectModalDist(this)">5K</button>
+                    <button class="dist-opt" data-dist="8K" onclick="selectModalDist(this)">8K</button>
+                  </div>`;
+
+            const html = `
+<div style="font-family:'Inter',sans-serif;text-align:left;color:#fff;margin:-1rem -1rem -1.5rem;overflow:hidden;border-radius:14px;">
+  <div style="background:linear-gradient(160deg,#0f0f1a 0%,#1a1533 100%);padding:1.5rem 1.5rem 1.125rem;border-bottom:1px solid rgba(255,255,255,0.06);">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:1rem;flex-wrap:wrap;">
+      <span style="font-size:0.6rem;font-weight:800;letter-spacing:3px;color:var(--neon-accent);text-transform:uppercase;background:rgba(88,74,220,0.1);border:1px solid rgba(88,74,220,0.25);padding:4px 10px;border-radius:20px;">🏅 Tour de Cairo</span>
+      ${statusBadge}
+    </div>
+    <div style="display:flex;align-items:center;gap:16px;margin-bottom:0.5rem;">
+      <div style="font-family:'Outfit',sans-serif;font-size:3.5rem;font-weight:800;line-height:1;color:rgba(255,255,255,0.06);letter-spacing:-3px;flex-shrink:0;user-select:none;">${stopNum}</div>
+      <div>
+        <div style="font-size:0.55rem;font-weight:700;letter-spacing:3px;color:rgba(255,255,255,0.3);text-transform:uppercase;margin-bottom:3px;">STOP ${stopNum} / 8</div>
+        <div style="font-family:'Outfit',sans-serif;font-size:1.55rem;font-weight:800;color:#fff;line-height:1.1;">${stop.name}</div>
+      </div>
+    </div>
+    <div style="font-size:0.7rem;font-weight:600;color:rgba(255,255,255,0.4);">Hosted by ${partnerName} × Stride Rite</div>
+  </div>
+  ${run ? `
+  <div style="background:#0d0d11;padding:1rem 1.5rem;border-bottom:1px solid rgba(255,255,255,0.06);">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:0.75rem;">
+      <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:0.7rem;">
+        <div style="font-size:0.55rem;font-weight:700;letter-spacing:2px;color:rgba(255,255,255,0.35);text-transform:uppercase;margin-bottom:3px;">📅 DATE & TIME</div>
+        <div style="font-weight:700;color:#fff;font-size:0.9rem;">${dateLabel}</div>
+      </div>
+      <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:0.7rem;overflow:hidden;">
+        <div style="font-size:0.55rem;font-weight:700;letter-spacing:2px;color:rgba(255,255,255,0.35);text-transform:uppercase;margin-bottom:3px;">📍 START POINT</div>
+        <div style="font-weight:700;color:#fff;font-size:0.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${run.location || '—'}</div>
+      </div>
+    </div>
+    ${run.location_link ? `<a href="${run.location_link}" target="_blank" style="display:flex;align-items:center;gap:8px;background:rgba(88,74,220,0.05);border:1px solid rgba(88,74,220,0.18);border-radius:8px;padding:0.6rem 0.9rem;color:var(--neon-accent);text-decoration:none;font-size:0.82rem;font-weight:600;">📍 Open Start Location in Google Maps →</a>` : ''}
+  </div>` : ''}
+  <div style="background:#0d0d11;padding:1.25rem 1.5rem 1.5rem;">
+    ${bottomSection}
+  </div>
+</div>`;
+
+            const showRegBtn = !isCompleted && !isRegistered && !isLocked && run;
+            Swal.fire({
+                html,
+                width: 620,
+                background: '#141419',
+                color: '#fff',
+                padding: '1.25rem',
+                showConfirmButton: !!showRegBtn,
+                confirmButtonText: '🚀 Lock In My Spot',
+                confirmButtonColor: 'var(--neon-accent)',
+                showCancelButton: true,
+                cancelButtonText: 'Close',
+                preConfirm: () => {
+                    if (!showRegBtn) return true;
+                    const fn    = (document.getElementById('sm-firstname').value || '').trim();
+                    const ln    = (document.getElementById('sm-lastname').value  || '').trim();
+                    const phone = (document.getElementById('sm-phone').value      || '').trim();
+                    const active = document.querySelector('#sm-dist-row .dist-opt.active');
+                    const dist  = active ? active.dataset.dist : null;
+                    if (!fn || !phone || !dist) {
+                        Swal.showValidationMessage('⚠️ Please enter your first name, phone number, and choose a distance.');
+                        return false;
+                    }
+                    return { name: (fn + ' ' + ln).trim(), phone, dist };
+                }
+            }).then(result => {
+                if (result.isConfirmed && showRegBtn && result.value && typeof result.value === 'object') {
+                    const { name, phone, dist } = result.value;
+                    joinRun(stop.runId, dist, name, phone);
+                }
             });
         }
     </script>
