@@ -65,12 +65,14 @@
                         <th style="width: 40px;"></th>
                     </tr>
                 </thead>
-                <tbody id="attendanceBody"></tbody>
+                <tbody id="attendanceBody">
+                    <!-- Loaded dynamically -->
+                </tbody>
             </table>
         </div>
     </div>
 
-    <script src="app.js?v=33"></script>
+    <script src="app.js?v=32"></script>
     <script>
         const user = AuthService.getCurrentUser();
         if (!user || !user.is_admin) {
@@ -81,18 +83,22 @@
         let attendance = [];
 
         async function init() {
+            // Load all tour/upcoming runs for selector
             const allRuns = await dbGet('stride_runs', 'order=date_label.desc');
             const select = document.getElementById('runSelect');
             allRuns.forEach(run => {
                 const label = run.date_label.split('||')[0].replace('[EXPORTED] ', '');
                 const opt = document.createElement('option');
                 opt.value = run.id;
-                opt.innerText = label + ' - ' + run.location;
+                opt.innerText = `${label} - ${run.location}`;
                 select.appendChild(opt);
             });
 
+            // Start Scanner
             html5QrCode = new Html5Qrcode("reader");
-            html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 250 } }, onScanSuccess);
+            const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+            
+            html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess);
         }
 
         async function onScanSuccess(decodedText) {
@@ -101,7 +107,10 @@
                 Swal.fire('⚠️ Wait!', 'Please select which run you are tracking first.', 'warning');
                 return;
             }
+
+            // Pause scanning to process
             html5QrCode.pause();
+            
             try {
                 const result = await AppService.checkInRunner(runId, decodedText);
                 showSuccess(result);
@@ -109,7 +118,8 @@
             } catch (e) {
                 Swal.fire('❌ Error', e.message, 'error');
             } finally {
-                setTimeout(function() { html5QrCode.resume(); }, 2000);
+                // Resume scanning after 2 seconds
+                setTimeout(() => html5QrCode.resume(), 2000);
             }
         }
 
@@ -117,6 +127,7 @@
             const runId = document.getElementById('runSelect').value;
             const bib = document.getElementById('manualBib').value;
             if (!runId || !bib) return;
+
             try {
                 const result = await AppService.checkInRunner(runId, bib);
                 showSuccess(result);
@@ -127,30 +138,10 @@
             }
         }
 
-        function playBeep() {
-            try {
-                var ctx = new (window.AudioContext || window.webkitAudioContext)();
-                var osc = ctx.createOscillator();
-                var gain = ctx.createGain();
-                osc.connect(gain);
-                gain.connect(ctx.destination);
-                osc.type = 'square';
-                osc.frequency.setValueAtTime(1200, ctx.currentTime);
-                gain.gain.setValueAtTime(0.2, ctx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + 0.1);
-                osc.start(ctx.currentTime);
-                osc.stop(ctx.currentTime + 0.1);
-            } catch (e) {}
-        }
-
         function showSuccess(runner) {
-            playBeep();
-            var bibText = runner.bib || '?';
-            var nameText = runner.name || 'Unknown';
-            var timeText = runner.time || '';
             Swal.fire({
                 title: '✅ CHECKED IN',
-                html: '<div style="padding:1rem;"><div style="font-size:3rem;font-weight:900;color:#ff8b6a;margin-bottom:0.5rem;">#' + bibText + '</div><div style="font-size:1.4rem;font-weight:700;">' + nameText + '</div><div style="font-size:0.8rem;color:#888;margin-top:0.5rem;">' + timeText + '</div></div>',
+                html: `<b>#${runner.bib} - ${runner.name}</b><br><span style="font-size:0.8rem;color:#888;">Time: ${runner.time}</span>`,
                 icon: 'success',
                 timer: 1500,
                 showConfirmButton: false,
@@ -162,24 +153,32 @@
         async function loadAttendance() {
             const runId = document.getElementById('runSelect').value;
             if (!runId) return;
+
             const list = await AppService.getAttendanceList(runId);
             attendance = list;
-            var body = document.getElementById('attendanceBody');
-            document.getElementById('scanCount').innerText = list.length + ' Runners';
-            var html = '';
-            for (var i = 0; i < list.length; i++) {
-                var r = list[i];
-                html += '<tr><td style="font-weight:800;">#' + r.bib + '</td><td style="font-weight:600;font-size:0.8rem;">' + r.name + '</td><td style="color:var(--text-muted);font-size:0.75rem;">' + r.time + '</td><td style="text-align:right;"><button class="btn-remove" onclick="removeCheckIn(' + r.bib + ')" title="Remove">✕</button></td></tr>';
-            }
-            body.innerHTML = html;
+            
+            const body = document.getElementById('attendanceBody');
+            document.getElementById('scanCount').innerText = `${list.length} Runners`;
+            
+            body.innerHTML = list.map(r => `
+                <tr id="row-${r.bib}">
+                    <td style="font-weight:800;">#${r.bib}</td>
+                    <td style="font-weight:600; font-size: 0.8rem;">${r.name}</td>
+                    <td style="color:var(--text-muted); font-size:0.75rem;">${r.time}</td>
+                    <td style="text-align: right;">
+                        <button class="btn-remove" onclick="removeCheckIn(${r.bib})" title="Remove / Cancel Registration">✕</button>
+                    </td>
+                </tr>
+            `).join('');
         }
 
         async function removeCheckIn(bib) {
             const runId = document.getElementById('runSelect').value;
             if (!runId) return;
-            var conf = await Swal.fire({
+
+            const { isConfirmed } = await Swal.fire({
                 title: 'Sure?',
-                text: 'Remove runner #' + bib + ' and cancel their registration permanently?',
+                text: `Remove runner #${bib} and cancel their registration permanently?`,
                 icon: 'warning',
                 showCancelButton: true,
                 confirmButtonColor: '#ef4444',
@@ -188,11 +187,12 @@
                 background: '#141419',
                 color: '#fff'
             });
-            if (conf.isConfirmed) {
-                var success = await AppService.cancelRunnerRegistration(runId, bib);
+
+            if (isConfirmed) {
+                const success = await AppService.cancelRunnerRegistration(runId, bib);
                 if (success) {
                     loadAttendance();
-                    Swal.fire({ icon: 'success', title: 'Cancelled', timer: 1000, showConfirmButton: false, background: '#141419' });
+                    Swal.fire({ icon: 'success', title: 'Registration Cancelled', timer: 1000, showConfirmButton: false, background:'#141419' });
                 }
             }
         }
@@ -202,10 +202,12 @@
                 Swal.fire('Empty List', 'No runners have checked in yet.', 'info');
                 return;
             }
-            var runName = document.getElementById('runSelect').options[document.getElementById('runSelect').selectedIndex].text;
-            var fileName = 'Attendance_' + runName.replace(/[^a-z0-9]/gi, '_') + '.xlsx';
-            var worksheet = XLSX.utils.json_to_sheet(attendance);
-            var workbook = XLSX.utils.book_new();
+
+            const runName = document.getElementById('runSelect').options[document.getElementById('runSelect').selectedIndex].text;
+            const fileName = `Attendance_${runName.replace(/[^a-z0-9]/gi, '_')}.xlsx`;
+
+            const worksheet = XLSX.utils.json_to_sheet(attendance);
+            const workbook = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(workbook, worksheet, "Attendance");
             XLSX.writeFile(workbook, fileName);
         }
