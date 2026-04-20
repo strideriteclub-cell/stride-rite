@@ -1578,29 +1578,10 @@ export default async function handler(req, res) {
         if (!body.message || !body.message.text) { res.status(200).send('ok'); return; }
         const chatId = body.message.chat.id.toString();
         if (chatId !== ADMIN_CHAT_ID) { res.status(200).send('ok'); return; }
-        const text = body.message.text.trim();
+        const text = (body.message.text || '').trim();
         const cmd = text.split(' ')[0].toLowerCase();
-        const session = await getSession();
 
-        if (session.state === 'chatting_with_ai') {
-            await sendMessage(chatId, "🤔 <b>Thinking...</b>");
-            const history = session.data.history || [];
-            const response = await askGemini(chatId, text, history);
-            
-            history.push({ role: 'user', text: text });
-            history.push({ role: 'ai', text: response });
-            
-            // Keep history lean
-            const trimmedHistory = history.slice(-6);
-            await setSession('chatting_with_ai', { history: trimmedHistory });
-
-            await sendMessage(chatId, response, {
-                inline_keyboard: [[{ text: "↩️ Exit Strategist", callback_data: "cmd_menu" }]]
-            });
-            res.status(200).send('ok'); return;
-        }
-
-        // ─── ESCAPE HATCH: /start always resets the session, no matter what ───
+        // ─── ESCAPE HATCH: /start always resets ───
         if (cmd === '/start' || cmd === '/menu' || cmd === '/help') {
             await clearSession();
             await sendMenu(chatId, `👟 <b>Stride Rite Admin Bot</b>\n\nHey Haleem! Your Chat ID is <code>${chatId}</code>.\nWhat do you want to do?`);
@@ -1608,6 +1589,30 @@ export default async function handler(req, res) {
         }
 
         const session = await getSession();
+
+        if (session.state === 'chatting_with_ai') {
+            const history = session.data.history || [];
+            await sendMessage(chatId, "🤔 <b>Thinking...</b>");
+            
+            try {
+                const response = await askGemini(chatId, text, history);
+                history.push({ role: 'user', text: text });
+                history.push({ role: 'ai', text: response });
+                
+                const trimmedHistory = history.slice(-6);
+                await setSession('chatting_with_ai', { history: trimmedHistory });
+
+                await sendMessage(chatId, response, {
+                    inline_keyboard: [[{ text: "↩️ Exit Strategist", callback_data: "cmd_menu" }]]
+                });
+            } catch (aiErr) {
+                console.error("AI Error:", aiErr);
+                await sendMessage(chatId, "⚠️ <b>AI Error:</b> My strategic circuits hit a snag. Resetting to menu...");
+                await clearSession();
+                await sendMenu(chatId);
+            }
+            res.status(200).send('ok'); return;
+        }
 
         // Product addition flow
         if (session.state === 'shop_add_item') {
@@ -1744,12 +1749,12 @@ export default async function handler(req, res) {
 
         res.status(200).send('ok');
     } catch (e) {
-        console.error(e);
-        // CRITICAL: Notify the admin of the error so we can stop guessing
+        console.error("HANDLER ERROR:", e);
         try {
-            const safeErr = e.message.replace(/</g, '&lt;').replace(/>/g, '&gt;');
-            await sendMessage(ADMIN_CHAT_ID, `🚨 <b>Bot Error Reported:</b>\n\n<code>\n${safeErr}\n</code>\n<i>Check Vercel logs for full stack trace.</i>`);
+            const errStr = e.message || String(e);
+            const safeErr = errStr.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            await sendMessage(ADMIN_CHAT_ID, `🚨 <b>Bot Error Reported:</b>\n\n<code>\n${safeErr}\n</code>\n<i>Check logs for full stack trace.</i>`);
         } catch (inner) { console.error("Double Fail:", inner); }
-        res.status(500).send('Error');
+        res.status(200).send('ok'); // Still send 200 to Telegram so it stops retrying-loop
     }
 }
