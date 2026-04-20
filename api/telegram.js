@@ -206,10 +206,10 @@ Current Chat Session:
 ${history.map(h => `${h.role === 'user' ? 'Haleem' : 'StrideBot'}: ${h.text}`).join('\n')}
 Haleem: ${prompt}`;
 
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent`;
-        const res = await fetch(url, {
+        const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent`;
+        const res = await fetch(url + `?key=${GEMINI_API_KEY}`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'x-goog-api-key': GEMINI_API_KEY },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ contents: [{ parts: [{ text: systemPrompt }] }] })
         });
         
