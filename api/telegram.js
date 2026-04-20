@@ -422,7 +422,7 @@ async function detectBibsInImage(imgBuffer) {
             body: JSON.stringify({
                 contents: [{
                     parts: [
-                        { text: "INSTRUCTIONS: You are a professional race timer. Look EXTREMELY closely at this photo. Identify EVERY SINGLE runner bib number (the numbers on their shirts). \n\nIMPORTANT: \n1. Return ONLY the digits separated by commas (Example: 100, 201, 55).\n2. Look at runners in the background too.\n3. If no numbers are found, return 'none'.\n4. Do NOT include any sentences or explanations." },
+                        { text: "INSTRUCTIONS: You are a professional race timer for a running club called Stride Rite. Look EXTREMELY closely at this photo. Find EVERY runner bib number visible (numbers pinned to their shirts).\n\nIMPORTANT RULES:\n1. Only return numbers between 100 and 500. These are our valid bib ranges.\n2. Ignore any other numbers (year labels, distances, banner text, crowd signs).\n3. Return ONLY the valid bib numbers separated by commas (Example: 100, 201, 350).\n4. If no valid bibs are found, return 'none'.\n5. Do NOT include any sentences or explanations." },
                         { inline_data: { mime_type: "image/jpeg", data: Buffer.from(imgBuffer).toString('base64') } }
                     ]
                 }]
