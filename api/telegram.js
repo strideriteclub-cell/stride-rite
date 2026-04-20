@@ -1131,9 +1131,9 @@ async function handleAskStopName(chatId, stopNum) {
     await sendMessage(chatId, `📍 <b>Stop ${stopNum} Selected</b>\n\nWhat is the <b>Name</b> of this stop?\n(e.g. <i>Heliopolis Hills</i> or <i>The Sphinx Sprint</i>)`);
 }
 
-async function createPartnerSetup(chatId, stopNum) {
-    await setSession('setup_partner', { stopNum, isTour: true });
-    await sendMessage(chatId, `✅ Stop ${esc(stopNum)}\n\n<b>Step 2</b>: Who is hosting this run?`, {
+async function createPartnerSetup(chatId, initData) {
+    await setSession('setup_partner', initData);
+    await sendMessage(chatId, `✅ Stop ${esc(initData.stopNum)}: <b>${esc(initData.stopName)}</b>\n\n<b>Step 2</b>: Who is hosting this run?`, {
         inline_keyboard: [
             [{ text: "🤝 Stride Rite x Partner", callback_data: "create_partner_yes" }],
             [{ text: "👟 Stride Rite Only", callback_data: "create_partner_no" }],
@@ -1252,8 +1252,8 @@ async function createExecute(chatId) {
             description: 'Every pace is welcome!', created_by: 'admin-1',
             route_preview_url: previewVal,
             route_type: previewVal ? d.routeType : 'image',
-            tour_stop_id: d.isTour ? parseInt(d.stopNum) : null,
-            tour_stop_name: d.isTour ? d.stopName : null,
+            tour_stop_id: d.isTour ? (parseInt(d.stopNum) || null) : null,
+            tour_stop_name: d.isTour ? (d.stopName || null) : null,
             partner_name: d.partnerName || null,
             partner_ig: d.partnerIg || null,
             partner_logo: d.partnerLogo || null
