@@ -630,11 +630,18 @@ const AppService = {
 
     cancelRunnerRegistration: async (runId, bib) => {
         try {
-            const existing = await dbGet('stride_registrations', `run_id=eq.${runId}&bib_number=eq.${bib}`);
+            // 1. Find user by bib
+            const users = await dbGet('stride_users', `bib_number=eq.${bib}`);
+            if (!users || users.length === 0) return false;
+            const userId = users[0].id;
+
+            // 2. Find registration by user_id and runId
+            const existing = await dbGet('stride_registrations', `run_id=eq.${runId}&user_id=eq.${userId}`);
             if (existing && existing.length > 0) {
                 await dbDelete('stride_registrations', 'id', existing[0].id);
+                return true;
             }
-            return true;
+            return false;
         } catch (e) {
             console.error("Failed to cancel registration", e);
             return false;
