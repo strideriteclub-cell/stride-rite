@@ -486,7 +486,7 @@ const AppService = {
                 const isExported = (r.date_label || '').includes('[EXPORTED]');
                 const userRegistered = userRegs.find(reg => reg.run_id === r.id);
 
-                if (userRegistered && (isExported || (runDate && runDate < now))) {
+                if (userRegistered && userRegistered.attended_at) {
                     status = 'completed'; runId = r.id; break;
                 }
                 if (userRegistered && runDate && runDate >= now) {
@@ -511,14 +511,15 @@ const AppService = {
         });
 
         const tourProgress = await AppService.getTourProgress(userId);
-        const unlockedCount = tourProgress.filter(s => s.status === 'unlocked').length;
+        const completedCount = tourProgress.filter(s => s.status === 'completed').length;
+        const TOUR_STOPS_COUNT = 8;
 
         return {
             totalRuns: pastRuns.length,
             totalKms: totalKms.toFixed(1),
             pastRuns: pastRuns,
             tourProgress: tourProgress,
-            completionRate: Math.round((unlockedCount / TOUR_STOPS_COUNT) * 100)
+            completionRate: Math.round((completedCount / TOUR_STOPS_COUNT) * 100)
         };
     },
 
@@ -594,6 +595,37 @@ const AppService = {
             return true;
         }
         return false;
+    },
+
+    submitSurvey: async (runLabel, rating, feedback) => {
+        const botToken = '8682463984:AAHA2PWT7WtQRskETmOanj0k2b45ZgGfYIs';
+        const chatId = '1538316434';
+        
+        try {
+            await dbInsert('stride_surveys', {
+                run_label: runLabel || 'Unknown',
+                rating: parseInt(rating),
+                feedback: feedback || ''
+            });
+
+            const text = `📝 *New Post-Run Feedback*\n\n📅 *Run:* ${runLabel || 'Unknown'}\n💪 *Effort:* ${rating}/10\n💬 *Feedback:* ${feedback || '_No text provided_'}`;
+            await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ chat_id: chatId, text, parse_mode: 'Markdown' })
+            });
+            return true;
+        } catch (e) { console.error("Survey submission failed", e); return false; }
+    },
+
+    getSurveys: async () => {
+        const surveys = await dbGet('stride_surveys', 'order=created_at.desc');
+        const allRuns = await dbGet('stride_runs');
+        
+        if (!surveys) return [];
+        
+        const activeRunLabels = allRuns.map(r => r.date_label.includes('||') ? r.date_label.split('||')[0] : r.date_label);
+        return surveys.filter(s => activeRunLabels.includes(s.run_label));
     }
 };
 
