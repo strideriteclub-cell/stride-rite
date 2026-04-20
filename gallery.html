@@ -45,9 +45,9 @@
         <h1 style="font-size:2.2rem; margin-bottom:0.5rem;">📸 Run Memories</h1>
         <p style="color:var(--text-muted); margin-bottom:2rem;">Photos from our community runs</p>
 
-        <!-- BIB SEARCH - hidden by default, shown when bib scanner is enabled -->
+        <!-- BIB SEARCH - hidden by default, shown only when bib scanner is enabled by admin -->
         <div id="bibSearchWrapper" style="display:none; margin-bottom: 1.5rem; max-width: 400px; position: relative;">
-            <input type="text" id="bibSearch" placeholder="🔍 Search Bib # (e.g. 100)" 
+            <input type="text" id="bibSearch" placeholder="🔍 Search Bib # (e.g. 100)"
                 style="width: 100%; padding: 0.8rem 1.2rem; border-radius: 12px; background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); color: white; font-family: 'Inter', sans-serif; outline: none; transition: 0.3s;"
                 onkeyup="handleBibSearch(this.value)">
             <div style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); font-size: 0.8rem; color: var(--neon-accent); pointer-events: none;">AI Powered</div>
@@ -70,14 +70,14 @@
         let bibScanEnabled = false;
 
         async function loadGallery() {
-            // Check if bib scanner is enabled
+            // Check if bib scanner is enabled from DB
             try {
                 const settRes = await fetch(`${SUPABASE_URL}/rest/v1/shop_settings?id=eq.bib_scan&select=is_open`, { headers: defaultHeaders });
                 const settData = await settRes.json();
                 bibScanEnabled = settData && settData.length > 0 ? settData[0].is_open : false;
             } catch(e) { bibScanEnabled = false; }
 
-            // Show or hide bib search UI
+            // Show or hide bib search UI based on toggle
             document.getElementById('bibSearchWrapper').style.display = bibScanEnabled ? 'block' : 'none';
 
             const res = await fetch(`${SUPABASE_URL}/rest/v1/gallery_photos?select=*&order=uploaded_at.desc`, { headers: defaultHeaders });
@@ -97,7 +97,7 @@
 
             allPhotos = photos;
 
-            // Update AI status only if enabled
+            // Show AI status indicator ONLY if bib scanner is enabled
             if (bibScanEnabled) {
                 const tagged = photos.filter(p => (p.caption || '').toLowerCase().includes('[bibs:')).length;
                 const statusDiv = document.createElement('div');
@@ -133,9 +133,10 @@
         }
 
         function filterGallery(label, btn) {
-            // Reset search input when switching runs
-            document.getElementById('bibSearch').value = '';
-            
+            // Reset bib search when switching filters
+            const bibInput = document.getElementById('bibSearch');
+            if (bibInput) bibInput.value = '';
+
             document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
 
@@ -149,22 +150,17 @@
 
         function handleBibSearch(query) {
             if (!query) {
-                // If query cleared, go back to currently active run filter
                 const activeBtn = document.querySelector('.filter-btn.active');
-                if (activeBtn.id === 'filterAll') renderPhotos(allPhotos);
-                else {
+                if (activeBtn && activeBtn.id === 'filterAll') renderPhotos(allPhotos);
+                else if (activeBtn) {
                     const label = (activeBtn.textContent || '').replace('🏃 ', '');
                     renderPhotos(allPhotos.filter(p => p.run_label === label));
                 }
                 return;
             }
-
-            // AI Filter: Look for [BIBS:number, number] tags in the caption
             const q = query.trim();
             const filtered = allPhotos.filter(p => {
                 if (!p.caption) return false;
-                // Target format: [BIBS:12, 45, 67]
-                // We use i flag for case-insensitivity and allow spaces [\d, ]+
                 const bibMatch = p.caption.match(/\[BIBS:([\d, ]+)\]/i);
                 if (bibMatch) {
                     const bibs = bibMatch[1].split(',').map(s => s.trim());
