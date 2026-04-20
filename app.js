@@ -188,19 +188,20 @@ const AppService = {
         const validRuns = [];
         
         for (const run of rawRuns) {
+            if (!run.date_label) continue;
+            // Never show exported or past runs in the upcoming list
             if (run.date_label.includes('[EXPORTED]')) continue;
-            if (run.date_label && run.date_label.includes('||')) {
-                const parts = run.date_label.split('||');
-                const runDate = new Date(parts[1]);
-                if (runDate < now) {
-                    AppService.handleExpiredRun(run.id, parts[0]);
-                    continue;
-                }
-                run.date_label = parts[0];
-                run.iso_date = parts[1];
-            } else {
+            
+            const parts = run.date_label.split('||');
+            const runDate = parts[1] ? new Date(parts[1]) : null;
+            if (runDate && runDate < now) {
+                AppService.handleExpiredRun(run.id, parts[0]);
                 continue;
             }
+            
+            // Format for display
+            run.date_label = parts[0];
+            run.iso_date = parts[1];
             validRuns.push(run);
         }
 
