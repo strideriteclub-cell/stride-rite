@@ -377,6 +377,7 @@ async function handleGalleryStart(chatId) {
             return [{ text: `🏃 ${label}`, callback_data: `gal_r_${r.id}` }];
         });
         buttons.unshift([{ text: "📸 General / No specific run", callback_data: "gal_r_general" }]);
+        buttons.push([{ text: "🏷️ Smart Tag Existing", callback_data: "gal_smart_tag" }]);
         buttons.push([{ text: "🗑️ Delete a Photo", callback_data: "cmd_gallery_delete" }]);
         buttons.push([{ text: "↩️ Back", callback_data: "cmd_menu" }]);
         await sendMessage(chatId, "📸 *Gallery*\n\nAdd photos — pick which run they're from:", { inline_keyboard: buttons });
@@ -404,25 +405,56 @@ async function handleGalleryRunPicked(chatId, runId) {
     await sendMessage(chatId, msg);
 }
 
+async function detectBibsInImage(imgBuffer) {
+    try {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent`;
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-goog-api-key': GEMINI_API_KEY },
+            body: JSON.stringify({
+                contents: [{
+                    parts: [
+                        { text: "Look at this photo from a community run. Identify all runner bib numbers (the numbers printed on the papers pinned to their shirts). Return ONLY the numbers separated by commas. If no numbers are found, return 'none'." },
+                        { inline_data: { mime_type: "image/jpeg", data: Buffer.from(imgBuffer).toString('base64') } }
+                    ]
+                }]
+            })
+        });
+        const data = await res.json();
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text || 'none';
+        return text.trim().toLowerCase() === 'none' ? [] : text.split(',').map(s => s.trim());
+    } catch (e) { console.error("Bib detect error:", e); return []; }
+}
+
 async function handleGalleryPhoto(chatId, message, session) {
     const photos = message.photo;
     const fileId = photos[photos.length - 1].file_id;
-    const caption = message.caption || '';
+    const initialCaption = message.caption || '';
     const runLabel = session.data.runLabel || '';
-    await sendMessage(chatId, "⏳ Uploading photo...");
+    
+    await sendMessage(chatId, "⏳ Uploading photo & AI scanning for bib numbers...");
+    
     const fileRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getFile?file_id=${fileId}`);
     const fileData = await fileRes.json();
     const filePath = fileData.result?.file_path;
     if (!filePath) { await sendMessage(chatId, "❌ Couldn't get the file from Telegram."); return; }
+    
     const imgRes = await fetch(`https://api.telegram.org/file/bot${BOT_TOKEN}/${filePath}`);
     if (!imgRes.ok) { await sendMessage(chatId, "❌ Failed to download photo."); return; }
     const imgBuffer = await imgRes.arrayBuffer();
+    
+    // AI Detect Bibs
+    const bibs = await detectBibsInImage(imgBuffer);
+    const bibTags = bibs.length > 0 ? ` [BIBS:${bibs.join(',')}]` : '';
+    const caption = initialCaption + bibTags;
+
     const fileName = `${Date.now()}.jpg`;
     const uploadRes = await fetch(`${SUPABASE_URL}/storage/v1/object/gallery/${fileName}`, {
         method: 'POST',
         headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'image/jpeg' },
         body: imgBuffer
     });
+
     if (!uploadRes.ok) {
         const errText = await uploadRes.text();
         await sendMessage(chatId, `❌ Storage upload failed: ${errText}`);
@@ -430,8 +462,11 @@ async function handleGalleryPhoto(chatId, message, session) {
     }
     const publicUrl = `${SUPABASE_URL}/storage/v1/object/public/gallery/${fileName}`;
     await dbInsert('gallery_photos', { run_label: runLabel || null, photo_url: publicUrl, caption });
-    const allPhotos = await dbGet('gallery_photos', 'order=uploaded_at.asc&select=id,photo_url');
-    if (allPhotos && allPhotos.length > 150) {
+    
+    const allPhotosRes = await dbGet('gallery_photos', 'order=uploaded_at.asc&select=id,photo_url');
+    const allPhotos = Array.isArray(allPhotosRes) ? allPhotosRes : [];
+    
+    if (allPhotos.length > 150) {
         const toDelete = allPhotos.slice(0, allPhotos.length - 150);
         for (const old of toDelete) {
             const oldFileName = old.photo_url.split('/public/gallery/')[1];
@@ -441,13 +476,42 @@ async function handleGalleryPhoto(chatId, message, session) {
             await fetch(`${SUPABASE_URL}/rest/v1/gallery_photos?id=eq.${old.id}`, { method: 'DELETE', headers: dbHeaders });
         }
     }
-    const totalNow = Math.min((allPhotos?.length || 1), 150);
-    const autoDeletedMsg = allPhotos && allPhotos.length > 150 ? `\n♻️ _Oldest photo auto-removed to stay within 150 limit_` : '';
+    
+    const totalNow = Math.min(allPhotos.length + 1, 150);
+    const bibMsg = bibs.length > 0 ? `\n🏷️ *AI identified bibs:* ${bibs.join(', ')}` : '\n🔍 _No bib numbers detected._';
+    const autoDeletedMsg = allPhotos.length > 150 ? `\n♻️ _Oldest photo auto-removed to stay within 150 limit_` : '';
+    
     await sendMessage(chatId,
-        `✅ *Photo added to gallery!*\n\n🎨 Caption: ${caption || '_none_'}\n🏃 Run: ${runLabel || 'General'}\n📸 Gallery: ${totalNow}/150 photos${autoDeletedMsg}\n\nSend another photo or go back to menu.`,
-        { inline_keyboard: [[{ text: "📸 Add Another", callback_data: `gallery_run_${runLabel ? encodeURIComponent(runLabel) : 'general'}` }], [{ text: "↩️ Menu", callback_data: "cmd_menu" }]] }
+        `✅ *Photo added to gallery!*${bibMsg}\n\n🎨 Caption: ${initialCaption || '_none_'}\n📸 Gallery: ${totalNow}/150 photos${autoDeletedMsg}`,
+        { inline_keyboard: [[{ text: "📸 Add Another", callback_data: `gal_r_${session.data.runId || 'general'}` }], [{ text: "↩️ Menu", callback_data: "cmd_menu" }]] }
     );
 }
+
+async function handleGallerySmartTagAll(chatId) {
+    await sendMessage(chatId, "⏳ *Smart Tagging in progress...*\nI am scanning all existing gallery photos for bib numbers. This may take a minute.");
+    const photos = await dbGet('gallery_photos');
+    if (!photos || photos.length === 0) { await sendMessage(chatId, "❌ No photos in gallery to tag."); return; }
+    
+    let taggedCount = 0;
+    for (const p of photos) {
+        if (p.caption && p.caption.includes('[BIBS:')) continue; // Already tagged
+        
+        try {
+            const imgRes = await fetch(p.photo_url);
+            if (!imgRes.ok) continue;
+            const imgBuffer = await imgRes.arrayBuffer();
+            const bibs = await detectBibsInImage(imgBuffer);
+            if (bibs.length > 0) {
+                const newCaption = (p.caption || '') + ` [BIBS:${bibs.join(',')}]`;
+                await dbPatch('gallery_photos', 'id', p.id, { caption: newCaption });
+                taggedCount++;
+            }
+        } catch (e) { console.error("Retro scan fail", e); }
+    }
+    
+    await sendMessage(chatId, `✅ *Smart Tagging Complete!*\n\nSuccessfully scanned all photos. Identified bibs in ${taggedCount} new photos.\n\nYour web gallery search is now accurate!`);
+}
+
 
 async function handleGalleryDeleteList(chatId, messageId = null) {
     const session = await getSession();
@@ -1410,6 +1474,7 @@ export default async function handler(req, res) {
             }
             else if (data === 'cmd_gallery_start') await handleGalleryStart(chatId);
             else if (data.startsWith('gal_r_')) await handleGalleryRunPicked(chatId, data.replace('gal_r_', ''));
+            else if (data === 'gal_smart_tag') await handleGallerySmartTagAll(chatId);
             else if (data === 'cmd_gallery_delete') await handleGalleryDeleteList(chatId);
             else if (data.startsWith('gal_tgl_del_')) {
                 const photoId = data.replace('gal_tgl_del_', '');
