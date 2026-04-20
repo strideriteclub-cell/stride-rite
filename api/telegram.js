@@ -115,6 +115,7 @@ async function getSession() {
 }
 async function setSession(state, data = {}) {
     await dbUpsert('bot_sessions', { id: 'admin', state, data, updated_at: new Date().toISOString() });
+}
 async function clearSession() { await setSession('idle', {}); }
 
 // ─── TELEGRAM ─────────────────────────────────────────────────────────────────
