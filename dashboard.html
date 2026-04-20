@@ -665,8 +665,8 @@
                     // Force size recalc for Leaflet in modal
                     setTimeout(() => smMap.invalidateSize(), 200);
 
-                    if (stopRun && stopRun.route_preview_url && stopRun.route_type === 'gpx') {
-                        new L.GPX(stopRun.route_preview_url, {
+                    if (run && run.route_preview_url && run.route_type === 'gpx') {
+                        new L.GPX(run.route_preview_url, {
                             async: true,
                             polyline_options: { color: '#ff7300', weight: 4, opacity: 0.9 },
                             marker_options: {
