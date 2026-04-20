@@ -391,13 +391,28 @@
         // ─────────────────────────────────────────────────────────────────
         async function initTourMap() {
             const mapEl = document.getElementById('tourMap');
+            if (!mapEl) return;
+            
             if (window.tourMap) {
                 window.tourMap.remove();
             }
-            window.tourMap = L.map(mapEl, { zoomControl: false, attributionControl: false }).setView([30.035, 31.4775], 9.7);
-
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 19 }).addTo(window.tourMap);
             
+            // Initialize with zoomSnap for fractional zoom support
+            window.tourMap = L.map(mapEl, { 
+                zoomControl: false, 
+                attributionControl: false,
+                zoomSnap: 0.1
+            }).setView([30.035, 31.25], 9.5);
+
+            // Dark Matter Tiles - Robust Version
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                maxZoom: 20,
+                subdomains: 'abcd'
+            }).addTo(window.tourMap);
+            
+            // Force re-calculation of map size after render
+            setTimeout(() => { if(window.tourMap) window.tourMap.invalidateSize(); }, 600);
+
             // Remove old overlay if any
             const oldOverlay = mapEl.querySelector('.tour-map-overlay');
             if (oldOverlay) oldOverlay.remove();
