@@ -415,58 +415,77 @@ const AppService = {
     checkInRunner: async (runId, identifier) => {
         const id = String(identifier).trim();
         let reg = null;
-        console.log('🔍 checkInRunner called:', { runId, identifier: id, idLength: id.length });
+        let debugInfo = `Scanned: "${id}" | Run: ${runId}\n`;
 
         if (id.length > 10) {
-            // Likely a UUID — try as registration ID first
+            // UUID path — try registration ID, then user ID
             const rows = await dbGet('stride_registrations', `id=eq.${id}`);
-            console.log('🔍 UUID lookup (reg ID):', rows);
             if (rows && rows.length > 0) {
                 reg = rows[0];
+                debugInfo += `✅ Found by registration ID\n`;
             } else {
-                // Fallback: Maybe the QR contains a user_id
                 const userRegs = await dbGet('stride_registrations', `run_id=eq.${runId}&user_id=eq.${id}`);
-                console.log('🔍 UUID lookup (user ID):', userRegs);
-                if (userRegs && userRegs.length > 0) reg = userRegs[0];
+                if (userRegs && userRegs.length > 0) {
+                    reg = userRegs[0];
+                    debugInfo += `✅ Found by user ID\n`;
+                } else {
+                    debugInfo += `❌ No registration found for UUID\n`;
+                }
             }
         } else {
-            // Likely a Bib Number
+            // Bib Number path
             const users = await dbGet('stride_users', `bib_number=eq.${id}`);
-            console.log('🔍 Bib lookup result:', users);
             if (users && users.length > 0) {
+                debugInfo += `✅ User found: ${users[0].name} (ID: ${users[0].id})\n`;
                 const regs = await dbGet('stride_registrations', `run_id=eq.${runId}&user_id=eq.${users[0].id}`);
-                console.log('🔍 Registration lookup for user', users[0].id, ':', regs);
-                if (regs && regs.length > 0) reg = regs[0];
+                if (regs && regs.length > 0) {
+                    reg = regs[0];
+                    debugInfo += `✅ Registration found!\n`;
+                } else {
+                    debugInfo += `❌ User exists but NOT registered for this specific run\n`;
+                    // Check what runs this user IS registered for
+                    const allUserRegs = await dbGet('stride_registrations', `user_id=eq.${users[0].id}`);
+                    debugInfo += `📋 User has ${allUserRegs.length} total registrations\n`;
+                    if (allUserRegs.length > 0) {
+                        debugInfo += `Run IDs: ${allUserRegs.map(r => r.run_id).join(', ')}\n`;
+                    }
+                }
+            } else {
+                debugInfo += `❌ No user with bib_number=${id} found in database\n`;
             }
         }
 
-        // FALLBACK: If nothing found, try searching ALL registrations for this run
+        // FALLBACK: Search ALL registrations for this run
         if (!reg) {
-            console.log('⚠️ Primary lookup failed. Trying full scan of run registrations...');
             const allRegs = await dbGet('stride_registrations', `run_id=eq.${runId}`);
-            console.log('📋 All registrations for this run:', allRegs);
-            
-            // Try matching by user_full_name or any user whose bib matches
+            debugInfo += `\n🔎 Fallback scan: ${allRegs.length} registrations for this run\n`;
+
             if (allRegs && allRegs.length > 0) {
+                // Try to match by bib through each registered user
                 for (const r of allRegs) {
                     const userRows = await dbGet('stride_users', `id=eq.${r.user_id}`);
                     if (userRows && userRows.length > 0) {
                         const u = userRows[0];
-                        if (String(u.bib_number) === id) {
-                            console.log('✅ Found match via full scan:', u.name, 'bib:', u.bib_number);
+                        debugInfo += `  → ${u.name} (bib: ${u.bib_number}, id: ${u.id})\n`;
+                        if (String(u.bib_number) === id || u.name.toLowerCase().includes(id.toLowerCase())) {
                             reg = r;
+                            debugInfo += `  ✅ MATCHED via fallback!\n`;
                             break;
                         }
                     }
                 }
+            } else {
+                debugInfo += `⚠️ ZERO registrations exist for the selected run!\n`;
             }
         }
 
-        if (!reg) throw new Error("Runner not found or not registered for this run. Check the console (F12) for debug info.");
+        console.log('🔍 CHECK-IN DEBUG:\n' + debugInfo);
+
+        if (!reg) throw new Error(debugInfo);
         if (reg.attended_at) throw new Error("This runner is already checked in!");
 
         await dbUpdate('stride_registrations', 'id', reg.id, { attended_at: new Date().toISOString() });
-        
+
         const userInfo = await dbGet('stride_users', `id=eq.${reg.user_id}`);
         return {
             name: userInfo[0].name,
