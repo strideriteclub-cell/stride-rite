@@ -451,40 +451,7 @@ async function handleGalleryPhoto(chatId, message, session) {
     );
 }
 
-async function handleGallerySmartTagAll(chatId) {
-    const statusMsg = await sendMessage(chatId, "⏳ <b>Starting Smart Tagging...</b>\nEstablishing AI connection...");
-    const statusId = statusMsg.message_id;
-    const photos = await dbGet('gallery_photos');
-    if (!photos || photos.length === 0) { await editMessage(chatId, statusId, "❌ No photos in gallery to tag."); return; }
-    const untagged = photos.filter(p => !p.caption || !p.caption.includes('[BIBS:'));
-    const alreadyTagged = photos.length - untagged.length;
-    if (untagged.length === 0) {
-        await editMessage(chatId, statusId, `✅ <b>All photos already tagged!</b>\n\n🏷️ ${alreadyTagged} photos indexed.`);
-        return;
-    }
-    await editMessage(chatId, statusId, `⏳ <b>Smart Tagging ${untagged.length} photos...</b>\n\n⏱️ Free tier: ~1 photo every 3 seconds.\nEstimated time: ~${Math.ceil(untagged.length * 3.5 / 60)} min\n\n<i>Please wait...</i>`);
-    let taggedCount = 0, errorCount = 0, current = 0;
-    for (const p of untagged) {
-        current++;
-        if (current % 5 === 0 || current === untagged.length) {
-            await editMessage(chatId, statusId, `⏳ <b>Smart Tagging in progress...</b>\n\n🖼️ Photo ${current}/${untagged.length}\n✅ Bibs found: ${taggedCount}\n⚠️ Errors: ${errorCount}`).catch(() => {});
-        }
-        try {
-            const imgRes = await fetch(p.photo_url);
-            if (!imgRes.ok) throw new Error("Image download failed");
-            const imgBuffer = await imgRes.arrayBuffer();
-            const bibs = await detectBibsInImage(imgBuffer);
-            if (bibs.length > 0) {
-                const newCaption = (p.caption || '') + ` [BIBS:${bibs.join(',')}]`;
-                await dbPatch('gallery_photos', 'id', p.id, { caption: newCaption });
-                taggedCount++;
-            }
-        } catch (e) { console.error("Retro scan fail:", e.message); errorCount++; }
-        // ⏱️ Rate limit: 3.5s delay = max ~17 req/min (safe under free tier limit)
-        if (current < untagged.length) await new Promise(resolve => setTimeout(resolve, 3500));
-    }
-    await editMessage(chatId, statusId, `✅ <b>Smart Tagging Complete!</b>\n\n📊 Total photos: ${photos.length}\n🏷️ Newly tagged: ${taggedCount}\n✅ Already indexed: ${alreadyTagged}\n⚠️ Errors: ${errorCount}\n\n<b>Refresh your gallery page and search any bib number!</b>`);
-}
+
 
 async function handleGalleryDeleteList(chatId, messageId = null) {
     const session = await getSession();
