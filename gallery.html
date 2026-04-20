@@ -132,20 +132,21 @@
                 const activeBtn = document.querySelector('.filter-btn.active');
                 if (activeBtn.id === 'filterAll') renderPhotos(allPhotos);
                 else {
-                    const label = activeBtn.textContent.replace('🏃 ', '');
+                    const label = (activeBtn.textContent || '').replace('🏃 ', '');
                     renderPhotos(allPhotos.filter(p => p.run_label === label));
                 }
                 return;
             }
 
-            // AI Filter: Look for [BIBS:number] tags in the caption
+            // AI Filter: Look for [BIBS:number, number] tags in the caption
             const q = query.trim();
             const filtered = allPhotos.filter(p => {
                 if (!p.caption) return false;
-                // Target format: [BIBS:12,45,67]
-                const bibMatch = p.caption.match(/\[BIBS:([\d,]+)\]/);
+                // Target format: [BIBS:12, 45, 67]
+                // We use i flag for case-insensitivity and allow spaces [\d, ]+
+                const bibMatch = p.caption.match(/\[BIBS:([\d, ]+)\]/i);
                 if (bibMatch) {
-                    const bibs = bibMatch[1].split(',');
+                    const bibs = bibMatch[1].split(',').map(s => s.trim());
                     return bibs.includes(q);
                 }
                 return false;
