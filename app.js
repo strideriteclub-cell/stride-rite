@@ -279,6 +279,18 @@ const AppService = {
         return false;
     },
 
+    cancelRunRegistration: async (runId, userId) => {
+        try {
+            const regs = await dbGet('stride_registrations', `run_id=eq.${runId}&user_id=eq.${userId}`);
+            if (regs && regs.length > 0) {
+                const regId = regs[0].id;
+                await dbDelete('stride_registrations', 'id', regId);
+                return true;
+            }
+            return false;
+        } catch (e) { console.error("Cancel failed", e); return false; }
+    },
+
     sendTelegramAlert: async (user, distance, level, run, isFirstTimer, phoneNumber) => {
         const botToken = '8682463984:AAHA2PWT7WtQRskETmOanj0k2b45ZgGfYIs';
         const chatId = '1538316434';
