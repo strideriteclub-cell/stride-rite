@@ -413,13 +413,23 @@ const AppService = {
     },
 
     checkInRunner: async (runId, identifier) => {
-        // identifier can be bib_number (number) or registrationId (uuid)
+        // identifier can be bib_number (number), registrationId (uuid string), or user_id (uuid string)
+        const id = String(identifier).trim();
         let reg = null;
-        if (identifier.length > 10) { // Likely UUID (registration ID)
-            const rows = await dbGet('stride_registrations', `id=eq.${identifier}`);
-            if (rows && rows.length > 0) reg = rows[0];
-        } else { // Likely Bib Number
-            const users = await dbGet('stride_users', `bib_number=eq.${identifier}`);
+
+        if (id.length > 10) {
+            // Likely a UUID — try as registration ID first
+            const rows = await dbGet('stride_registrations', `id=eq.${id}`);
+            if (rows && rows.length > 0) {
+                reg = rows[0];
+            } else {
+                // Fallback: Maybe the QR contains a user_id instead of a registration_id
+                const userRegs = await dbGet('stride_registrations', `run_id=eq.${runId}&user_id=eq.${id}`);
+                if (userRegs && userRegs.length > 0) reg = userRegs[0];
+            }
+        } else {
+            // Likely a Bib Number
+            const users = await dbGet('stride_users', `bib_number=eq.${id}`);
             if (users && users.length > 0) {
                 const regs = await dbGet('stride_registrations', `run_id=eq.${runId}&user_id=eq.${users[0].id}`);
                 if (regs && regs.length > 0) reg = regs[0];
