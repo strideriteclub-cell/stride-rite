@@ -10,17 +10,19 @@
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
     <style>
-        .scanner-container { max-width: 800px; margin: 0 auto; padding: 2rem; margin-top: 80px; }
-        .scanner-card { background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); border-radius: 20px; padding: 2rem; margin-bottom: 2rem; }
+        .scanner-container { max-width: 1000px; margin: 0 auto; padding: 1.5rem; margin-top: 60px; }
+        .scanner-card { background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); border-radius: 20px; padding: 1.5rem; margin-bottom: 2rem; }
         #reader { width: 100%; border-radius: 12px; overflow: hidden; border: none !important; }
         #reader__scan_region { background: #000 !important; }
         .manual-input-wrap { display: flex; gap: 10px; margin-top: 1.5rem; }
         .scanner-input { flex: 1; background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); padding: 12px 16px; border-radius: 10px; color: white; font-family: 'Inter'; }
-        .scan-list { width: 100%; border-collapse: collapse; margin-top: 2rem; }
-        .scan-list th { text-align: left; padding: 12px; border-bottom: 1px solid var(--border-color); color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; }
-        .scan-list td { padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 0.9rem; }
-        .status-badge { padding: 4px 10px; border-radius: 20px; font-size: 0.7rem; font-weight: 700; }
+        .scan-list { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+        .scan-list th { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--border-color); color: var(--text-muted); font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1px; }
+        .scan-list td { padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 0.85rem; }
+        .status-badge { padding: 4px 8px; border-radius: 20px; font-size: 0.65rem; font-weight: 700; }
         .status-success { background: rgba(34,197,94,0.1); color: #22c55e; border: 1px solid rgba(34,197,94,0.2); }
+        .btn-remove { background: rgba(239,68,68,0.1); color: #ef4444; border: 1px solid rgba(239,68,68,0.2); width: 28px; height: 28px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: bold; transition: 0.2s; }
+        .btn-remove:hover { background: #ef4444; color: white; }
         .run-selector { width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--neon-accent); padding: 12px; border-radius: 10px; color: white; margin-bottom: 1.5rem; font-family: 'Outfit'; font-weight: 600; cursor: pointer; }
     </style>
 </head>
@@ -58,9 +60,9 @@
                 <thead>
                     <tr>
                         <th>Bib</th>
-                        <th>Runner Name</th>
-                        <th>Time</th>
-                        <th>Status</th>
+                        <th>Name</th>
+                        <th>Scan Time</th>
+                        <th style="width: 40px;"></th>
                     </tr>
                 </thead>
                 <tbody id="attendanceBody">
@@ -159,13 +161,40 @@
             document.getElementById('scanCount').innerText = `${list.length} Runners`;
             
             body.innerHTML = list.map(r => `
-                <tr>
+                <tr id="row-${r.bib}">
                     <td style="font-weight:800;">#${r.bib}</td>
-                    <td style="font-weight:600;">${r.name}</td>
-                    <td style="color:var(--text-muted); font-size:0.8rem;">${r.time}</td>
-                    <td><span class="status-badge status-success">Checked In</span></td>
+                    <td style="font-weight:600; font-size: 0.8rem;">${r.name}</td>
+                    <td style="color:var(--text-muted); font-size:0.75rem;">${r.time}</td>
+                    <td style="text-align: right;">
+                        <button class="btn-remove" onclick="removeCheckIn(${r.bib})" title="Remove / Cancel Registration">✕</button>
+                    </td>
                 </tr>
             `).join('');
+        }
+
+        async function removeCheckIn(bib) {
+            const runId = document.getElementById('runSelect').value;
+            if (!runId) return;
+
+            const { isConfirmed } = await Swal.fire({
+                title: 'Sure?',
+                text: `Remove runner #${bib} and cancel their registration permanently?`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#ef4444',
+                cancelButtonColor: 'rgba(255,255,255,0.1)',
+                confirmButtonText: 'Yes, cancel it',
+                background: '#141419',
+                color: '#fff'
+            });
+
+            if (isConfirmed) {
+                const success = await AppService.cancelRunnerRegistration(runId, bib);
+                if (success) {
+                    loadAttendance();
+                    Swal.fire({ icon: 'success', title: 'Registration Cancelled', timer: 1000, showConfirmButton: false, background:'#141419' });
+                }
+            }
         }
 
         function exportToExcel() {
