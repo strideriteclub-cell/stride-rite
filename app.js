@@ -626,6 +626,19 @@ const AppService = {
         
         const activeRunLabels = allRuns.map(r => r.date_label.includes('||') ? r.date_label.split('||')[0] : r.date_label);
         return surveys.filter(s => activeRunLabels.includes(s.run_label));
+    },
+
+    cancelRunnerRegistration: async (runId, bib) => {
+        try {
+            const existing = await dbGet('stride_registrations', `run_id=eq.${runId}&bib_number=eq.${bib}`);
+            if (existing && existing.length > 0) {
+                await dbDelete('stride_registrations', 'id', existing[0].id);
+            }
+            return true;
+        } catch (e) {
+            console.error("Failed to cancel registration", e);
+            return false;
+        }
     }
 };
 
