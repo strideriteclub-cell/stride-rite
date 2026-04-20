@@ -267,19 +267,18 @@ async function checkBirthdays(chatId) {
 // ─── MENU ─────────────────────────────────────────────────────────────────────
 async function sendMenu(chatId, msg) {
     await clearSession();
-    const bibEnabled = await getBibScanEnabled();
-    const defaultMsg = `👟 <b>Stride Rite Admin Bot</b>\n\nHey Haleem! AI Bib Scanner is <b>${bibEnabled ? '🔵 ACTIVE' : '⚫ STANDBY'}</b>.`;
+    const defaultMsg = `👟 <b>Stride Rite Admin Bot</b>\n\nHey Haleem!`;
     await sendMessage(chatId, msg || defaultMsg, {
         inline_keyboard: [
             [{ text: "📊 Run Stats", callback_data: "cmd_stats" }, { text: "📋 List All Runs", callback_data: "cmd_runs" }],
             [{ text: "📸 Add to Gallery", callback_data: "cmd_gallery_start" }, { text: "🛍️ VIP Shop Admin", callback_data: "cmd_shop_menu" }],
-            [{ text: "📥 Export Excel", callback_data: "cmd_export" }, { text: bibEnabled ? "🔵 Bib Scanner: ON" : "⚫ Bib Scanner: OFF", callback_data: "gal_toggle_bib_menu" }],
-            [{ text: "📲 WhatsApp Blast", callback_data: "cmd_blast" }, { text: "🤖 AI Strategist", callback_data: "cmd_ai_strat" }],
-            [{ text: "📝 Feedbacks", callback_data: "cmd_survey_menu" }, { text: "🎂 Birthdays", callback_data: "cmd_birthdays" }],
-            [{ text: "🔍 Runner Lookup", callback_data: "cmd_lookup_start" }, { text: "📣 Broadcast", callback_data: "cmd_broadcast_start" }],
-            [{ text: "📈 Growth Graph", callback_data: "cmd_growth" }, { text: "✏️ Edit a Run", callback_data: "cmd_edit_list" }],
-            [{ text: "🗺️ Tour Map Editor", callback_data: "cmd_tour_editor" }, { text: "🆕 Create New Run", callback_data: "create_setup_start" }],
-            [{ text: "🚫 Cancel a Run", callback_data: "cmd_cancel_list" }, { text: "🗑️ Delete a Run", callback_data: "cmd_delete_list" }]
+            [{ text: "📥 Export Excel", callback_data: "cmd_export" }, { text: "🤖 AI Strategist", callback_data: "cmd_ai_strat" }],
+            [{ text: "📲 WhatsApp Blast", callback_data: "cmd_blast" }, { text: "📝 Feedbacks", callback_data: "cmd_survey_menu" }],
+            [{ text: "🎂 Birthdays", callback_data: "cmd_birthdays" }, { text: "🔍 Runner Lookup", callback_data: "cmd_lookup_start" }],
+            [{ text: "📣 Broadcast", callback_data: "cmd_broadcast_start" }, { text: "📈 Growth Graph", callback_data: "cmd_growth" }],
+            [{ text: "✏️ Edit a Run", callback_data: "cmd_edit_list" }, { text: "🗺️ Tour Map Editor", callback_data: "cmd_tour_editor" }],
+            [{ text: "🆕 Create New Run", callback_data: "create_setup_start" }, { text: "🚫 Cancel a Run", callback_data: "cmd_cancel_list" }],
+            [{ text: "🗑️ Delete a Run", callback_data: "cmd_delete_list" }]
         ]
     });
 }
