@@ -629,6 +629,11 @@
       </div>
     </div>
     ${run.location_link ? `<a href="${run.location_link}" target="_blank" style="display:flex;align-items:center;gap:8px;background:rgba(88,74,220,0.05);border:1px solid rgba(88,74,220,0.18);border-radius:8px;padding:0.6rem 0.9rem;color:var(--neon-accent);text-decoration:none;font-size:0.82rem;font-weight:600;">📍 Open Start Location in Google Maps →</a>` : ''}
+  </div>
+  
+  <!-- Map Container Added Here -->
+  <div style="background:#0d0d11; border-bottom:1px solid rgba(255,255,255,0.06);">
+    <div id="sm-map" style="width:100%;height:200px;background:#111;"></div>
   </div>` : ''}
   <div style="background:#0d0d11;padding:1.25rem 1.5rem 1.5rem;">
     ${bottomSection}
