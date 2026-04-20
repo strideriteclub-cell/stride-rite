@@ -414,20 +414,24 @@ async function detectBibsInImage(imgBuffer) {
             body: JSON.stringify({
                 contents: [{
                     parts: [
-                        { text: "Look at this photo from a community run. Identify all runner bib numbers (the numbers printed on the papers pinned to their shirts). Return ONLY the numbers separated by commas. If no numbers are found, return 'none'." },
+                        { text: "INSTRUCTIONS: You are a professional race timer. Look EXTREMELY closely at this photo. Identify EVERY SINGLE runner bib number (the numbers on their shirts). \n\nIMPORTANT: \n1. Return ONLY the digits separated by commas (Example: 100, 201, 55).\n2. Look at runners in the background too.\n3. If no numbers are found, return 'none'.\n4. Do NOT include any sentences or explanations." },
                         { inline_data: { mime_type: "image/jpeg", data: Buffer.from(imgBuffer).toString('base64') } }
                     ]
                 }]
             })
         });
         const data = await res.json();
+        if (data.error) throw new Error(data.error.message);
+        
         const text = data.candidates?.[0]?.content?.parts?.[0]?.text || 'none';
         if (text.trim().toLowerCase() === 'none') return [];
         
-        // Robust Extraction: Use regex to find all sequences of digits
         const matches = text.match(/\d+/g);
-        return matches ? matches.map(s => s.trim()) : [];
-    } catch (e) { console.error("Bib detect error:", e); return []; }
+        return matches ? [...new Set(matches.map(s => s.trim()))] : [];
+    } catch (e) { 
+        console.error("Bib detect error:", e); 
+        throw e; // Throw so we can report errors to the admin
+    }
 }
 
 async function handleGalleryPhoto(chatId, message, session) {
@@ -492,28 +496,48 @@ async function handleGalleryPhoto(chatId, message, session) {
 }
 
 async function handleGallerySmartTagAll(chatId) {
-    await sendMessage(chatId, "⏳ *Smart Tagging in progress...*\nI am scanning all existing gallery photos for bib numbers. This may take a minute.");
+    const statusMsg = await sendMessage(chatId, "⏳ <b>Starting Smart Tagging...</b>\nEstablishing AI connection...");
+    const statusId = statusMsg.message_id;
+
     const photos = await dbGet('gallery_photos');
-    if (!photos || photos.length === 0) { await sendMessage(chatId, "❌ No photos in gallery to tag."); return; }
+    if (!photos || photos.length === 0) { 
+        await editMessage(chatId, statusId, "❌ No photos in gallery to tag."); 
+        return; 
+    }
     
     let taggedCount = 0;
+    let errorCount = 0;
+    let current = 0;
+    const total = photos.length;
+
     for (const p of photos) {
-        if (p.caption && p.caption.includes('[BIBS:')) continue; // Already tagged
+        current++;
+        // Update progress every 3 photos or at the start/end
+        if (current % 3 === 1 || current === total) {
+            await editMessage(chatId, statusId, `⏳ <b>Smart Tagging in progress...</b>\n\n🖼️ Photo ${current}/${total}\n✅ Tagged: ${taggedCount}\n⚠️ Errors: ${errorCount}\n\n<i>This may take a moment. Please wait.</i>`);
+        }
+
+        if (p.caption && p.caption.includes('[BIBS:')) continue; // Skip already tagged
         
         try {
             const imgRes = await fetch(p.photo_url);
-            if (!imgRes.ok) continue;
+            if (!imgRes.ok) throw new Error("Image download failed");
             const imgBuffer = await imgRes.arrayBuffer();
             const bibs = await detectBibsInImage(imgBuffer);
+            
             if (bibs.length > 0) {
                 const newCaption = (p.caption || '') + ` [BIBS:${bibs.join(',')}]`;
-                await dbPatch('gallery_photos', 'id', p.id, { caption: newCaption });
+                const patch = await dbPatch('gallery_photos', 'id', p.id, { caption: newCaption });
+                if (!patch.ok) throw new Error("Database update failed");
                 taggedCount++;
             }
-        } catch (e) { console.error("Retro scan fail", e); }
+        } catch (e) { 
+            console.error("Retro scan fail:", e);
+            errorCount++;
+        }
     }
     
-    await sendMessage(chatId, `✅ *Smart Tagging Complete!*\n\nSuccessfully scanned all photos. Identified bibs in ${taggedCount} new photos.\n\nYour web gallery search is now accurate!`);
+    await editMessage(chatId, statusId, `✅ <b>Smart Tagging Complete!</b>\n\nSuccessfully scanned ${total} photos.\n🏷️ Newly tagged: ${taggedCount}\n⚠️ Errors encountered: ${errorCount}\n\n<b>Your bib search is now 100% accurate!</b> Refresh your gallery page to test.`);
 }
 
 
