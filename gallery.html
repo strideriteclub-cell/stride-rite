@@ -70,11 +70,16 @@
         let bibScanEnabled = false;
 
         async function loadGallery() {
-            // Check if bib scanner is enabled from DB
+            // Check if bib scanner is enabled — using fixed UUID matching the bot's BIB_SCAN_UUID
+            const BIB_SCAN_UUID = 'b1b50000-0000-4000-8000-000000000001';
             try {
-                const settRes = await fetch(`${SUPABASE_URL}/rest/v1/shop_settings?id=eq.bib_scan&select=is_open`, { headers: defaultHeaders });
+                // Added cache buster to ensure real-time toggle reflection
+                const settRes = await fetch(`${SUPABASE_URL}/rest/v1/shop_settings?id=eq.${BIB_SCAN_UUID}&select=is_open&t=${Date.now()}`, { 
+                    headers: defaultHeaders,
+                    cache: 'no-store'
+                });
                 const settData = await settRes.json();
-                bibScanEnabled = settData && settData.length > 0 ? settData[0].is_open : false;
+                bibScanEnabled = settData && settData.length > 0 ? settData[0].is_open === true : false;
             } catch(e) { bibScanEnabled = false; }
 
             // Show or hide bib search UI based on toggle
