@@ -45,14 +45,6 @@
         <h1 style="font-size:2.2rem; margin-bottom:0.5rem;">📸 Run Memories</h1>
         <p style="color:var(--text-muted); margin-bottom:2rem;">Photos from our community runs</p>
 
-        <!-- BIB SEARCH - hidden by default, shown only when bib scanner is enabled by admin -->
-        <div id="bibSearchWrapper" style="display:none; margin-bottom: 1.5rem; max-width: 400px; position: relative;">
-            <input type="text" id="bibSearch" placeholder="🔍 Search Bib # (e.g. 100)"
-                style="width: 100%; padding: 0.8rem 1.2rem; border-radius: 12px; background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); color: white; font-family: 'Inter', sans-serif; outline: none; transition: 0.3s;"
-                onkeyup="handleBibSearch(this.value)">
-            <div style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); font-size: 0.8rem; color: var(--neon-accent); pointer-events: none;">AI Powered</div>
-        </div>
-
         <div class="filter-bar" id="filterBar">
             <button class="filter-btn active" id="filterAll" onclick="filterGallery('all', this)">All Runs</button>
         </div>
@@ -67,28 +59,8 @@
     <script src="app.js?v=32"></script>
     <script>
         let allPhotos = [];
-        let bibScanEnabled = false;
 
         async function loadGallery() {
-            // Check if bib scanner is enabled — using fixed UUID matching the bot's BIB_SCAN_UUID
-            const BIB_SCAN_UUID = 'b1b50000-0000-4000-8000-000000000001';
-            try {
-                const settRes = await fetch(`${SUPABASE_URL}/rest/v1/shop_settings?id=eq.${BIB_SCAN_UUID}&select=is_open&t=${Date.now()}`, { 
-                    headers: defaultHeaders,
-                    cache: 'no-store'
-                });
-                const settData = await settRes.json();
-                console.log('🔍 Bib Scanner Debug:', { settData, BIB_SCAN_UUID });
-                bibScanEnabled = settData && settData.length > 0 ? settData[0].is_open === true : false;
-                console.log('✅ Bib Scanner Enabled:', bibScanEnabled);
-            } catch(e) { 
-                console.error('❌ Bib Scanner Check Failed:', e);
-                bibScanEnabled = false; 
-            }
-
-            // Show or hide bib search UI based on toggle
-            document.getElementById('bibSearchWrapper').style.display = bibScanEnabled ? 'block' : 'none';
-
             const res = await fetch(`${SUPABASE_URL}/rest/v1/gallery_photos?select=*&order=uploaded_at.desc`, { headers: defaultHeaders });
             const photos = await res.json();
             const grid = document.getElementById('galleryGrid');
@@ -105,15 +77,6 @@
             }
 
             allPhotos = photos;
-
-            // Show AI status indicator ONLY if bib scanner is enabled
-            if (bibScanEnabled) {
-                const tagged = photos.filter(p => (p.caption || '').toLowerCase().includes('[bibs:')).length;
-                const statusDiv = document.createElement('div');
-                statusDiv.style = "font-size: 0.8rem; color: var(--text-muted); margin-top: 2rem; border-top: 1px solid var(--border-color); padding-top: 1rem; width: 100%;";
-                statusDiv.innerHTML = `🧬 <b>AI Intelligence Status:</b> ${tagged} of ${photos.length} photos indexed for bib search.`;
-                document.querySelector('.main-container').appendChild(statusDiv);
-            }
 
             // Build dynamic filter buttons from run_labels
             const labels = [...new Set(photos.map(p => p.run_label).filter(Boolean))];
@@ -142,10 +105,6 @@
         }
 
         function filterGallery(label, btn) {
-            // Reset bib search when switching filters
-            const bibInput = document.getElementById('bibSearch');
-            if (bibInput) bibInput.value = '';
-
             document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
 
@@ -155,29 +114,6 @@
                 const filtered = allPhotos.filter(p => p.run_label === label);
                 renderPhotos(filtered);
             }
-        }
-
-        function handleBibSearch(query) {
-            if (!query) {
-                const activeBtn = document.querySelector('.filter-btn.active');
-                if (activeBtn && activeBtn.id === 'filterAll') renderPhotos(allPhotos);
-                else if (activeBtn) {
-                    const label = (activeBtn.textContent || '').replace('🏃 ', '');
-                    renderPhotos(allPhotos.filter(p => p.run_label === label));
-                }
-                return;
-            }
-            const q = query.trim();
-            const filtered = allPhotos.filter(p => {
-                if (!p.caption) return false;
-                const bibMatch = p.caption.match(/\[BIBS:([\d, ]+)\]/i);
-                if (bibMatch) {
-                    const bibs = bibMatch[1].split(',').map(s => s.trim());
-                    return bibs.includes(q);
-                }
-                return false;
-            });
-            renderPhotos(filtered);
         }
 
         function openPhoto(url, caption) {
