@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My Profile | Stride Rite</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=29">
+    <link rel="stylesheet" href="styles.css?v=30">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
@@ -82,7 +82,7 @@
         <div class="b-grid" id="historyContainer"></div>
     </div>
 
-    <script src="app.js?v=29"></script>
+    <script src="app.js?v=30"></script>
     <script>
         const user = AuthService.getCurrentUser();
         if (!user) window.location.href = 'index.html';
@@ -113,20 +113,15 @@
                 document.getElementById('bibNumber').innerText = activeUser.bib_number;
                 document.getElementById('bibName').innerText = activeUser.name;
                 
-                // Get most recent upcoming registration to use for QR
-                const regs = await dbGet('stride_registrations', `user_id=eq.${user.id}&order=registered_at.desc&limit=1`);
-                if (regs && regs.length > 0) {
-                    new QRCode(document.getElementById("qrcode"), {
-                        text: regs[0].id,
-                        width: 140,
-                        height: 140,
-                        colorDark : "#1a1a1f",
-                        colorLight : "#ffffff",
-                        correctLevel : QRCode.CorrectLevel.H
-                    });
-                } else {
-                    document.getElementById("qrcode").innerHTML = "<p style='font-size:0.7rem; color:#888; width:140px; padding:20px;'>Join a run to activate your QR check-in</p>";
-                }
+                // Render LIFETIME QR Code based on the user's permanent Bib Number
+                new QRCode(document.getElementById("qrcode"), {
+                    text: String(activeUser.bib_number),
+                    width: 140,
+                    height: 140,
+                    colorDark : "#1a1a1f",
+                    colorLight : "#ffffff",
+                    correctLevel : QRCode.CorrectLevel.H
+                });
             }
                 const archiveSec = document.getElementById('tourArchiveSection');
                 const archiveCont = document.getElementById('tourArchiveContainer');
