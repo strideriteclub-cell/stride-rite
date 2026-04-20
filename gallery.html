@@ -85,6 +85,13 @@
 
             allPhotos = photos;
 
+            // Update AI status
+            const tagged = photos.filter(p => (p.caption || '').toLowerCase().includes('[bibs:')).length;
+            const statusDiv = document.createElement('div');
+            statusDiv.style = "font-size: 0.8rem; color: var(--text-muted); margin-top: 2rem; border-top: 1px solid var(--border-color); padding-top: 1rem; width: 100%;";
+            statusDiv.innerHTML = `🧬 <b>AI Intelligence Status:</b> ${tagged} of ${photos.length} photos indexed for bib search. <br><span style="font-size:0.7rem;">Index out of date? Run "Smart Tag" in the Bot menu.</span>`;
+            document.querySelector('.main-container').appendChild(statusDiv);
+
             // Build dynamic filter buttons from run_labels
             const labels = [...new Set(photos.map(p => p.run_label).filter(Boolean))];
             labels.forEach(label => {
