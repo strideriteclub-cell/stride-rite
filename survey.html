@@ -47,6 +47,7 @@
         <div style="text-align:center;"><a href="index.html" style="color:var(--text-muted); font-size:0.85rem;">Skip & Go Home</a></div>
     </div>
 
+    <script src="app.js?v=32"></script>
     <script>
         const urlParams = new URLSearchParams(window.location.search);
         const runDate = urlParams.get('run');
@@ -63,48 +64,20 @@
         });
 
         async function submitSurvey() {
-            Swal.fire({ title: 'Sending...', background:'#141419', didOpen: () => Swal.showLoading() });
+            Swal.fire({ title: 'Sending...', background:'#141419', color:'#fff', didOpen: () => Swal.showLoading() });
             
             const feedback = document.getElementById('feedbackText').value;
-            const botToken = '8682463984:AAHA2PWT7WtQRskETmOanj0k2b45ZgGfYIs';
-            const chatId = '1538316434';
-            const supabaseUrl = 'https://qcqyyfnsfyuaaaacddsm.supabase.co';
-            const supabaseKey = 'sb_publishable_uXs2e5aPzrIL_M2xsYDmWg_hPOUaG1l';
+            const success = await AppService.submitSurvey(runDate, selectedRating, feedback);
             
-            try {
-                // 1. Save to Supabase for the Feedback Hub
-                await fetch(`${supabaseUrl}/rest/v1/stride_surveys`, {
-                    method: 'POST',
-                    headers: {
-                        'apikey': supabaseKey,
-                        'Authorization': `Bearer ${supabaseKey}`,
-                        'Content-Type': 'application/json',
-                        'Prefer': 'return=minimal'
-                    },
-                    body: JSON.stringify({
-                        run_label: runDate || 'Unknown',
-                        rating: parseInt(selectedRating),
-                        feedback: feedback || ''
-                    })
-                });
-
-                // 2. Notify Telegram
-                const text = `📝 *New Post-Run Feedback*\n\n📅 *Run:* ${runDate || 'Unknown'}\n💪 *Effort:* ${selectedRating}/10\n💬 *Feedback:* ${feedback || '_No text provided_'}`;
-                await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ chat_id: chatId, text, parse_mode: 'Markdown' })
-                });
-                
+            if (success) {
                 Swal.fire({
                     icon: 'success',
                     title: 'Thank you!',
                     text: 'Your feedback helps the community grow.',
                     background: '#141419', color: '#fff'
                 }).then(() => window.location.href = 'index.html');
-            } catch(e) {
-                console.error(e);
-                Swal.fire({ icon: 'error', title: 'Error', text: 'Could not send feedback. Try again later.', background:'#141419' });
+            } else {
+                Swal.fire({ icon: 'error', title: 'Error', text: 'Could not send feedback. Try again later.', background:'#141419', color:'#fff' });
             }
         }
     </script>
