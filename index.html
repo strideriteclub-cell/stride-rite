@@ -73,6 +73,15 @@
                 <button id="tabLogin" class="auth-tab" onclick="switchAuth('login')">Log In</button>
             </div>
 
+            <!-- Google Login Button -->
+            <div id="googleBtn" style="margin-bottom: 20px; width: 100%;"></div>
+
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px; color: rgba(255,255,255,0.2);">
+                <div style="flex: 1; height: 1px; background: rgba(255,255,255,0.1);"></div>
+                <div style="font-size: 0.7rem; font-weight: 700; letter-spacing: 1px;">OR</div>
+                <div style="flex: 1; height: 1px; background: rgba(255,255,255,0.1);"></div>
+            </div>
+
             <form id="loginForm" class="auth-form hidden">
                 <div class="input-group"><label>Email</label><input type="email" id="loginEmail" required></div>
                 <div class="input-group"><label>Password</label><input type="password" id="loginPassword" required></div>
@@ -97,7 +106,38 @@
         <p>&copy; 2026 Stride Rite | <a href="admin.html">Admin Portal</a></p>
     </footer>
 
+    <!-- Google Identity Services -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script src="app.js?v=31"></script>
+    <script>
+        // Global handler for Google Sign-In
+        async function onGoogleSignIn(response) {
+            const success = await AuthService.handleGoogleResponse(response.credential);
+            if (success) {
+                window.location.href = 'dashboard.html';
+            } else {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Login Failed',
+                    text: 'We couldn\'t complete your Google sign-in. Try again or use email.',
+                    background: '#141419',
+                    color: '#fff'
+                });
+            }
+        }
+
+        window.onload = function () {
+            google.accounts.id.initialize({
+                client_id: "861624171414-h88f0sp05ipjluknttf6t0a61dmejl0p.apps.googleusercontent.com",
+                callback: onGoogleSignIn,
+                cancel_on_tap_outside: false
+            });
+            google.accounts.id.renderButton(
+                document.getElementById("googleBtn"),
+                { theme: "outline", size: "large", width: "100%", shape: "pill", text: "continue_with" }
+            );
+        };
+    </script>
     <script>
         window.addEventListener('load', () => {
             const targetDay = "SATURDAY";
