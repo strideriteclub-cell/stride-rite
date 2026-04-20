@@ -62,7 +62,7 @@
                 <span class="logo-subtitle">Al Rehab Running Community</span>
             </div>
         </div>
-        <div class="nav-links">
+        <div class="nav-links" id="navLinks">
             <a href="shop.html">🛍 Shop</a>
             <a href="gallery.html">📸 Gallery</a>
             <a href="profile.html">👤 My Profile</a>
@@ -115,6 +115,15 @@
             user = AuthService.getCurrentUser();
             if (!user) { window.location.href = 'index.html'; return; }
             document.getElementById('welcomeUser').innerText = 'Welcome back, ' + user.name.split(' ')[0] + '!';
+            
+            // Add Admin Link if applicable
+            if (user.email === 'tsmhaleem@gmail.com') {
+                const nl = document.getElementById('navLinks');
+                if (nl && !nl.innerHTML.includes('admin-scanner.html')) {
+                    nl.innerHTML = '<a href="admin-scanner.html" style="color:var(--peach-accent); font-weight:800;">📡 Admin Scan</a>' + nl.innerHTML;
+                }
+            }
+
             await initDashboard();
             initTourMap();
         });
@@ -175,8 +184,13 @@
 
                 if (runs.length > 0) loadAIAdvisor(runs[0]);
             } catch (err) {
-                console.error(err);
-                container.innerHTML = '<p style="color:#ff4d4d;padding:2rem;">Dashboard connection failed.</p>';
+                console.error("Dashboard error:", err);
+                container.innerHTML = `
+                    <div style="padding:3rem;text-align:center;grid-column:1/-1;">
+                        <p style="color:#ef4444; font-weight:700; margin-bottom:0.5rem;">⚠️ System Syncing...</p>
+                        <p style="color:var(--text-muted); font-size:0.85rem;">We're retrieving the latest run data. Please refresh in a moment. If this persists, ensure your bib is assigned.</p>
+                        <button onclick="location.reload()" class="btn btn-secondary" style="margin-top:1rem; padding:8px 16px;">🔄 Refresh Page</button>
+                    </div>`;
             }
         }
 
