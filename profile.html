@@ -67,6 +67,10 @@
             position: relative;
             padding: 15px;
             margin-bottom: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
         }
         .qr-corner { position: absolute; width: 24px; height: 24px; border: 2px solid #ff6b35; border-radius: 4px; }
         .qr-tl { top: 0; left: 0; border-right: 0; border-bottom: 0; }
@@ -206,8 +210,10 @@
                         <div style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 2px; font-weight: 800; margin-bottom: 0.5rem;">${monthName} ${now.getFullYear()}</div>
                         <h3 style="font-family: 'Outfit'; font-size: 1.5rem; margin-bottom: 1rem;">Tour de Cairo</h3>
                         
-                        <div style="height: 8px; background: rgba(255,255,255,0.05); border-radius: 10px; margin-bottom: 0.5rem; overflow: hidden;">
-                            <div style="width: ${stats.completionRate}%; height: 100%; background: ${isComplete ? '#22c55e' : 'var(--peach-accent)'}; border-radius: 10px;"></div>
+                        <div style="display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; margin-bottom: 0.5rem;">
+                            ${stats.tourProgress.map((p, i) => `
+                                <div style="height: 6px; border-radius: 2px; background: ${p.status === 'completed' ? (isComplete ? '#22c55e' : 'var(--peach-accent)') : 'rgba(255,255,255,0.05)'};"></div>
+                            `).join('')}
                         </div>
                         <div style="display: flex; justify-content: space-between; font-size: 0.85rem;">
                              <span style="color: var(--text-muted);">${stats.tourProgress.filter(s => s.status === 'completed').length} / 8 Districts</span>
