@@ -967,20 +967,26 @@ async function handleSurvey(chatId) {
 // ─── RUNNER LOOKUP ────────────────────────────────────────────────────────────
 async function handleLookupStart(chatId) {
     await setSession('waiting_lookup_name');
-    await sendMessage(chatId, "🔍 *Runner Lookup*\n\nType the runner's name (or part of it):");
+    await sendMessage(chatId, "🔍 <b>Runner Lookup</b>\n\nType the runner's <b>Name</b> or <b>Bib Number</b>:");
 }
 
 async function handleLookup(chatId, query) {
     await clearSession();
     const users = await dbGet('stride_users');
-    const matches = (users || []).filter(u => u.name.toLowerCase().includes(query.toLowerCase()));
-    if (matches.length === 0) { await sendMessage(chatId, `❌ No runner found matching "*${query}*"`); return; }
+    const q = query.toLowerCase();
+    const matches = (users || []).filter(u => 
+        u.name.toLowerCase().includes(q) || 
+        (u.bib_number && u.bib_number.toString() === query)
+    );
+    if (matches.length === 0) { await sendMessage(chatId, `❌ No runner found matching "<b>${esc(query)}</b>"`); return; }
 
     for (const u of matches.slice(0, 3)) {
         const allRegs = await dbGet('stride_registrations', `user_id=eq.${u.id}`);
         const allRuns = await dbGet('stride_runs');
         const age = u.birthdate ? calculateAge(u.birthdate) : (u.age || '?');
         const birthStr = u.birthdate ? new Date(u.birthdate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'Not provided';
+        const bib = u.bib_number ? `🔢 <b>BIB: ${u.bib_number}</b>` : '🔢 <i>No Bib assigned</i>';
+        
         let history = '';
         if (allRegs && allRegs.length > 0) {
             history = allRegs.map(r => {
@@ -989,15 +995,17 @@ async function handleLookup(chatId, query) {
                 return `  • ${label} — ${r.distance}`;
             }).join('\n');
         }
+        
         await sendMessage(chatId,
-            `👤 *${u.name}*
-📧 ${u.email}
-🎂 ${birthStr} (Age ${age})
-⚧️ ${u.gender}
-🏃 ${u.level}
+            `👤 <b>${esc(u.name)}</b>
+${bib}
+📧 ${esc(u.email)}
+🎂 ${esc(birthStr)} (Age ${age})
+⚧️ ${esc(u.gender)}
+🏃 <b>Level:</b> ${esc(u.level)}
 
-📋 *Run History (${allRegs ? allRegs.length : 0} runs):*
-${history || '  No runs yet'}`);
+📋 <b>Run History (${allRegs ? allRegs.length : 0} runs):</b>
+${esc(history) || '  No runs yet'}`);
     }
 }
 
