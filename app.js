@@ -190,8 +190,8 @@ const DEFAULT_TOUR_CONFIG = [
 // --- APP SERVICE ---
 const AppService = {
     assignBibNumber: async (userId) => {
-        const users = await dbGet('stride_users', 'select=bib_number&order=bib_number.desc&limit=1');
-        const maxBib = (users && users.length > 0) ? (users[0].bib_number || 99) : 99;
+        const users = await dbGet('stride_users', 'bib_number=not.is.null&select=bib_number&order=bib_number.desc&limit=1');
+        const maxBib = (users && users.length > 0 && users[0].bib_number) ? users[0].bib_number : 99;
         const nextBib = maxBib + 1;
         
         await dbUpdate('stride_users', 'id', userId, { bib_number: nextBib });
