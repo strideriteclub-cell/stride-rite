@@ -174,7 +174,7 @@
             if (!bib) return;
 
             try {
-                const result = await AppService.checkInRunner(runId, parseInt(bib));
+                const result = await AppService.checkInRunner(runId, bib);
                 showSuccess(result);
                 document.getElementById('manualBib').value = '';
                 loadAttendance();
@@ -183,7 +183,33 @@
             }
         }
 
+        function playSuccessBeep() {
+            try {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                if (!AudioContext) return;
+                const audioCtx = new AudioContext();
+                const oscillator = audioCtx.createOscillator();
+                const gainNode = audioCtx.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+                
+                oscillator.type = 'square';
+                oscillator.frequency.setValueAtTime(1200, audioCtx.currentTime); 
+                
+                // Fast sharp beep volume profile
+                gainNode.gain.setValueAtTime(0.2, audioCtx.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + 0.1);
+                
+                oscillator.start(audioCtx.currentTime);
+                oscillator.stop(audioCtx.currentTime + 0.1);
+            } catch (e) {
+                console.error("Beep failed:", e);
+            }
+        }
+
         function showSuccess(runner) {
+            playSuccessBeep();
             Swal.fire({
                 title: '✅ CHECKED IN',
                 html: `<div style="padding:1rem;">
