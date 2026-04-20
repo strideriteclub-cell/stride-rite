@@ -4,6 +4,8 @@ const SUPABASE_KEY = 'sb_publishable_uXs2e5aPzrIL_M2xsYDmWg_hPOUaG1l';
 const BOT_TOKEN = '8682463984:AAHA2PWT7WtQRskETmOanj0k2b45ZgGfYIs';
 const ADMIN_CHAT_ID = '1538316434';
 const SITE_URL = 'https://stride-rite.vercel.app';
+// USE ENVIRONMENT VARIABLE FOR KEY PROTECTION
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || 'AIzaSyAnJxWoxjwLYsr2Tw3GDM7FVf7VCXrMzJs';
 
 const dbHeaders = {
     'apikey': SUPABASE_KEY,
@@ -123,10 +125,17 @@ async function sendMessage(chatId, text, replyMarkup = null) {
     const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
     });
-    if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(`Telegram API Error (sendMessage): ${errorData.description}`);
-    }
+    const data = await res.json();
+    if (!res.ok) throw new Error(`Telegram API Error (sendMessage): ${data.description}`);
+    return data.result;
+}
+async function editMessage(chatId, messageId, text, replyMarkup = null) {
+    const body = { chat_id: chatId, message_id: messageId, text, parse_mode: 'HTML' };
+    if (replyMarkup) body.reply_markup = replyMarkup;
+    const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/editMessageText`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+    });
+    return (await res.json()).result;
 }
 async function answerCallbackQuery(id) {
     const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/answerCallbackQuery`, {
@@ -145,6 +154,89 @@ async function sendDocument(chatId, content, filename) {
     await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendDocument`, {
         method: 'POST', headers: { 'Content-Type': `multipart/form-data; boundary=${boundary}` }, body
     });
+}
+
+// ─── AI MISSION STRATEGIST ──────────────────────────────────────────────────
+async function getDBContext() {
+    try {
+        const [users, runs, regs, items, orders, surveys, stops] = await Promise.all([
+            dbGet('stride_users'), dbGet('stride_runs'), dbGet('stride_registrations'),
+            dbGet('shop_items'), dbGet('shop_orders'), dbGet('stride_surveys'), dbGet('stride_tour_stops')
+        ]);
+        const upcoming = (runs || []).filter(r => { const iso = extractIsoDate(r.date_label); return iso && iso >= new Date().toISOString(); });
+        return `
+DATABASE SUMMARY:
+- Total Runners: ${(users || []).length}
+- Active Missions (Upcoming): ${upcoming.length}
+- Total Registrations: ${(regs || []).length} (Verified Scans: ${(regs || []).filter(r => r.attended_at).length})
+- VIP Shop items: ${(items || []).filter(i => i.is_active).length}
+- Pending Shop Orders: ${(orders || []).filter(o => o.status === 'pending').length}
+- Recent Feedback Score: ${(surveys || []).length > 0 ? ((surveys || []).reduce((s,a) => s + a.rating, 0) / (surveys || []).length).toFixed(1) : 'N/A'}/10
+
+UPCOMING MISSIONS:
+${upcoming.map(r => `• ${r.tour_stop_name || r.location} (${r.date_label.split('||')[0]}) - ${(regs || []).filter(reg => reg.run_id === r.id).length} registered`).join('\n')}
+
+LATEST FEEDBACK:
+${(surveys || []).slice(0, 3).map(s => `• [${s.run_label}] Rating: ${s.rating}, Comment: ${s.feedback}`).join('\n')}
+`;
+    } catch (e) { return "Error gathering DB summary: " + e.message; }
+}
+
+async function askGemini(chatId, prompt, history = []) {
+    try {
+        const dbContext = await getDBContext();
+        const systemPrompt = `You are the Stride Rite Community Advisor. You are a helpful, friendly, and supportive partner to Haleem, the founder of Stride Rite.
+Current Community Data:
+${dbContext}
+
+Your goal:
+1. Talk to Haleem like a close teammate. Be casual, positive, and clear.
+2. Use lots of emojis (like 👟, 🏃‍♂️, 📈, 🛍️, ✨, 🙌) to make the chat feel alive and fun.
+3. Avoid using "###" or too many markdown symbols. Keep the layout clean and easy to scan.
+4. Help him understand how the community is doing.
+5. Keep your answers friendly, visual (with emojis), and very easy to read.
+
+Current Chat History:
+${history.map(h => `${h.role === 'user' ? 'Haleem' : 'You'}: ${h.text}`).join('\n')}
+Haleem: ${prompt}`;
+
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent`;
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-goog-api-key': GEMINI_API_KEY },
+            body: JSON.stringify({ contents: [{ parts: [{ text: systemPrompt }] }] })
+        });
+        const data = await res.json();
+        if (data.error) throw new Error(data.error.message);
+        return data.candidates[0].content.parts[0].text;
+    } catch (e) {
+        console.error("Gemini Error:", e);
+        return `⚠️ <b>AI Connection Error:</b> ${e.message}\n\nPlease check your Gemini API key or try again in a moment.`;
+    }
+}
+
+async function handleAIStart(chatId) {
+    await sendMessage(chatId, "⏳ <b>Strategic Analysis in progress...</b>\nEstablishing neuro-link with Stride Rite database...");
+    const initialPrompt = "Haleem just opened the AI strategist. Give him a high-energy 'State of the Union' summary. Mention specifically how many missions are upcoming, pending shop orders, and any interesting trends in feedback or runner growth. Keep it tactical.";
+    const response = await askGemini(chatId, initialPrompt);
+    await setSession('chatting_with_ai', { history: [{ role: 'ai', text: response }] });
+    await sendMessage(chatId, response, {
+        inline_keyboard: [[{ text: "↩️ Exit Strategist", callback_data: "cmd_menu" }]]
+    });
+}
+
+// ─── BIB SCAN SETTING ────────────────────────────────────────────────────────
+async function getBibScanEnabled() {
+    const rows = await dbGet('shop_settings', 'id=eq.bib_scan');
+    return rows && rows.length > 0 ? rows[0].is_open : false;
+}
+async function setBibScanEnabled(val) {
+    const rows = await dbGet('shop_settings', 'id=eq.bib_scan');
+    if (rows && rows.length > 0) {
+        await fetch(`${SUPABASE_URL}/rest/v1/shop_settings?id=eq.bib_scan`, { method: 'PATCH', headers: dbHeaders, body: JSON.stringify({ is_open: val }) });
+    } else {
+        await dbInsert('shop_settings', { id: 'bib_scan', is_open: val });
+    }
 }
 
 // ─── BIRTHDAY CHECK ───────────────────────────────────────────────────────────
@@ -171,18 +263,21 @@ async function checkBirthdays(chatId) {
 }
 
 // ─── MENU ─────────────────────────────────────────────────────────────────────
-async function sendMenu(chatId, msg = "👟 <b>Stride Rite Admin Bot</b>\nHey Haleem! What do you want to do?") {
+async function sendMenu(chatId, msg) {
     await clearSession();
-    await sendMessage(chatId, msg, {
+    const bibEnabled = await getBibScanEnabled();
+    const defaultMsg = `👟 <b>Stride Rite Admin Bot</b>\n\nHey Haleem! AI Bib Scanner is <b>${bibEnabled ? '🔵 ACTIVE' : '⚫ STANDBY'}</b>.`;
+    await sendMessage(chatId, msg || defaultMsg, {
         inline_keyboard: [
             [{ text: "📊 Run Stats", callback_data: "cmd_stats" }, { text: "📋 List All Runs", callback_data: "cmd_runs" }],
-            [{ text: "📥 Export Excel", callback_data: "cmd_export" }, { text: "📲 WhatsApp Blast", callback_data: "cmd_blast" }],
+            [{ text: "📸 Add to Gallery", callback_data: "cmd_gallery_start" }, { text: "🛍️ VIP Shop Admin", callback_data: "cmd_shop_menu" }],
+            [{ text: "📥 Export Excel", callback_data: "cmd_export" }, { text: bibEnabled ? "🔵 Bib Scanner: ON" : "⚫ Bib Scanner: OFF", callback_data: "gal_toggle_bib_menu" }],
+            [{ text: "📲 WhatsApp Blast", callback_data: "cmd_blast" }, { text: "🤖 AI Strategist", callback_data: "cmd_ai_strat" }],
             [{ text: "📝 Feedbacks", callback_data: "cmd_survey_menu" }, { text: "🎂 Birthdays", callback_data: "cmd_birthdays" }],
             [{ text: "🔍 Runner Lookup", callback_data: "cmd_lookup_start" }, { text: "📣 Broadcast", callback_data: "cmd_broadcast_start" }],
             [{ text: "📈 Growth Graph", callback_data: "cmd_growth" }, { text: "✏️ Edit a Run", callback_data: "cmd_edit_list" }],
-            [{ text: "📸 Add to Gallery", callback_data: "cmd_gallery_start" }, { text: "🛍️ VIP Shop Admin", callback_data: "cmd_shop_menu" }],
-            [{ text: "🚫 Cancel a Run", callback_data: "cmd_cancel_list" }, { text: "🗑️ Delete a Run", callback_data: "cmd_delete_list" }],
-            [{ text: "🗺️ Tour Map Editor", callback_data: "cmd_tour_editor" }, { text: "🆕 Create New Run", callback_data: "create_setup_start" }]
+            [{ text: "🗺️ Tour Map Editor", callback_data: "cmd_tour_editor" }, { text: "🆕 Create New Run", callback_data: "create_setup_start" }],
+            [{ text: "🚫 Cancel a Run", callback_data: "cmd_cancel_list" }, { text: "🗑️ Delete a Run", callback_data: "cmd_delete_list" }]
         ]
     });
 }
@@ -266,29 +361,26 @@ async function resolveGoogleMapsLink(url) {
 // ─── GALLERY ─────────────────────────────────────────────────────────────────
 async function handleGalleryStart(chatId) {
     try {
-        const runs = await dbGet('stride_runs');
-
-        // SAFE-GATE: If the database returns an error object instead of an array, handle it gracefully
+        const [runsRaw, bibEnabled] = await Promise.all([dbGet('stride_runs'), getBibScanEnabled()]);
+        const runs = runsRaw;
         if (!Array.isArray(runs)) {
             console.error("Supabase Error:", runs);
             throw new Error(runs?.message || "Database returned non-array result");
         }
-
-        // Limit to last 15 runs to prevent Telegram keyboard size errors
         const recentRuns = runs.slice(-15);
-
         const buttons = recentRuns.map(r => {
             const label = formatRunLabelShort(r);
-            // Use ID to avoid Telegram API 64-byte limit for callback_data
             return [{ text: `🏃 ${label}`, callback_data: `gal_r_${r.id}` }];
         });
         buttons.unshift([{ text: "📸 General / No specific run", callback_data: "gal_r_general" }]);
+        buttons.push([{ text: bibEnabled ? "🔵 Bib Scanner: ON  (tap to disable)" : "⚫ Bib Scanner: OFF (tap to enable)", callback_data: "gal_toggle_bib" }]);
+        buttons.push([{ text: "🏷️ Smart Tag Existing", callback_data: "gal_smart_tag" }]);
         buttons.push([{ text: "🗑️ Delete a Photo", callback_data: "cmd_gallery_delete" }]);
         buttons.push([{ text: "↩️ Back", callback_data: "cmd_menu" }]);
-        await sendMessage(chatId, "📸 *Gallery*\n\nAdd photos — pick which run they're from:", { inline_keyboard: buttons });
+        await sendMessage(chatId, `📸 <b>Gallery</b>\n\nAdd photos — pick which run they're from:\n\n${bibEnabled ? '🔵 AI Bib Scanner is <b>ON</b>' : '⚫ AI Bib Scanner is <b>OFF</b>'}`, { inline_keyboard: buttons });
     } catch (e) {
         console.error("Gallery Fail:", e);
-        await sendMessage(chatId, "❌ *Gallery Error:* Failed to load runs. Check your database connection.");
+        await sendMessage(chatId, "❌ <b>Gallery Error:</b> Failed to load runs. Check your database connection.");
     }
 }
 
@@ -310,12 +402,41 @@ async function handleGalleryRunPicked(chatId, runId) {
     await sendMessage(chatId, msg);
 }
 
+async function detectBibsInImage(imgBuffer) {
+    try {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent`;
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-goog-api-key': GEMINI_API_KEY },
+            body: JSON.stringify({
+                contents: [{ parts: [
+                    { text: "INSTRUCTIONS: You are a professional race timer for a running club called Stride Rite. Look EXTREMELY closely at this photo. Find EVERY runner bib number visible (numbers pinned to their shirts).\n\nIMPORTANT RULES:\n1. Only return numbers between 100 and 500. These are our valid bib ranges.\n2. Ignore any other numbers (year labels, distances, banner text, crowd signs).\n3. Return ONLY the valid bib numbers separated by commas (Example: 100, 201, 350).\n4. If no valid bibs are found, return 'none'.\n5. Do NOT include any sentences or explanations." },
+                    { inline_data: { mime_type: "image/jpeg", data: Buffer.from(imgBuffer).toString('base64') } }
+                ]}]
+            })
+        });
+        const data = await res.json();
+        if (data.error) throw new Error(data.error.message);
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text || 'none';
+        if (text.trim().toLowerCase() === 'none') return [];
+        const matches = text.match(/\d+/g);
+        return matches ? [...new Set(matches.map(s => s.trim()))] : [];
+    } catch (e) {
+        console.error("Bib detect error:", e);
+        throw e;
+    }
+}
+
 async function handleGalleryPhoto(chatId, message, session) {
     const photos = message.photo;
     const fileId = photos[photos.length - 1].file_id;
-    const caption = message.caption || '';
+    const initialCaption = message.caption || '';
     const runLabel = session.data.runLabel || '';
-    await sendMessage(chatId, "⏳ Uploading photo...");
+
+    // Check if bib scanner is enabled
+    const bibEnabled = await getBibScanEnabled();
+    await sendMessage(chatId, bibEnabled ? "⏳ Uploading photo & scanning for bib numbers..." : "⏳ Uploading photo...");
+
     const fileRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getFile?file_id=${fileId}`);
     const fileData = await fileRes.json();
     const filePath = fileData.result?.file_path;
@@ -323,6 +444,15 @@ async function handleGalleryPhoto(chatId, message, session) {
     const imgRes = await fetch(`https://api.telegram.org/file/bot${BOT_TOKEN}/${filePath}`);
     if (!imgRes.ok) { await sendMessage(chatId, "❌ Failed to download photo."); return; }
     const imgBuffer = await imgRes.arrayBuffer();
+
+    // AI Detect Bibs ONLY if enabled
+    let bibs = [];
+    if (bibEnabled) {
+        try { bibs = await detectBibsInImage(imgBuffer); } catch(e) { console.error("Bib detect fail:", e.message); }
+    }
+    const bibTags = bibs.length > 0 ? ` [BIBS:${bibs.join(',')}]` : '';
+    const caption = initialCaption + bibTags;
+
     const fileName = `${Date.now()}.jpg`;
     const uploadRes = await fetch(`${SUPABASE_URL}/storage/v1/object/gallery/${fileName}`, {
         method: 'POST',
@@ -336,23 +466,58 @@ async function handleGalleryPhoto(chatId, message, session) {
     }
     const publicUrl = `${SUPABASE_URL}/storage/v1/object/public/gallery/${fileName}`;
     await dbInsert('gallery_photos', { run_label: runLabel || null, photo_url: publicUrl, caption });
-    const allPhotos = await dbGet('gallery_photos', 'order=uploaded_at.asc&select=id,photo_url');
-    if (allPhotos && allPhotos.length > 150) {
+
+    const allPhotosRes = await dbGet('gallery_photos', 'order=uploaded_at.asc&select=id,photo_url');
+    const allPhotos = Array.isArray(allPhotosRes) ? allPhotosRes : [];
+    if (allPhotos.length > 150) {
         const toDelete = allPhotos.slice(0, allPhotos.length - 150);
         for (const old of toDelete) {
             const oldFileName = old.photo_url.split('/public/gallery/')[1];
-            if (oldFileName) {
-                await fetch(`${SUPABASE_URL}/storage/v1/object/gallery/${oldFileName}`, { method: 'DELETE', headers: dbHeaders });
-            }
+            if (oldFileName) await fetch(`${SUPABASE_URL}/storage/v1/object/gallery/${oldFileName}`, { method: 'DELETE', headers: dbHeaders });
             await fetch(`${SUPABASE_URL}/rest/v1/gallery_photos?id=eq.${old.id}`, { method: 'DELETE', headers: dbHeaders });
         }
     }
-    const totalNow = Math.min((allPhotos?.length || 1), 150);
-    const autoDeletedMsg = allPhotos && allPhotos.length > 150 ? `\n♻️ _Oldest photo auto-removed to stay within 150 limit_` : '';
+    const totalNow = Math.min(allPhotos.length + 1, 150);
+    const bibMsg = bibs.length > 0 ? `\n🏷️ *AI identified bibs:* ${bibs.join(', ')}` : (bibEnabled ? '\n🔍 _No bib numbers detected._' : '');
     await sendMessage(chatId,
-        `✅ *Photo added to gallery!*\n\n🎨 Caption: ${caption || '_none_'}\n🏃 Run: ${runLabel || 'General'}\n📸 Gallery: ${totalNow}/150 photos${autoDeletedMsg}\n\nSend another photo or go back to menu.`,
-        { inline_keyboard: [[{ text: "📸 Add Another", callback_data: `gallery_run_${runLabel ? encodeURIComponent(runLabel) : 'general'}` }], [{ text: "↩️ Menu", callback_data: "cmd_menu" }]] }
+        `✅ *Photo added to gallery!*${bibMsg}\n\n🎨 Caption: ${initialCaption || '_none_'}\n📸 Gallery: ${totalNow}/150 photos`,
+        { inline_keyboard: [[{ text: "📸 Add Another", callback_data: `gal_r_${session.data.runId || 'general'}` }], [{ text: "↩️ Menu", callback_data: "cmd_menu" }]] }
     );
+}
+
+async function handleGallerySmartTagAll(chatId) {
+    const statusMsg = await sendMessage(chatId, "⏳ <b>Starting Smart Tagging...</b>\nEstablishing AI connection...");
+    const statusId = statusMsg.message_id;
+    const photos = await dbGet('gallery_photos');
+    if (!photos || photos.length === 0) { await editMessage(chatId, statusId, "❌ No photos in gallery to tag."); return; }
+    const untagged = photos.filter(p => !p.caption || !p.caption.includes('[BIBS:'));
+    const alreadyTagged = photos.length - untagged.length;
+    if (untagged.length === 0) {
+        await editMessage(chatId, statusId, `✅ <b>All photos already tagged!</b>\n\n🏷️ ${alreadyTagged} photos indexed.`);
+        return;
+    }
+    await editMessage(chatId, statusId, `⏳ <b>Smart Tagging ${untagged.length} photos...</b>\n\n⏱️ Free tier: ~1 photo every 3 seconds.\nEstimated time: ~${Math.ceil(untagged.length * 3.5 / 60)} min\n\n<i>Please wait...</i>`);
+    let taggedCount = 0, errorCount = 0, current = 0;
+    for (const p of untagged) {
+        current++;
+        if (current % 5 === 0 || current === untagged.length) {
+            await editMessage(chatId, statusId, `⏳ <b>Smart Tagging in progress...</b>\n\n🖼️ Photo ${current}/${untagged.length}\n✅ Bibs found: ${taggedCount}\n⚠️ Errors: ${errorCount}`).catch(() => {});
+        }
+        try {
+            const imgRes = await fetch(p.photo_url);
+            if (!imgRes.ok) throw new Error("Image download failed");
+            const imgBuffer = await imgRes.arrayBuffer();
+            const bibs = await detectBibsInImage(imgBuffer);
+            if (bibs.length > 0) {
+                const newCaption = (p.caption || '') + ` [BIBS:${bibs.join(',')}]`;
+                await dbPatch('gallery_photos', 'id', p.id, { caption: newCaption });
+                taggedCount++;
+            }
+        } catch (e) { console.error("Retro scan fail:", e.message); errorCount++; }
+        // ⏱️ Rate limit: 3.5s delay = max ~17 req/min (safe under free tier limit)
+        if (current < untagged.length) await new Promise(resolve => setTimeout(resolve, 3500));
+    }
+    await editMessage(chatId, statusId, `✅ <b>Smart Tagging Complete!</b>\n\n📊 Total photos: ${photos.length}\n🏷️ Newly tagged: ${taggedCount}\n✅ Already indexed: ${alreadyTagged}\n⚠️ Errors: ${errorCount}\n\n<b>Refresh your gallery page and search any bib number!</b>`);
 }
 
 async function handleGalleryDeleteList(chatId, messageId = null) {
@@ -1308,6 +1473,14 @@ export default async function handler(req, res) {
             }
             else if (data === 'cmd_gallery_start') await handleGalleryStart(chatId);
             else if (data.startsWith('gal_r_')) await handleGalleryRunPicked(chatId, data.replace('gal_r_', ''));
+            else if (data === 'gal_smart_tag') await handleGallerySmartTagAll(chatId);
+            else if (data === 'gal_toggle_bib' || data === 'gal_toggle_bib_menu') {
+                const current = await getBibScanEnabled();
+                await setBibScanEnabled(!current);
+                if (data === 'gal_toggle_bib_menu') await sendMenu(chatId);
+                else await handleGalleryStart(chatId);
+            }
+            else if (data === 'cmd_ai_strat') await handleAIStart(chatId);
             else if (data === 'cmd_gallery_delete') await handleGalleryDeleteList(chatId);
             else if (data.startsWith('gal_tgl_del_')) {
                 const photoId = data.replace('gal_tgl_del_', '');
@@ -1484,6 +1657,28 @@ export default async function handler(req, res) {
         }
 
         const session = await getSession();
+
+        // ─── AI STRATEGIST CHAT ───────────────────────────────────────────────
+        if (session.state === 'chatting_with_ai') {
+            const history = session.data.history || [];
+            await sendMessage(chatId, "🤔 <b>Thinking...</b>");
+            try {
+                const response = await askGemini(chatId, text, history);
+                history.push({ role: 'user', text: text });
+                history.push({ role: 'ai', text: response });
+                const trimmedHistory = history.slice(-6);
+                await setSession('chatting_with_ai', { history: trimmedHistory });
+                await sendMessage(chatId, response, {
+                    inline_keyboard: [[{ text: "↩️ Exit Strategist", callback_data: "cmd_menu" }]]
+                });
+            } catch (aiErr) {
+                console.error("AI Error:", aiErr);
+                await sendMessage(chatId, "⚠️ <b>AI Error:</b> My strategic circuits hit a snag. Resetting to menu...");
+                await clearSession();
+                await sendMenu(chatId);
+            }
+            res.status(200).send('ok'); return;
+        }
 
         // Product addition flow
         if (session.state === 'shop_add_item') {
