@@ -16,20 +16,17 @@
         .badge { display: inline-block; padding: 4px 12px; background: rgba(255,180,100,0.15); color: var(--peach-accent); border-radius: 50px; font-size: 0.8rem; font-weight: 700; text-transform: uppercase; border: 1px solid var(--peach-accent); }
         .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1.5rem; margin-bottom: 3rem; }
         .profile-stat-card { text-align: center; padding: 2rem 1rem; background: rgba(255,255,255,0.03); border-radius: 20px; border: 1px solid var(--border-color); border-bottom: 4px solid var(--neon-accent); }
-        .profile-stat-card.peach { border-bottom-color: var(--peach-accent); }
-        .stat-value { font-size: 3rem; font-weight: 800; font-family: 'Outfit'; line-height: 1; margin-bottom: 0.5rem; }
+        .stat-value { font-size: 3rem; font-weight: 800; font-family: 'Outfit'; margin-bottom: 0.5rem; }
         .stat-label { color: var(--text-muted); text-transform: uppercase; letter-spacing: 2px; font-size: 0.75rem; font-weight: 600; }
-        .history-title { font-family: 'Outfit'; font-size: 1.8rem; margin-bottom: 1.5rem; color: white; }
-
-        /* Bib Card Styles */
+        
         .bib-container { margin-bottom: 3rem; perspective: 1000px; }
         .bib-card { background: white; color: #1a1a1f; border-radius: 12px; padding: 20px; position: relative; border: 12px solid #ff6b35; box-shadow: 0 20px 40px rgba(0,0,0,0.4); display: flex; flex-direction: column; align-items: center; text-align: center; overflow: hidden; width: 280px; margin: 0 auto; }
         .bib-card::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 40px; background: #ff6b35; z-index: 0; }
         .bib-logo { font-family: 'Outfit'; font-weight: 900; font-size: 1.4rem; color: white; position: relative; z-index: 1; margin-bottom: 15px; letter-spacing: -1px; }
-        .bib-number { font-family: 'Outfit'; font-size: 5rem; font-weight: 800; line-height: 1; margin: 10px 0; letter-spacing: -2px; color: #1a1a1f; z-index: 1; }
-        .bib-name { font-weight: 700; font-size: 1.1rem; text-transform: uppercase; letter-spacing: 1px; color: #1a1a1f; z-index: 1; margin-bottom: 12px; opacity: 0.9; }
-        .qr-wrap { background: white; padding: 10px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1); margin-top: 10px; z-index: 1; }
-        .bib-footer { margin-top: 15px; font-size: 0.65rem; font-weight: 700; color: rgba(0,0,0,0.4); text-transform: uppercase; letter-spacing: 2px; }
+        .bib-number { font-family: 'Outfit'; font-size: 5rem; font-weight: 800; line-height: 1; margin: 10px 0; color: #1a1a1f; z-index: 1; }
+        .bib-name { font-weight: 700; font-size: 1.1rem; text-transform: uppercase; color: #1a1a1f; z-index: 1; margin-bottom: 12px; }
+        .qr-wrap { background: white; padding: 10px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1); z-index: 1; }
+        .bib-footer { margin-top: 15px; font-size: 0.65rem; font-weight: 700; color: rgba(0,0,0,0.3); text-transform: uppercase; letter-spacing: 2px; }
     </style>
 </head>
 <body>
@@ -47,39 +44,26 @@
             <div class="avatar-circle" id="userInitial">S</div>
             <div class="profile-info">
                 <h1 id="userName">Runner</h1>
-                <div style="margin-bottom:0.75rem;"><span class="badge" id="userLevelBadge">Beginner</span></div>
-                <div style="color:var(--text-muted); font-size:0.95rem;">📧 <span id="userEmail"></span></div>
+                <div><span class="badge" id="userLevelBadge">Beginner</span></div>
+                <div style="color:var(--text-muted); font-size:0.95rem; margin-top:5px;">📧 <span id="userEmail"></span></div>
             </div>
         </div>
 
-        <div class="bib-container animate-up" id="bibSection" style="display: none; margin-top: 1rem;">
+        <div class="bib-container animate-up" id="bibSection" style="display: none;">
             <div class="bib-card">
                 <div class="bib-logo">STRIDE RITE</div>
                 <div class="bib-name" id="bibName">RUNNER</div>
                 <div class="bib-number" id="bibNumber">000</div>
-                <div class="qr-wrap" id="qrcode" style="display: flex; justify-content: center;"></div>
+                <div class="qr-wrap" id="qrcode"></div>
                 <div class="bib-footer">Check-In Passport</div>
             </div>
-            <p style="text-align:center; color:var(--text-muted); font-size:0.8rem; margin: 1rem 0;">Scan this QR code at the event check-in point 📍</p>
         </div>
 
         <div class="stats-grid">
             <div class="profile-stat-card"><div class="stat-value" id="totalRuns">0</div><div class="stat-label">Total Runs</div></div>
-            <div class="profile-stat-card peach"><div class="stat-value" id="totalKms">0.0</div><div class="stat-label">Total KM</div></div>
-            <div class="profile-stat-card" style="border-bottom-color: #22c55e;">
-                <div class="stat-value" id="tourProgress">0%</div>
-                <div class="stat-label">Tour Progress</div>
-            </div>
+            <div class="profile-stat-card" style="border-bottom-color: var(--peach-accent);"><div class="stat-value" id="totalKms">0.0</div><div class="stat-label">Total KM</div></div>
+            <div class="profile-stat-card" style="border-bottom-color: #22c55e;"><div class="stat-value" id="tourProgress">0%</div><div class="stat-label">Tour Progress</div></div>
         </div>
-
-        <section id="tourArchiveSection" style="margin-bottom: 3rem; display: none;">
-            <h2 class="history-title">🏆 Tour de Cairo Archive</h2>
-            <div id="tourArchiveContainer" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem;"></div>
-        </section>
-
-
-        <h2 class="history-title">👟 Run History</h2>
-        <div class="b-grid" id="historyContainer"></div>
     </div>
 
     <script src="app.js?v=22"></script>
@@ -98,68 +82,19 @@
             document.getElementById('totalKms').innerText = stats.totalKms;
             document.getElementById('tourProgress').innerText = `${stats.completionRate}%`;
 
-            // If user has a bib, show the card
             if (user.bib_number) {
                 document.getElementById('bibSection').style.display = 'block';
                 document.getElementById('bibNumber').innerText = user.bib_number;
                 document.getElementById('bibName').innerText = user.name;
                 
-                // Get most recent upcoming registration to use for QR
                 const regs = await dbGet('stride_registrations', `user_id=eq.${user.id}&order=registered_at.desc&limit=1`);
                 if (regs && regs.length > 0) {
-                    new QRCode(document.getElementById("qrcode"), {
-                        text: regs[0].id,
-                        width: 140,
-                        height: 140,
-                        colorDark : "#1a1a1f",
-                        colorLight : "#ffffff",
-                        correctLevel : QRCode.CorrectLevel.H
-                    });
+                    new QRCode(document.getElementById("qrcode"), { text: regs[0].id, width: 140, height: 140 });
                 } else {
-                    document.getElementById("qrcode").innerHTML = "<p style='font-size:0.7rem; color:#888; width:140px; padding:20px;'>Join a run to activate your QR check-in</p>";
+                    document.getElementById("qrcode").innerHTML = "<p style='font-size:0.7rem; color:#888; padding:20px;'>Register for a run to see QR</p>";
                 }
             }
-                const archiveSec = document.getElementById('tourArchiveSection');
-                const archiveCont = document.getElementById('tourArchiveContainer');
-                archiveSec.style.display = 'block';
-                
-                const now = new Date();
-                const monthName = now.toLocaleString('default', { month: 'long' });
-                const isComplete = stats.completionRate === 100;
-
-                archiveCont.innerHTML = `
-                    <div class="glass-card" style="padding: 2rem; position: relative; border-bottom: 4px solid ${isComplete ? '#22c55e' : 'var(--peach-accent)'};">
-                        ${isComplete ? '<div style="position:absolute; top:1rem; right:1rem; font-size:2rem;">🥇</div>' : ''}
-                        <div style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 2px; font-weight: 800; margin-bottom: 0.5rem;">${monthName} ${now.getFullYear()}</div>
-                        <h3 style="font-family: 'Outfit'; font-size: 1.5rem; margin-bottom: 1rem;">Tour de Cairo</h3>
-                        
-                        <div style="height: 8px; background: rgba(255,255,255,0.05); border-radius: 10px; margin-bottom: 0.5rem; overflow: hidden;">
-                            <div style="width: ${stats.completionRate}%; height: 100%; background: ${isComplete ? '#22c55e' : 'var(--peach-accent)'}; border-radius: 10px;"></div>
-                        </div>
-                        <div style="display: flex; justify-content: space-between; font-size: 0.85rem;">
-                            <span style="color: var(--text-muted);">${stats.tourProgress.filter(s => s.status === 'unlocked').length} / 8 Districts</span>
-                            <span style="font-weight: 700; color: ${isComplete ? '#22c55e' : 'white'};">${isComplete ? 'COMPLETED' : 'IN PROGRESS'}</span>
-                        </div>
-                    </div>
-                `;
-            }
-
-            const container = document.getElementById('historyContainer');
-            if (!stats.pastRuns || stats.pastRuns.length === 0) {
-                container.innerHTML = `<p style="grid-column:1/-1; text-align:center; padding:3rem; color:var(--text-muted);">No community runs attended yet. Join a run to see your history here!</p>`;
-                return;
-            }
-            container.innerHTML = stats.pastRuns.map(run => `
-                <div class="glass-card" style="padding:1.5rem;">
-                    <div style="font-weight:800; color:white; font-size:1.1rem; margin-bottom:0.3rem;">${run.date_display}</div>
-                    <div style="color:var(--peach-accent); font-size:0.8rem; margin-bottom:1rem;">📍 ${run.location}</div>
-                    <div style="display:flex; gap:2rem; border-top:1px solid rgba(255,255,255,0.08); padding-top:1rem;">
-                        <div><div style="font-size:0.6rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px;">Distance</div><div style="font-weight:700; color:white;">${run.user_distance}</div></div>
-                        <div><div style="font-size:0.6rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px;">Level</div><div style="font-weight:700; color:white;">${run.user_level || 'N/A'}</div></div>
-                    </div>
-                </div>`).join('');
         }
-
         loadProfile();
     </script>
 </body>
