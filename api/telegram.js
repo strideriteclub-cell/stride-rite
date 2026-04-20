@@ -229,14 +229,36 @@ async function handleTourEditorWaitLoc(chatId, stopId) {
     await sendMessage(chatId, `📍 *Type/paste the Google Maps link for Stop ${stopId}:*`);
 }
 
-async function resolveGoogleMapsLink(shortUrl) {
+async function resolveGoogleMapsLink(url) {
     try {
-        const resFollow = await fetch(shortUrl, { redirect: 'follow' });
+        // --- Pattern 1: Standard URL with @lat,lng (e.g. google.com/maps/place/...@30.123,31.456,17z)
+        let match = url.match(/@(-?\d+\.?\d*),(-?\d+\.?\d*)/);
+        if (match) return { lat: parseFloat(match[1]), lng: parseFloat(match[2]) };
+
+        // --- Pattern 2: query param ?q=lat,lng or &q=lat,lng
+        match = url.match(/[?&]q=(-?\d+\.?\d*),(-?\d+\.?\d*)/);
+        if (match) return { lat: parseFloat(match[1]), lng: parseFloat(match[2]) };
+
+        // --- Pattern 3: ll=lat,lng
+        match = url.match(/ll=(-?\d+\.?\d*),(-?\d+\.?\d*)/);
+        if (match) return { lat: parseFloat(match[1]), lng: parseFloat(match[2]) };
+
+        // --- Pattern 4: Encoded in path !3dlat!4dlng (Google Maps embed format)
+        match = url.match(/!3d(-?\d+\.?\d*)!4d(-?\d+\.?\d*)/);
+        if (match) return { lat: parseFloat(match[1]), lng: parseFloat(match[2]) };
+
+        // --- Fallback: Follow redirect (for short links like maps.app.goo.gl or goo.gl/maps/...)
+        const resFollow = await fetch(url, { redirect: 'follow', headers: { 'User-Agent': 'Mozilla/5.0' } });
         const finalUrl = resFollow.url;
-        const match = finalUrl.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
-        if (match) {
-            return { lat: parseFloat(match[1]), lng: parseFloat(match[2]) };
-        }
+        
+        // Try all patterns again on the expanded URL
+        let m2 = finalUrl.match(/@(-?\d+\.?\d*),(-?\d+\.?\d*)/);
+        if (m2) return { lat: parseFloat(m2[1]), lng: parseFloat(m2[2]) };
+        m2 = finalUrl.match(/[?&]q=(-?\d+\.?\d*),(-?\d+\.?\d*)/);
+        if (m2) return { lat: parseFloat(m2[1]), lng: parseFloat(m2[2]) };
+        m2 = finalUrl.match(/!3d(-?\d+\.?\d*)!4d(-?\d+\.?\d*)/);
+        if (m2) return { lat: parseFloat(m2[1]), lng: parseFloat(m2[2]) };
+
     } catch(e) { console.error("Maps resolve error:", e); }
     return null;
 }
