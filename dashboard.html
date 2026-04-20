@@ -62,7 +62,7 @@
                 <span class="logo-subtitle">Al Rehab Running Community</span>
             </div>
         </div>
-        <div class="nav-links" id="navLinks">
+        <div class="nav-links">
             <a href="shop.html">🛍 Shop</a>
             <a href="gallery.html">📸 Gallery</a>
             <a href="profile.html">👤 My Profile</a>
@@ -115,15 +115,6 @@
             user = AuthService.getCurrentUser();
             if (!user) { window.location.href = 'index.html'; return; }
             document.getElementById('welcomeUser').innerText = 'Welcome back, ' + user.name.split(' ')[0] + '!';
-            
-            // Add Admin Link if applicable
-            if (user.email === 'tsmhaleem@gmail.com') {
-                const nl = document.getElementById('navLinks');
-                if (nl && !nl.innerHTML.includes('admin-scanner.html')) {
-                    nl.innerHTML = '<a href="admin-scanner.html" style="color:var(--peach-accent); font-weight:800;">📡 Admin Scan</a>' + nl.innerHTML;
-                }
-            }
-
             await initDashboard();
             initTourMap();
         });
@@ -184,13 +175,8 @@
 
                 if (runs.length > 0) loadAIAdvisor(runs[0]);
             } catch (err) {
-                console.error("Dashboard error:", err);
-                container.innerHTML = `
-                    <div style="padding:3rem;text-align:center;grid-column:1/-1;">
-                        <p style="color:#ef4444; font-weight:700; margin-bottom:0.5rem;">⚠️ System Syncing...</p>
-                        <p style="color:var(--text-muted); font-size:0.85rem;">We're retrieving the latest run data. Please refresh in a moment. If this persists, ensure your bib is assigned.</p>
-                        <button onclick="location.reload()" class="btn btn-secondary" style="margin-top:1rem; padding:8px 16px;">🔄 Refresh Page</button>
-                    </div>`;
+                console.error(err);
+                container.innerHTML = '<p style="color:#ff4d4d;padding:2rem;">Dashboard connection failed.</p>';
             }
         }
 
@@ -404,13 +390,22 @@
         // ─────────────────────────────────────────────────────────────────
         async function initTourMap() {
             const mapEl = document.getElementById('tourMap');
-            const tourMap = L.map(mapEl, { zoomControl: false, attributionControl: false }).setView([30.035, 31.4775], 9.7);
+            if (window.tourMap) {
+                window.tourMap.remove();
+            }
+            window.tourMap = L.map(mapEl, { zoomControl: false, attributionControl: false }).setView([30.035, 31.4775], 9.7);
 
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 19 }).addTo(tourMap);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 19 }).addTo(window.tourMap);
+            
+            // Remove old overlay if any
+            const oldOverlay = mapEl.querySelector('.tour-map-overlay');
+            if (oldOverlay) oldOverlay.remove();
             mapEl.insertAdjacentHTML('afterbegin', '<div class="tour-map-overlay"></div>');
 
             const stops = await AppService.getTourProgress(user.id);
             if (!stops || stops.length === 0) return;
+            
+            const tourMap = window.tourMap;
 
             // Separate polylines: one for all stops (dashed orange), one for completed path (animated green)
             const polylineAll  = L.polyline([], { color: '#ff6b35', weight: 2.5, dashArray: '6 8', opacity: 0.8 }).addTo(tourMap);
@@ -514,8 +509,8 @@
                 if (rows && rows.length > 0) run = rows[0];
             }
 
-            const isCompleted = stop.status === 'completed';
-            const isRegistered = stop.status === 'unlocked';
+            const isCompleted  = stop.status === 'completed';
+            const isRegistered = stop.status === 'unlocked' || (run && window.myRegistrations && window.myRegistrations.includes(run.id));
             const isLocked     = stop.status === 'locked';
             const stopNum      = String(stop.id).padStart(2, '0');
             const dateLabel    = run ? ((run.date_label || '').split('||')[0].replace('[EXPORTED] ','')) : '—';
