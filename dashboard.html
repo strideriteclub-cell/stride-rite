@@ -415,6 +415,10 @@
             async function animateStops() {
                 const completedLatLngs = [];
 
+                // Find the index of the last completed stop so orange starts from there
+                let lastCompletedIdx = -1;
+                stops.forEach((s, i) => { if (s.status === 'completed') lastCompletedIdx = i; });
+
                 for (let i = 0; i < stops.length; i++) {
                     const s = stops[i];
                     const isDone = s.status === 'completed';
@@ -431,13 +435,15 @@
                         if (el) el.classList.add('visible');
                     }, 40);
 
-                    // Add to overall dashed line
-                    polylineAll.addLatLng([s.lat, s.lng]);
+                    // Orange line: only draw from the last completed stop onward (no overlap with green)
+                    if (i >= lastCompletedIdx) {
+                        polylineAll.addLatLng([s.lat, s.lng]);
+                    }
 
                     // Build the green completed segment
                     if (isDone) {
                         completedLatLngs.push([s.lat, s.lng]);
-                        // Also include the NEXT stop as the endpoint so the line flows forward
+                        // Extend to the next stop so the line flows forward
                         if (i + 1 < stops.length) {
                             completedLatLngs.push([stops[i+1].lat, stops[i+1].lng]);
                         }
