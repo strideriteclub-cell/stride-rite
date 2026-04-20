@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Attendance Scanner | Stride Rite Admin</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css?v=22">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <style>
+        .scanner-container { max-width: 800px; margin: 0 auto; padding: 2rem; margin-top: 80px; }
+        .scanner-card { background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); border-radius: 20px; padding: 2rem; margin-bottom: 2rem; }
+        #reader { width: 100%; border-radius: 12px; overflow: hidden; border: none !important; }
+        #reader__scan_region { background: #000 !important; }
+        .manual-input-wrap { display: flex; gap: 10px; margin-top: 1.5rem; }
+        .scanner-input { flex: 1; background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); padding: 12px 16px; border-radius: 10px; color: white; font-family: 'Inter'; }
+        .scan-list { width: 100%; border-collapse: collapse; margin-top: 2rem; }
+        .scan-list th { text-align: left; padding: 12px; border-bottom: 1px solid var(--border-color); color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; }
+        .scan-list td { padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 0.9rem; }
+        .status-badge { padding: 4px 10px; border-radius: 20px; font-size: 0.7rem; font-weight: 700; }
+        .status-success { background: rgba(34,197,94,0.1); color: #22c55e; border: 1px solid rgba(34,197,94,0.2); }
+        .run-selector { width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--neon-accent); padding: 12px; border-radius: 10px; color: white; margin-bottom: 1.5rem; font-family: 'Outfit'; font-weight: 600; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div style="font-family:'Outfit'; font-weight:800; font-size:1.5rem;">S<span style="color:var(--peach-accent);">.</span> SCANNER</div>
+        <div class="nav-links">
+            <a href="dashboard.html">📊 Dashboard</a>
+            <button onclick="exportToExcel()" class="btn-primary" style="padding: 8px 16px; font-size: 0.8rem;">📥 Export Excel</button>
+        </div>
+    </nav>
+
+    <div class="scanner-container animate-up">
+        <div class="scanner-card">
+            <h2 style="font-family:'Outfit'; margin-bottom: 1.5rem;">📍 Attendance Tracking</h2>
+            
+            <select id="runSelect" class="run-selector" onchange="loadAttendance()">
+                <option value="">Choose a Tour Stop / Run...</option>
+            </select>
+
+            <div id="reader"></div>
+
+            <div class="manual-input-wrap">
+                <input type="number" id="manualBib" class="scanner-input" placeholder="Enter Bib Number manually...">
+                <button onclick="checkInByBib()" class="btn-primary">Check In</button>
+            </div>
+        </div>
+
+        <div class="scanner-card">
+            <h3 style="font-family:'Outfit'; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center;">
+                👥 Attendance List 
+                <span id="scanCount" style="font-size: 0.9rem; color: var(--neon-accent);">0 Runners</span>
+            </h3>
+            <table class="scan-list">
+                <thead>
+                    <tr>
+                        <th>Bib</th>
+                        <th>Runner Name</th>
+                        <th>Time</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="attendanceBody">
+                    <!-- Loaded dynamically -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script src="app.js?v=22"></script>
+    <script>
+        const user = AuthService.getCurrentUser();
+        if (!user || !user.is_admin) {
+            window.location.href = 'dashboard.html';
+        }
+
+        let html5QrCode;
+        let attendance = [];
+
+        async function init() {
+            // Load all tour/upcoming runs for selector
+            const allRuns = await dbGet('stride_runs', 'order=date_label.desc');
+            const select = document.getElementById('runSelect');
+            allRuns.forEach(run => {
+                const label = run.date_label.split('||')[0].replace('[EXPORTED] ', '');
+                const opt = document.createElement('option');
+                opt.value = run.id;
+                opt.innerText = `${label} - ${run.location}`;
+                select.appendChild(opt);
+            });
+
+            // Start Scanner
+            html5QrCode = new Html5Qrcode("reader");
+            const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+            
+            html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess);
+        }
+
+        async function onScanSuccess(decodedText) {
+            const runId = document.getElementById('runSelect').value;
+            if (!runId) {
+                Swal.fire('⚠️ Wait!', 'Please select which run you are tracking first.', 'warning');
+                return;
+            }
+
+            // Pause scanning to process
+            html5QrCode.pause();
+            
+            try {
+                const result = await AppService.checkInRunner(runId, decodedText);
+                showSuccess(result);
+                loadAttendance();
+            } catch (e) {
+                Swal.fire('❌ Error', e.message, 'error');
+            } finally {
+                // Resume scanning after 2 seconds
+                setTimeout(() => html5QrCode.resume(), 2000);
+            }
+        }
+
+        async function checkInByBib() {
+            const runId = document.getElementById('runSelect').value;
+            const bib = document.getElementById('manualBib').value;
+            if (!runId || !bib) return;
+
+            try {
+                const result = await AppService.checkInRunner(runId, parseInt(bib));
+                showSuccess(result);
+                document.getElementById('manualBib').value = '';
+                loadAttendance();
+            } catch (e) {
+                Swal.fire('❌ Error', e.message, 'error');
+            }
+        }
+
+        function showSuccess(runner) {
+            Swal.fire({
+                title: '✅ CHECKED IN',
+                html: `<b>#${runner.bib} - ${runner.name}</b><br><span style="font-size:0.8rem;color:#888;">Time: ${runner.time}</span>`,
+                icon: 'success',
+                timer: 1500,
+                showConfirmButton: false,
+                background: '#141419',
+                color: '#fff'
+            });
+        }
+
+        async function loadAttendance() {
+            const runId = document.getElementById('runSelect').value;
+            if (!runId) return;
+
+            const list = await AppService.getAttendanceList(runId);
+            attendance = list;
+            
+            const body = document.getElementById('attendanceBody');
+            document.getElementById('scanCount').innerText = `${list.length} Runners`;
+            
+            body.innerHTML = list.map(r => `
+                <tr>
+                    <td style="font-weight:800;">#${r.bib}</td>
+                    <td style="font-weight:600;">${r.name}</td>
+                    <td style="color:var(--text-muted); font-size:0.8rem;">${r.time}</td>
+                    <td><span class="status-badge status-success">Checked In</span></td>
+                </tr>
+            `).join('');
+        }
+
+        function exportToExcel() {
+            if (attendance.length === 0) {
+                Swal.fire('Empty List', 'No runners have checked in yet.', 'info');
+                return;
+            }
+
+            const runName = document.getElementById('runSelect').options[document.getElementById('runSelect').selectedIndex].text;
+            const fileName = `Attendance_${runName.replace(/[^a-z0-9]/gi, '_')}.xlsx`;
+
+            const worksheet = XLSX.utils.json_to_sheet(attendance);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Attendance");
+            XLSX.writeFile(workbook, fileName);
+        }
+
+        init();
+    </script>
+</body>
+</html>
