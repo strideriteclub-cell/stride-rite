@@ -166,34 +166,23 @@ async function getDBContext() {
             return iso && iso >= new Date().toISOString();
         });
 
-        const context = {
-            summary: {
-                total_runners: (users || []).length,
-                active_missions: upcoming.length,
-                shop_items: (items || []).length,
-                pending_orders: (orders || []).filter(o => o.status === 'pending').length,
-                completed_mission_scans: (regs || []).filter(r => r.attended_at).length
-            },
-            missions: upcoming.map(r => ({
-                id: r.id,
-                name: r.tour_stop_name || r.location,
-                date: r.date_label.split('||')[0],
-                registrations: (regs || []).filter(reg => reg.run_id === r.id).length
-            })),
-            shop: (items || []).map(i => ({
-                name: i.name,
-                price: i.price,
-                stock_status: i.is_active ? 'In Stock' : 'Hidden'
-            })),
-            recent_feedback: (surveys || []).slice(0, 5).map(s => ({
-                run: s.run_label,
-                rating: s.rating,
-                comment: s.feedback
-            }))
-        };
+        // Optimized Summary (smaller payload to avoid Gemini timeouts)
+        return `
+DATABASE SUMMARY:
+- Total Runners: ${(users || []).length}
+- Active Missions (Upcoming): ${upcoming.length}
+- Total Registrations: ${(regs || []).length} (Verified Scans: ${(regs || []).filter(r => r.attended_at).length})
+- VIP Shop items: ${(items || []).filter(i => i.is_active).length}
+- Pending Shop Orders: ${(orders || []).filter(o => o.status === 'pending').length}
+- Recent Feedback Score: ${(surveys || []).length > 0 ? ((surveys || []).reduce((s,a) => s + a.rating, 0) / (surveys || []).length).toFixed(1) : 'N/A'}/10
 
-        return JSON.stringify(context, null, 2);
-    } catch (e) { return "Error gathering DB context: " + e.message; }
+UPCOMING MISSIONS:
+${upcoming.map(r => `• ${r.tour_stop_name || r.location} (${r.date_label.split('||')[0]}) - ${(regs || []).filter(reg => reg.run_id === r.id).length} registered`).join('\n')}
+
+LATEST FEEDBACK:
+${(surveys || []).slice(0, 3).map(s => `• [${s.run_label}] Rating: ${s.rating}, Comment: ${s.feedback}`).join('\n')}
+`;
+    } catch (e) { return "Error gathering DB summary: " + e.message; }
 }
 
 async function askGemini(chatId, prompt, history = []) {
@@ -225,10 +214,11 @@ Haleem: ${prompt}`;
         });
 
         const data = await res.json();
+        if (data.error) throw new Error(data.error.message);
         return data.candidates[0].content.parts[0].text;
     } catch (e) {
         console.error("Gemini Error:", e);
-        return "⚠️ I'm having trouble connecting to my strategic circuits right now. Please try again in a moment.";
+        return `⚠️ <b>AI Connection Error:</b> ${e.message}\n\nPlease check your Gemini API key or try again in a moment.`;
     }
 }
 
@@ -277,6 +267,10 @@ async function sendMenu(chatId, msg = "👟 <b>Stride Rite Admin Bot</b>\nHey Ha
             [{ text: "📊 Run Stats", callback_data: "cmd_stats" }, { text: "📋 List All Runs", callback_data: "cmd_runs" }],
             [{ text: "📥 Export Excel", callback_data: "cmd_export" }, { text: "📲 WhatsApp Blast", callback_data: "cmd_blast" }],
             [{ text: "📝 Feedbacks", callback_data: "cmd_survey_menu" }, { text: "🎂 Birthdays", callback_data: "cmd_birthdays" }],
+            [{ text: "🔍 Runner Lookup", callback_data: "cmd_lookup_start" }, { text: "📣 Broadcast", callback_data: "cmd_broadcast_start" }],
+            [{ text: "📈 Growth Graph", callback_data: "cmd_growth" }, { text: "✏️ Edit a Run", callback_data: "cmd_edit_list" }],
+            [{ text: "📸 Add to Gallery", callback_data: "cmd_gallery_start" }, { text: "🛍️ VIP Shop Admin", callback_data: "cmd_shop_menu" }],
+            [{ text: "🚫 Cancel a Run", callback_data: "cmd_cancel_list" }, { text: "🗑️ Delete a Run", callback_data: "cmd_delete_list" }],
             [{ text: "🗺️ Tour Map Editor", callback_data: "cmd_tour_editor" }, { text: "🤖 AI Strategist", callback_data: "cmd_ai_strat" }],
             [{ text: "🆕 Create New Run", callback_data: "create_setup_start" }]
         ]
