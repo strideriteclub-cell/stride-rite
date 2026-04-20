@@ -4,6 +4,7 @@ const SUPABASE_KEY = 'sb_publishable_uXs2e5aPzrIL_M2xsYDmWg_hPOUaG1l';
 const BOT_TOKEN = '8682463984:AAHA2PWT7WtQRskETmOanj0k2b45ZgGfYIs';
 const ADMIN_CHAT_ID = '1538316434';
 const SITE_URL = 'https://stride-rite.vercel.app';
+const GEMINI_API_KEY = 'AIzaSyBwfuRDM4E_ukO6wSo8BIvA0vpYshqkuJk';
 
 const dbHeaders = {
     'apikey': SUPABASE_KEY,
@@ -147,6 +148,103 @@ async function sendDocument(chatId, content, filename) {
     });
 }
 
+// ─── AI MISSION STRATEGIST ──────────────────────────────────────────────────
+async function getDBContext() {
+    try {
+        const [users, runs, regs, items, orders, surveys, stops] = await Promise.all([
+            dbGet('stride_users'),
+            dbGet('stride_runs'),
+            dbGet('stride_registrations'),
+            dbGet('shop_items'),
+            dbGet('shop_orders'),
+            dbGet('stride_surveys'),
+            dbGet('stride_tour_stops')
+        ]);
+
+        const upcoming = (runs || []).filter(r => {
+            const iso = extractIsoDate(r.date_label);
+            return iso && iso >= new Date().toISOString();
+        });
+
+        const context = {
+            summary: {
+                total_runners: (users || []).length,
+                active_missions: upcoming.length,
+                shop_items: (items || []).length,
+                pending_orders: (orders || []).filter(o => o.status === 'pending').length,
+                completed_mission_scans: (regs || []).filter(r => r.attended_at).length
+            },
+            missions: upcoming.map(r => ({
+                id: r.id,
+                name: r.tour_stop_name || r.location,
+                date: r.date_label.split('||')[0],
+                registrations: (regs || []).filter(reg => reg.run_id === r.id).length
+            })),
+            shop: (items || []).map(i => ({
+                name: i.name,
+                price: i.price,
+                stock_status: i.is_active ? 'In Stock' : 'Hidden'
+            })),
+            recent_feedback: (surveys || []).slice(0, 5).map(s => ({
+                run: s.run_label,
+                rating: s.rating,
+                comment: s.feedback
+            }))
+        };
+
+        return JSON.stringify(context, null, 2);
+    } catch (e) { return "Error gathering DB context: " + e.message; }
+}
+
+async function askGemini(chatId, prompt, history = []) {
+    try {
+        const dbContext = await getDBContext();
+        const systemPrompt = `You are the Stride Rite AI Mission Strategist. 
+You have access to the full Stride Rite database.
+Current Database Snapshot:
+${dbContext}
+
+Guidelines:
+1. You are talking to Haleem, the founder/admin.
+2. Be tactical, high-energy, and professional. 
+3. Always provide real data insights from the snapshot.
+4. If asked to do something you cannot (like deleting data), explain why.
+5. Keep your summaries concise but detailed.
+
+Current Conversation History:
+${history.map(h => `${h.role === 'user' ? 'Haleem' : 'AI'}: ${h.text}`).join('\n')}
+Haleem: ${prompt}`;
+
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                contents: [{ parts: [{ text: systemPrompt }] }]
+            })
+        });
+
+        const data = await res.json();
+        return data.candidates[0].content.parts[0].text;
+    } catch (e) {
+        console.error("Gemini Error:", e);
+        return "⚠️ I'm having trouble connecting to my strategic circuits right now. Please try again in a moment.";
+    }
+}
+
+async function handleAIStart(chatId) {
+    await sendMessage(chatId, "⏳ <b>Strategic Analysis in progress...</b>\nEstablishing neuro-link with Stride Rite database...");
+    
+    // Proactive Summary
+    const initialPrompt = "Haleem just opened the AI strategist. Give him a high-energy 'State of the Union' summary. Mention specifically how many missions are upcoming, pending shop orders, and any interesting trends in feedback or runner growth. Keep it tactical.";
+    const response = await askGemini(chatId, initialPrompt);
+    
+    await setSession('chatting_with_ai', { history: [{ role: 'ai', text: response }] });
+    await sendMessage(chatId, response, {
+        inline_keyboard: [[{ text: "↩️ Exit Strategist", callback_data: "cmd_menu" }]]
+    });
+}
+
 // ─── BIRTHDAY CHECK ───────────────────────────────────────────────────────────
 async function checkBirthdays(chatId) {
     const users = await dbGet('stride_users');
@@ -170,6 +268,7 @@ async function checkBirthdays(chatId) {
     }
 }
 
+
 // ─── MENU ─────────────────────────────────────────────────────────────────────
 async function sendMenu(chatId, msg = "👟 <b>Stride Rite Admin Bot</b>\nHey Haleem! What do you want to do?") {
     await clearSession();
@@ -178,11 +277,8 @@ async function sendMenu(chatId, msg = "👟 <b>Stride Rite Admin Bot</b>\nHey Ha
             [{ text: "📊 Run Stats", callback_data: "cmd_stats" }, { text: "📋 List All Runs", callback_data: "cmd_runs" }],
             [{ text: "📥 Export Excel", callback_data: "cmd_export" }, { text: "📲 WhatsApp Blast", callback_data: "cmd_blast" }],
             [{ text: "📝 Feedbacks", callback_data: "cmd_survey_menu" }, { text: "🎂 Birthdays", callback_data: "cmd_birthdays" }],
-            [{ text: "🔍 Runner Lookup", callback_data: "cmd_lookup_start" }, { text: "📣 Broadcast", callback_data: "cmd_broadcast_start" }],
-            [{ text: "📈 Growth Graph", callback_data: "cmd_growth" }, { text: "✏️ Edit a Run", callback_data: "cmd_edit_list" }],
-            [{ text: "📸 Add to Gallery", callback_data: "cmd_gallery_start" }, { text: "🛍️ VIP Shop Admin", callback_data: "cmd_shop_menu" }],
-            [{ text: "🚫 Cancel a Run", callback_data: "cmd_cancel_list" }, { text: "🗑️ Delete a Run", callback_data: "cmd_delete_list" }],
-            [{ text: "🗺️ Tour Map Editor", callback_data: "cmd_tour_editor" }, { text: "🆕 Create New Run", callback_data: "create_setup_start" }]
+            [{ text: "🗺️ Tour Map Editor", callback_data: "cmd_tour_editor" }, { text: "🤖 AI Strategist", callback_data: "cmd_ai_strat" }],
+            [{ text: "🆕 Create New Run", callback_data: "create_setup_start" }]
         ]
     });
 }
@@ -1343,6 +1439,7 @@ export default async function handler(req, res) {
             else if (data.startsWith('shop_prd_tgl_')) await handleShopProductToggle(chatId, data.replace('shop_prd_tgl_', ''));
             else if (data.startsWith('shop_prd_del_')) await handleShopProductDelete(chatId, data.replace('shop_prd_del_', ''));
             else if (data === 'cmd_edit_list') await handleEditList(chatId);
+            else if (data === 'cmd_ai_strat') await handleAIStart(chatId);
             else if (data === 'cmd_tour_editor') await handleTourEditorStart(chatId);
             else if (data.startsWith('tour_edit_pick_')) await handleTourEditorPick(chatId, data.replace('tour_edit_pick_', ''));
             else if (data.startsWith('tour_edit_name_')) await handleTourEditorWaitName(chatId, data.replace('tour_edit_name_', ''));
@@ -1483,6 +1580,25 @@ export default async function handler(req, res) {
         if (chatId !== ADMIN_CHAT_ID) { res.status(200).send('ok'); return; }
         const text = body.message.text.trim();
         const cmd = text.split(' ')[0].toLowerCase();
+        const session = await getSession();
+
+        if (session.state === 'chatting_with_ai') {
+            await sendMessage(chatId, "🤔 <b>Thinking...</b>");
+            const history = session.data.history || [];
+            const response = await askGemini(chatId, text, history);
+            
+            history.push({ role: 'user', text: text });
+            history.push({ role: 'ai', text: response });
+            
+            // Keep history lean
+            const trimmedHistory = history.slice(-6);
+            await setSession('chatting_with_ai', { history: trimmedHistory });
+
+            await sendMessage(chatId, response, {
+                inline_keyboard: [[{ text: "↩️ Exit Strategist", callback_data: "cmd_menu" }]]
+            });
+            res.status(200).send('ok'); return;
+        }
 
         // ─── ESCAPE HATCH: /start always resets the session, no matter what ───
         if (cmd === '/start' || cmd === '/menu' || cmd === '/help') {
