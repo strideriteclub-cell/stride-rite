@@ -204,7 +204,7 @@ Current Conversation History:
 ${history.map(h => `${h.role === 'user' ? 'Haleem' : 'AI'}: ${h.text}`).join('\n')}
 Haleem: ${prompt}`;
 
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${GEMINI_API_KEY}`;
         const res = await fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
