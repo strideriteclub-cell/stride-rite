@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="styles.css?v=27">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <style>
         .profile-container { max-width: 900px; margin: 0 auto; padding: 2rem; margin-top: 100px; }
         .profile-header { display: flex; align-items: center; gap: 2rem; margin-bottom: 2rem; flex-wrap: wrap; }
@@ -20,6 +21,28 @@
         .stat-value { font-size: 3rem; font-weight: 800; font-family: 'Outfit'; line-height: 1; margin-bottom: 0.5rem; }
         .stat-label { color: var(--text-muted); text-transform: uppercase; letter-spacing: 2px; font-size: 0.75rem; font-weight: 600; }
         .history-title { font-family: 'Outfit'; font-size: 1.8rem; margin-bottom: 1.5rem; color: white; }
+        
+        .finisher-badge { 
+            display: inline-block; 
+            padding: 6px 16px; 
+            background: linear-gradient(135deg, #ffd700 0%, #ff8b6a 100%); 
+            color: #000 !important; 
+            border-radius: 50px; 
+            font-size: 0.85rem; 
+            font-weight: 800; 
+            text-transform: uppercase; 
+            letter-spacing: 2px; 
+            border: none; 
+            box-shadow: 0 4px 15px rgba(255, 139, 106, 0.4);
+            margin-left: 8px;
+            animation: finisherPulse 2s infinite ease-in-out;
+            vertical-align: middle;
+        }
+        @keyframes finisherPulse {
+            0% { transform: scale(1); filter: brightness(1); }
+            50% { transform: scale(1.05); filter: brightness(1.2); }
+            100% { transform: scale(1); filter: brightness(1); }
+        }
 
         /* Bib Card Styles */
         .bib-container { margin-bottom: 3rem; position: relative; display: flex; justify-content: center; }
@@ -146,6 +169,25 @@
             const stats = await AppService.getUserStats(user.id);
             document.getElementById('totalRuns').innerText = stats.totalRuns;
             document.getElementById('tourProgress').innerText = `${stats.completionRate}%`;
+
+            if (stats.isFinisher) {
+                const badgeContainer = document.getElementById('userLevelBadge').parentElement;
+                if (badgeContainer && !document.getElementById('finisherTag')) {
+                    const tag = document.createElement('span');
+                    tag.id = 'finisherTag';
+                    tag.className = 'finisher-badge';
+                    tag.innerText = '🏆 TOUR FINISHER';
+                    badgeContainer.appendChild(tag);
+                    
+                    // One-time confetti
+                    confetti({
+                        particleCount: 150,
+                        spread: 70,
+                        origin: { y: 0.6 },
+                        colors: ['#ffd700', '#ff8b6a', '#584adc']
+                    });
+                }
+            }
 
             // Auto-heal missing bib numbers (especially for new accounts)
             let activeUser = user;
