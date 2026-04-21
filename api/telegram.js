@@ -545,12 +545,16 @@ async function handleTestCenter(chatId) {
             // Ensure URL has a valid protocol for Telegram URL buttons
             const safeUrl = t.url && (t.url.startsWith('http://') || t.url.startsWith('https://'))
                 ? t.url
-                : `https://${t.url || ''}`;
+                : (t.url ? `https://${t.url}` : null);
             msgText += `🔗 <b>${esc(t.name)}</b>\n`;
-            rows.push([
-                { text: `🔗 Open: ${t.name}`, url: safeUrl },
-                { text: `🗑️ Delete`, callback_data: `test_del_${t.id}` }
-            ]);
+            if (safeUrl && safeUrl.length > 8) {
+                rows.push([
+                    { text: `🔗 Open: ${t.name}`, url: safeUrl },
+                    { text: `🗑️ Delete`, callback_data: `test_del_${t.id}` }
+                ]);
+            } else {
+                rows.push([{ text: `🗑️ Delete "${t.name}" (no URL)`, callback_data: `test_del_${t.id}` }]);
+            }
         }
     } else {
         msgText += `No tests saved yet. Tap ➕ to add your first one!`;
