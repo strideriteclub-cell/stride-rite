@@ -381,8 +381,8 @@ async function handleTourAdmin(chatId) {
 
 // ─── DELETE ALL TOUR RUNS ─────────────────────────────────────────────────────
 async function handleTourDeleteAllConfirm(chatId) {
-    const tourRuns = await dbGet('stride_runs', 'select=id&tour_stop_id=not.is.null');
-    const count = (tourRuns || []).length;
+    const allRuns = await dbGet('stride_runs', 'select=id,tour_stop_id');
+    const count = (allRuns || []).filter(r => r.tour_stop_id !== null && r.tour_stop_id !== undefined).length;
     await sendMessage(chatId,
         `⚠️ <b>DANGER ZONE — Season Reset</b>\n\nYou are about to permanently delete <b>${count} Tour Run${count !== 1 ? 's' : ''}</b> and <b>all their registrations</b>.\n\n<i>This cannot be undone. Only do this at the end of a season to clean up before the next one.</i>`,
         {
@@ -396,9 +396,10 @@ async function handleTourDeleteAllConfirm(chatId) {
 
 async function handleTourDeleteAllExecute(chatId) {
     await sendMessage(chatId, "⏳ <b>Deleting all tour runs and registrations...</b>");
-    const tourRuns = await dbGet('stride_runs', 'select=id&tour_stop_id=not.is.null');
+    const allRuns = await dbGet('stride_runs', 'select=id,tour_stop_id');
+    const tourRuns = (allRuns || []).filter(r => r.tour_stop_id !== null && r.tour_stop_id !== undefined);
     let deleted = 0;
-    for (const run of (tourRuns || [])) {
+    for (const run of tourRuns) {
         await dbDelete('stride_registrations', 'run_id', run.id);
         await dbDelete('stride_runs', 'id', run.id);
         deleted++;
@@ -469,31 +470,47 @@ async function handleTourSeasonExecute(chatId) {
     const stopsMap = {};
     (tourStops || []).forEach(s => { stopsMap[s.id] = s.name; });
     let created = 0;
+    let errors = 0;
     for (let i = 0; i < 8; i++) {
         const stopNum = i + 1;
         const d = new Date(baseDate.getTime() + i * 7 * 24 * 60 * 60 * 1000);
         const fd = d.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
         const stopName = stopsMap[stopNum] || `Stop ${stopNum}`;
-        await dbInsert('stride_runs', {
-            id: crypto.randomUUID(),
-            date_label: `${fd} - ${formatTime(startTime)}||${d.toISOString()}`,
-            location: stopName,
-            location_link: null,
-            description: 'Every pace is welcome!',
-            created_by: 'admin-1',
-            route_preview_url: null,
-            route_type: 'image',
-            tour_stop_id: stopNum,
-            tour_stop_name: stopName,
-            partner_name: null,
-            partner_ig: null,
-            partner_logo: null
-        });
-        created++;
+        try {
+            const result = await dbInsert('stride_runs', {
+                id: crypto.randomUUID(),
+                date_label: `${fd} - ${formatTime(startTime)}||${d.toISOString()}`,
+                location: stopName,
+                location_link: null,
+                description: 'Every pace is welcome!',
+                created_by: 'admin-1',
+                route_preview_url: null,
+                route_type: 'image',
+                tour_stop_id: stopNum,
+                tour_stop_name: stopName,
+                partner_name: null,
+                partner_ig: null,
+                partner_logo: null
+            });
+            if (result && !result.error && !result.message) {
+                created++;
+            } else {
+                console.error(`Stop ${stopNum} insert failed:`, JSON.stringify(result));
+                errors++;
+            }
+        } catch (e) {
+            console.error(`Stop ${stopNum} exception:`, e.message);
+            errors++;
+        }
     }
     await clearSession();
+    if (errors > 0) {
+        await sendMessage(chatId, `⚠️ <b>Partial Season Created</b>\n\n✅ ${created} runs created, ❌ ${errors} failed.\n\nCheck Vercel logs for details.`);
+        await sendMenu(chatId, "What else?");
+        return;
+    }
     await sendMessage(chatId,
-        `🎉 <b>New Season is Live!</b>\n\n✅ ${created} tour runs have been added to your dashboard.\n\n<i>Use the Tour Map Editor to update stop locations, and Edit a Run to add Maps links and route previews.</i>`,
+        `🎉 <b>New Season is Live!</b>\n\n✅ ${created} tour runs added to your dashboard!\n\n<i>Use the Tour Map Editor to update stop locations, and Edit a Run to add Maps links.</i>`,
         {
             inline_keyboard: [
                 [{ text: "🗺️ Open Tour Map Editor", callback_data: "cmd_tour_editor" }],
