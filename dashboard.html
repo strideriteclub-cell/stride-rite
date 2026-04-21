@@ -139,6 +139,14 @@
             const container = document.getElementById('runsContainer');
             try {
                 const [runs, myRegs] = await Promise.all([AppService.getRuns(), AppService.getUserRegistrations(user.id)]);
+                
+                // Sort numerically by Stop ID (1-8)
+                runs.sort((a, b) => {
+                    const idA = a.tour_stop_id || 999;
+                    const idB = b.tour_stop_id || 999;
+                    return idA - idB;
+                });
+
                 window.lastFetchedRuns = runs;
                 window.myRegistrations = myRegs;
 
