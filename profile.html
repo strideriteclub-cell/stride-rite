@@ -141,23 +141,9 @@
         document.getElementById('userName').innerText = user.name;
         document.getElementById('userEmail').innerText = user.email;
         
-        // Handle Avatar rendering
-        function renderAvatar(userData) {
-            const initialEl = document.getElementById('userInitial');
-            if (userData.avatar_url) {
-                initialEl.innerText = '';
-                initialEl.style.backgroundImage = `url('${userData.avatar_url}')`;
-                initialEl.style.backgroundSize = 'cover';
-                initialEl.style.backgroundPosition = 'center';
-                initialEl.style.border = '4px solid var(--neon-accent)';
-                initialEl.style.boxShadow = '0 0 20px rgba(255, 115, 0, 0.4)';
-            } else {
-                initialEl.innerText = userData.name.charAt(0).toUpperCase();
-                initialEl.style.backgroundImage = 'none';
-            }
-        }
-        
-        renderAvatar(user);
+        // Initial-based avatar
+        const initialEl = document.getElementById('userInitial');
+        initialEl.innerText = user.name.charAt(0).toUpperCase();
         
         // Add Admin Link if applicable
         if (user.email === 'tsmhaleem@gmail.com') {
@@ -180,7 +166,7 @@
                 document.getElementById('bibNumber').innerText = user.bib_number;
                 document.getElementById('bibName').innerText = user.name;
                 
-                // Render Bib Number QR Code
+                // Render QR Code
                 new QRCode(document.getElementById("qrcode"), {
                     text: String(user.bib_number),
                     width: 140,
@@ -200,43 +186,30 @@
 
             archiveCont.innerHTML = `
                 <div class="glass-card" style="padding: 2rem; position: relative; border-bottom: 4px solid ${isComplete ? '#22c55e' : 'var(--peach-accent)'};">
-                    ${isComplete ? '<div style="position:absolute; top:1rem; right:1rem; font-size:2rem;">🥇</div>' : ''}
                     <div style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 2px; font-weight: 800; margin-bottom: 0.5rem;">${monthName} ${now.getFullYear()}</div>
                     <h3 style="font-family: 'Outfit'; font-size: 1.5rem; margin-bottom: 1rem;">Tour de Cairo</h3>
                     
                     <div style="height: 8px; background: rgba(255,255,255,0.05); border-radius: 10px; margin-bottom: 0.5rem; overflow: hidden;">
                         <div style="width: ${stats.completionRate}%; height: 100%; background: ${isComplete ? '#22c55e' : 'var(--peach-accent)'}; border-radius: 10px;"></div>
                     </div>
-                    <div style="display: flex; justify-content: space-between; font-size: 0.85rem;">
-                        <span style="color: var(--text-muted);">${stats.tourProgress.filter(s => s.status === 'unlocked').length} / 8 Districts</span>
-                        <span style="font-weight: 700; color: ${isComplete ? '#22c55e' : 'white'};">${isComplete ? 'COMPLETED' : 'IN PROGRESS'}</span>
-                    </div>
                 </div>
             `;
 
             const container = document.getElementById('historyContainer');
             if (!stats.pastRuns || stats.pastRuns.length === 0) {
-                container.innerHTML = `<p style="grid-column:1/-1; text-align:center; padding:3rem; color:var(--text-muted);">No community runs attended yet. Join a run to see your history here!</p>`;
+                container.innerHTML = `<p style="grid-column:1/-1; text-align:center; padding:3rem; color:var(--text-muted);">No community runs attended yet.</p>`;
                 return;
             }
             container.innerHTML = stats.pastRuns.map(run => `
                 <div class="glass-card" style="padding:1.5rem;">
                     <div style="font-weight:800; color:white; font-size:1.1rem; margin-bottom:0.3rem;">${run.date_display}</div>
                     <div style="color:var(--peach-accent); font-size:0.8rem; margin-bottom:1rem;">📍 ${run.location}</div>
-                    <div style="display:flex; gap:2rem; border-top:1px solid rgba(255,255,255,0.08); padding-top:1rem;">
-                        <div><div style="font-size:0.6rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px;">Distance</div><div style="font-weight:700; color:white;">${run.user_distance}</div></div>
-                        <div><div style="font-size:0.6rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px;">Level</div><div style="font-weight:700; color:white;">${run.user_level || 'N/A'}</div></div>
-                    </div>
                 </div>`).join('');
         }
 
-        async function init() {
-            const updatedUser = await AuthService.reFetchUser();
-            if (updatedUser) renderAvatar(updatedUser);
-            await loadProfile();
-        }
-
-        init();
+        loadProfile();
     </script>
+</body>
+</html>
 </body>
 </html>
