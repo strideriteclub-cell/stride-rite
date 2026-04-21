@@ -532,9 +532,14 @@ const AppService = {
 
         const progress = currentTourConfig.map(stop => {
             const stopRuns = (rawRuns || []).filter(r => r.tour_stop_id && Number(r.tour_stop_id) === Number(stop.id));
-            let status = 'locked', runId = null;
+            let status = 'locked', runId = null, runName = stop.name;
 
             for (const r of stopRuns) {
+                if (r.tour_stop_name) {
+                    // Update name dynamically based on what the bot saved in the run
+                    runName = r.tour_stop_name.trim();
+                }
+
                 const parts = (r.date_label || '').split('||');
                 const runDate = parts[1] ? new Date(parts[1]) : null;
                 const isExported = (r.date_label || '').includes('[EXPORTED]');
@@ -550,7 +555,7 @@ const AppService = {
                     status = 'active'; runId = r.id;
                 }
             }
-            return { ...stop, status, runId };
+            return { ...stop, name: runName, status, runId };
         });
         return progress;
     },
