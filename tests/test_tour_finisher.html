@@ -152,8 +152,34 @@
         @keyframes dash-flow { to { stroke-dashoffset: -24; } }
 
         @media (max-width: 900px) {
-            .main-layout { grid-template-columns: 1fr; }
-            #testMap { height: 400px; }
+            .main-layout { grid-template-columns: 1fr; gap: 10px; }
+            #testMap { 
+                height: 300px; 
+                position: sticky; 
+                top: 5px; 
+                z-index: 1001; 
+                box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+                border-radius: 12px;
+            }
+            .controls-panel { 
+                padding: 10px; 
+                display: grid; 
+                grid-template-columns: 1fr 1fr; 
+                gap: 8px; 
+            }
+            .controls-panel h3, .controls-panel p { grid-column: 1 / -1; }
+            .stop-row { 
+                flex-direction: column; 
+                align-items: flex-start; 
+                padding: 8px; 
+                gap: 8px;
+            }
+            .stop-info span { font-size: 0.75rem; }
+            .toggle-btn { padding: 4px 6px; font-size: 0.6rem; }
+        }
+
+        @media (max-width: 500px) {
+            .controls-panel { grid-template-columns: 1fr; }
         }
     </style>
 </head>
