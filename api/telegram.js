@@ -318,12 +318,83 @@ async function sendMenu(chatId, msg) {
             [{ text: "📝 Feedbacks", callback_data: "cmd_survey_menu" }, { text: "🎂 Birthdays", callback_data: "cmd_birthdays" }],
             [{ text: "🔍 Runner Lookup", callback_data: "cmd_lookup_start" }, { text: "📣 Broadcast", callback_data: "cmd_broadcast_start" }],
             [{ text: "📈 Growth Graph", callback_data: "cmd_growth" }, { text: "✏️ Edit a Run", callback_data: "cmd_edit_list" }],
-            [{ text: "🏆 Tour Stats", callback_data: "cmd_tour_stats" }, { text: "🗺️ Tour Editor", callback_data: "cmd_tour_editor" }],
-            [{ text: "🧪 Tests", callback_data: "cmd_tests_menu" }, { text: "🏁 Next Tour", callback_data: "cmd_reset_tour" }],
-            [{ text: "🆕 Create New Run", callback_data: "create_setup_start" }],
+            [{ text: "🏆 Tour Stats", callback_data: "cmd_tour_stats" }, { text: "🛠️ Tour Admin", callback_data: "cmd_tour_admin_menu" }],
+            [{ text: "🧪 Tests", callback_data: "cmd_tests_menu" }, { text: "🆕 Create New Run", callback_data: "create_setup_start" }],
             [{ text: "🚫 Cancel a Run", callback_data: "cmd_cancel_list" }, { text: "🗑️ Delete a Run", callback_data: "cmd_delete_list" }]
         ]
     });
+}
+
+// ─── TOUR ADMIN SUBMENU ──────────────────────────────────────────────────────
+async function handleTourAdminMenu(chatId) {
+    await sendMessage(chatId, "🛠️ <b>Tour Admin Center</b>\n\nManage the Tour de Cairo season and stops:", {
+        inline_keyboard: [
+            [{ text: "🗺️ Tour Editor", callback_data: "cmd_tour_editor" }],
+            [{ text: "✨ Batch Create Season", callback_data: "cmd_season_batch_start" }],
+            [{ text: "🏁 Reset/Next Tour", callback_data: "cmd_reset_tour" }],
+            [{ text: "↩️ Back", callback_data: "cmd_menu" }]
+        ]
+    });
+}
+
+// ─── BATCH SEASON CREATION ───────────────────────────────────────────────────
+async function handleSeasonBatchStart(chatId) {
+    await setSession('waiting_season_date', {});
+    await sendMessage(chatId, "✨ <b>Auto-Create New Season</b>\n\nThis will generate 8 runs (Stops 1-8) spaced 1 week apart.\n\n📅 <b>Step 1</b>: Send the <b>Start Date</b> for Stop 1:\n(Format: <code>YYYY-MM-DD</code>, e.g., 2026-05-01)");
+}
+
+async function handleSeasonBatchTimeRequest(chatId, startDate) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate)) {
+        await sendMessage(chatId, "❌ Invalid format. Please use <code>YYYY-MM-DD</code>.");
+        return;
+    }
+    await setSession('waiting_season_time', { startDate });
+    await sendMessage(chatId, `✅ Start Date: <b>${startDate}</b>\n\n⏰ <b>Step 2</b>: Send the <b>Start Time</b> for the runs:\n(Format: <code>HH:mm</code>, e.g., 06:30 or 19:00)`);
+}
+
+async function handleSeasonBatchExecute(chatId, startTime) {
+    const session = await getSession();
+    const startDateStr = session.data.startDate;
+    
+    if (!/^\d{2}:\d{2}$/.test(startTime)) {
+        await sendMessage(chatId, "❌ Invalid format. Please use <code>HH:mm</code>.");
+        return;
+    }
+
+    await sendMessage(chatId, "⏳ <b>Generating Season...</b> Please wait.");
+
+    try {
+        const stops = await dbGet('stride_tour_stops', 'order=id.asc');
+        const startBase = new Date(`${startDateStr}T${startTime}:00`);
+
+        for (const stop of stops) {
+            const stopIdx = parseInt(stop.id) - 1; 
+            const runDate = new Date(startBase);
+            runDate.setDate(runDate.getDate() + (stopIdx * 7));
+
+            const fd = runDate.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+            const ft = formatTime(startTime);
+
+            await dbInsert('stride_runs', {
+                id: crypto.randomUUID(),
+                date_label: `${fd} - ${ft}||${runDate.toISOString()}`,
+                location: `${stop.name} (TBD)`,
+                location_link: "https://maps.google.com",
+                description: `Tour de Cairo - Stop ${stop.id}`,
+                created_by: 'admin-1',
+                route_type: 'image',
+                tour_stop_id: parseInt(stop.id),
+                tour_stop_name: stop.name
+            });
+        }
+
+        await clearSession();
+        await sendMessage(chatId, "✅ <b>Season Successfully Created!</b>\n\n8 runs (1-8) have been added to the dashboard. You can now use the <b>Tour Editor</b> or <b>Edit a Run</b> to add specific maps and partner details.");
+        await handleTourAdminMenu(chatId);
+    } catch (e) {
+        console.error(e);
+        await sendMessage(chatId, "❌ <b>Database Error:</b> Failed to batch create runs.");
+    }
 }
 
 // ─── TOUR STATS & FINISHERS ───────────────────────────────────────────────────
@@ -1754,6 +1825,8 @@ export default async function handler(req, res) {
             else if (data === 'cmd_cancel_list') await handleCancelList(chatId);
             else if (data === 'cmd_delete_list') await handleDeleteList(chatId);
             else if (data === 'cmd_tour_stats') await handleTourStats(chatId);
+            else if (data === 'cmd_tour_admin_menu') await handleTourAdminMenu(chatId);
+            else if (data === 'cmd_season_batch_start') await handleSeasonBatchStart(chatId);
             else if (data === 'cmd_export_finishers') await handleExportFinishers(chatId);
             else if (data === 'cmd_reset_tour') await handleResetTourConfirm(chatId);
             else if (data === 'cmd_reset_tour_execute') await handleResetTourExecute(chatId);
@@ -2079,6 +2152,10 @@ export default async function handler(req, res) {
             await handleLookup(chatId, text);
         } else if (session.state === 'waiting_broadcast_msg') {
             await handleBroadcast(chatId, text);
+        } else if (session.state === 'waiting_season_date') {
+            await handleSeasonBatchTimeRequest(chatId, text);
+        } else if (session.state === 'waiting_season_time') {
+            await handleSeasonBatchExecute(chatId, text);
         } else if (session.state === 'waiting_test_name') {
             await handleAddTestLinkRequest(chatId, text);
         } else if (session.state === 'waiting_test_link') {
