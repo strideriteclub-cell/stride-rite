@@ -572,6 +572,25 @@ const AppService = {
         const tourProgress = await AppService.getTourProgress(userId);
         const completedCount = tourProgress.filter(s => s.status === 'completed').length;
         const TOUR_STOPS_COUNT = 8;
+        
+        // Check for permanent achievement record
+        const achievements = await dbGet('stride_achievements', `user_id=eq.${userId}`);
+        let isPermanentFinisher = (achievements || []).some(a => a.achievement_type === 'tour_finisher');
+
+        // Auto-award if they just finished but don't have the record yet
+        if (!isPermanentFinisher && completedCount >= TOUR_STOPS_COUNT) {
+            try {
+                await dbInsert('stride_achievements', { 
+                    id: crypto.randomUUID(), 
+                    user_id: userId, 
+                    achievement_type: 'tour_finisher', 
+                    awarded_at: new Date().toISOString() 
+                });
+                isPermanentFinisher = true;
+            } catch (e) {
+                console.error("Failed to award achievement", e);
+            }
+        }
 
         return {
             totalRuns: pastRuns.length,
@@ -579,7 +598,7 @@ const AppService = {
             pastRuns: pastRuns,
             tourProgress: tourProgress,
             completionRate: Math.round((completedCount / TOUR_STOPS_COUNT) * 100),
-            isFinisher: completedCount >= TOUR_STOPS_COUNT
+            isFinisher: isPermanentFinisher || completedCount >= TOUR_STOPS_COUNT
         };
     },
 
