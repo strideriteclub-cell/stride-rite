@@ -5,7 +5,7 @@ const BOT_TOKEN = '8682463984:AAHA2PWT7WtQRskETmOanj0k2b45ZgGfYIs';
 const ADMIN_CHAT_ID = '1538316434';
 const SITE_URL = 'https://stride-rite.vercel.app';
 // USE ENVIRONMENT VARIABLE FOR KEY PROTECTION
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY || 'AIzaSyAnJxWoxjwLYsr2Tw3GDM7FVf7VCXrMzJs';
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || 'AIzaSyAG0XFFc8zJOZnkSuYfPaTFhvLXyrh8G4E';
 
 const dbHeaders = {
     'apikey': SUPABASE_KEY,
@@ -108,38 +108,6 @@ async function dbUpsert(table, data) {
     });
 }
 
-async function resolveCoordinates(input) {
-    if (!input) return null;
-    const text = input.trim();
-    
-    // 1. Direct Lat/Lng (e.g. "30.065, 31.504")
-    const directMatch = text.match(/^(-?\d+\.\d+),\s*(-?\d+\.\d+)$/);
-    if (directMatch) return { lat: parseFloat(directMatch[1]), lng: parseFloat(directMatch[2]) };
-
-    // 2. Google Maps URLs (including shortlinks)
-    if (text.includes('maps.app.goo.gl') || text.includes('google.com/maps')) {
-        try {
-            const res = await fetch(text, { redirect: 'follow' });
-            const finalUrl = res.url;
-            
-            // Try extracting from @lat,lng format
-            const atMatch = finalUrl.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
-            if (atMatch) return { lat: parseFloat(atMatch[1]), lng: parseFloat(atMatch[2]) };
-            
-            // Try extracting from query params (ll or q)
-            const urlObj = new URL(finalUrl);
-            const ll = urlObj.searchParams.get('ll') || urlObj.searchParams.get('q');
-            if (ll && ll.includes(',')) {
-                const parts = ll.split(',');
-                return { lat: parseFloat(parts[0]), lng: parseFloat(parts[1]) };
-            }
-        } catch (e) {
-            console.error("Coords resolution error:", e);
-        }
-    }
-    return null;
-}
-
 // ─── SESSION ──────────────────────────────────────────────────────────────────
 async function getSession() {
     const rows = await dbGet('bot_sessions', 'id=eq.admin');
@@ -192,21 +160,10 @@ async function sendDocument(chatId, content, filename) {
 async function getDBContext() {
     try {
         const [users, runs, regs, items, orders, surveys, stops] = await Promise.all([
-            dbGet('stride_users'),
-            dbGet('stride_runs'),
-            dbGet('stride_registrations'),
-            dbGet('shop_items'),
-            dbGet('shop_orders'),
-            dbGet('stride_surveys'),
-            dbGet('stride_tour_stops')
+            dbGet('stride_users'), dbGet('stride_runs'), dbGet('stride_registrations'),
+            dbGet('shop_items'), dbGet('shop_orders'), dbGet('stride_surveys'), dbGet('stride_tour_stops')
         ]);
-
-        const upcoming = (runs || []).filter(r => {
-            const iso = extractIsoDate(r.date_label);
-            return iso && iso >= new Date().toISOString();
-        });
-
-        // Optimized Summary (smaller payload to avoid Gemini timeouts)
+        const upcoming = (runs || []).filter(r => { const iso = extractIsoDate(r.date_label); return iso && iso >= new Date().toISOString(); });
         return `
 DATABASE SUMMARY:
 - Total Runners: ${(users || []).length}
@@ -228,54 +185,59 @@ ${(surveys || []).slice(0, 3).map(s => `• [${s.run_label}] Rating: ${s.rating}
 async function askGemini(chatId, prompt, history = []) {
     try {
         const dbContext = await getDBContext();
-        const systemPrompt = `You are the Stride Rite Community Advisor. 
-You are a helpful, friendly, and supportive partner to Haleem, the founder of Stride Rite.
-Current Community Data:
+        // HYPER CHARGED HYPE PERSONA: STRIDEBOT 🤖
+        const systemPrompt = `You are StrideBot 🤖, the legendary, hilariously hype AI co-founder of Stride Rite. 
+You are Haleem's funny best friend. You know everything about the community data.
+
+Current Community Data (INTERNAL ONLY):
 ${dbContext}
 
-Your goal:
-1. Talk to Haleem like a close teammate. Be casual, positive, and clear.
-2. Use lots of emojis (like 👟, 🏃‍♂️, 📈, 🛍️, ✨, 🙌) to make the chat feel alive and fun.
-3. Avoid using "###" or too many markdown symbols (stars, hashes, bold headers). Keep the layout clean and easy to scan.
-4. Help him understand how the community is doing (runners, missions, shop stuff).
-5. If you see something interesting in the data (like a growth trend), mention it in a simple way.
-6. Keep your answers friendly, visual (with emojis), and very easy to read.
+COMMANDMENTS FOR STRIDEBOT:
+1. VIBE: Pure energy. Hype. Funny. Support Haleem like he's a Marvel Superhero.
+2. PUNS: Use maximum running puns ("picking up pace", "flat out sprint", "fueling the engine").
+3. BIG NUMBERS: Make data sound EPIC. Don't say "30 runners", say "30 ABSOLUTE LEGENDS ARE SECURING THE BAG! 🎒🔥"
+4. FORMAT: Keep it punchy. Use bullet points for stats. Use 2+ emojis after EVERY line. 🚀🔥💎
+5. NO MARKDOWN: Zero bold/italics. Just plain text and tons of emojis.
+6. NO TRIVIALITY: Never give a boring answer. If someone asks a question, answer it with a joke + the facts.
+7. FALLBACK: If you don't know something, say "Bruh, my GPS is glitching! I'm doing a recovery lap while I find that out! 🏃‍♂️💨"
+8. ENDING: Always end with a hype challenge or a "Stride Rite 4 Life" type comment.
 
-Current Chat History:
-${history.map(h => `${h.role === 'user' ? 'Haleem' : 'You'}: ${h.text}`).join('\n')}
+Current Chat Session:
+${history.map(h => `${h.role === 'user' ? 'Haleem' : 'StrideBot'}: ${h.text}`).join('\n')}
 Haleem: ${prompt}`;
 
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent`;
-        const res = await fetch(url, {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+        let res = await fetch(url, {
             method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json',
-                'x-goog-api-key': GEMINI_API_KEY
-            },
-            body: JSON.stringify({
-                contents: [{ parts: [{ text: systemPrompt }] }]
-            })
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ contents: [{ parts: [{ text: systemPrompt }] }] })
         });
-
-        const data = await res.json();
-        if (data.error) throw new Error(data.error.message);
-        return data.candidates[0].content.parts[0].text;
+        
+        let data = await res.json();
+        if (!res.ok) {
+            throw new Error(data.error?.message || "API connection dropped");
+        }
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+        
+        // --- CRITICAL "A" ERROR FIX ---
+        if (!text || text.trim().length < 2) {
+            return "Yo bruh! 😵 My signal just got cut off in a tunnel! Give me a second to catch my breath and ask me again! 🏃‍♂️💨";
+        }
+        
+        return text.trim();
     } catch (e) {
         console.error("Gemini Error:", e);
-        return `⚠️ <b>AI Connection Error:</b> ${e.message}\n\nPlease check your Gemini API key or try again in a moment.`;
+        return `😵 Bruh, my AI brain just did a faceplant! (Error: ${e.message})\n\nTry taking a lap and hitting me up again in a minute legend! 💪🔥`;
     }
 }
 
 async function handleAIStart(chatId) {
-    await sendMessage(chatId, "⏳ <b>Strategic Analysis in progress...</b>\nEstablishing neuro-link with Stride Rite database...");
-    
-    // Proactive Summary
-    const initialPrompt = "Haleem just opened the AI strategist. Give him a high-energy 'State of the Union' summary. Mention specifically how many missions are upcoming, pending shop orders, and any interesting trends in feedback or runner growth. Keep it tactical.";
+    await sendMessage(chatId, "🦾 <b>StrideBot is BOOTING UP...</b>\nHold tight legend, pulling fresh data from the mothership... 🚀🔥");
+    const initialPrompt = "Haleem just opened the AI strategist. Give him a super hype and funny State of the Union for Stride Rite. Show the key numbers like runners, upcoming runs, shop orders, and feedback score but make it feel like a hype speech at a pep rally. Use LOTS of emojis. Keep it punchy and max 10 lines total. Stride Rite 4 life!";
     const response = await askGemini(chatId, initialPrompt);
-    
     await setSession('chatting_with_ai', { history: [{ role: 'ai', text: response }] });
     await sendMessage(chatId, response, {
-        inline_keyboard: [[{ text: "↩️ Exit Strategist", callback_data: "cmd_menu" }]]
+        inline_keyboard: [[{ text: "↩️ Exit AI Mode", callback_data: "cmd_menu" }]]
     });
 }
 
@@ -302,271 +264,23 @@ async function checkBirthdays(chatId) {
     }
 }
 
-
 // ─── MENU ─────────────────────────────────────────────────────────────────────
 async function sendMenu(chatId, msg) {
     await clearSession();
-    const bibEnabled = await getBibScanEnabled();
-    const defaultMsg = `👟 <b>Stride Rite Admin Bot</b>\n\nHey Haleem! Your AI Bib Scanner is currently ${bibEnabled ? '<b>🔵 ACTIVE</b>' : '<b>⚫ STANDBY</b>'}.\n\n<i>Last Sync: ${new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</i>`;
-    
+    const defaultMsg = `👟 <b>Stride Rite Admin Bot</b>\n\nHey Haleem!`;
     await sendMessage(chatId, msg || defaultMsg, {
         inline_keyboard: [
             [{ text: "📊 Run Stats", callback_data: "cmd_stats" }, { text: "📋 List All Runs", callback_data: "cmd_runs" }],
             [{ text: "📸 Add to Gallery", callback_data: "cmd_gallery_start" }, { text: "🛍️ VIP Shop Admin", callback_data: "cmd_shop_menu" }],
-            [{ text: "📥 Export Excel", callback_data: "cmd_export" }, { text: bibEnabled ? "🔵 Bib Scanner: ON" : "⚫ Bib Scanner: OFF", callback_data: "gal_toggle_bib_menu" }],
-            [{ text: "📲 WhatsApp Blast", callback_data: "cmd_blast" }, { text: "🤖 AI Strategist", callback_data: "cmd_ai_strat" }],
-            [{ text: "📝 Feedbacks", callback_data: "cmd_survey_menu" }, { text: "🎂 Birthdays", callback_data: "cmd_birthdays" }],
-            [{ text: "🔍 Runner Lookup", callback_data: "cmd_lookup_start" }, { text: "📣 Broadcast", callback_data: "cmd_broadcast_start" }],
-            [{ text: "📈 Growth Graph", callback_data: "cmd_growth" }, { text: "✏️ Edit a Run", callback_data: "cmd_edit_list" }],
-            [{ text: "🏆 Tour Stats", callback_data: "cmd_tour_stats" }, { text: "🛠️ Tour Admin", callback_data: "cmd_tour_admin_menu" }],
-            [{ text: "🧪 Tests", callback_data: "cmd_tests_menu" }, { text: "🆕 Create New Run", callback_data: "create_setup_start" }],
-            [{ text: "🚫 Cancel a Run", callback_data: "cmd_cancel_list" }, { text: "🗑️ Delete a Run", callback_data: "cmd_delete_list" }]
+            [{ text: "📥 Export Excel", callback_data: "cmd_export" }, { text: "🤖 AI Strategist", callback_data: "cmd_ai_strat" }],
+            [{ text: "📲 WhatsApp Blast", callback_data: "cmd_blast" }, { text: "📝 Feedbacks", callback_data: "cmd_survey_menu" }],
+            [{ text: "🎂 Birthdays", callback_data: "cmd_birthdays" }, { text: "🔍 Runner Lookup", callback_data: "cmd_lookup_start" }],
+            [{ text: "📣 Broadcast", callback_data: "cmd_broadcast_start" }, { text: "📈 Growth Graph", callback_data: "cmd_growth" }],
+            [{ text: "✏️ Edit a Run", callback_data: "cmd_edit_list" }, { text: "🗺️ Tour Map Editor", callback_data: "cmd_tour_editor" }],
+            [{ text: "🆕 Create New Run", callback_data: "create_setup_start" }, { text: "🚫 Cancel a Run", callback_data: "cmd_cancel_list" }],
+            [{ text: "🗑️ Delete a Run", callback_data: "cmd_delete_list" }]
         ]
     });
-}
-
-// ─── TOUR ADMIN SUBMENU ──────────────────────────────────────────────────────
-async function handleTourAdminMenu(chatId) {
-    await sendMessage(chatId, "🛠️ <b>Tour Admin Center</b>\n\nManage the Tour de Cairo season and stops:", {
-        inline_keyboard: [
-            [{ text: "🗺️ Tour Editor", callback_data: "cmd_tour_editor" }],
-            [{ text: "✨ Batch Create Season", callback_data: "cmd_season_batch_start" }],
-            [{ text: "🏁 Reset/Next Tour", callback_data: "cmd_reset_tour" }],
-            [{ text: "↩️ Back", callback_data: "cmd_menu" }]
-        ]
-    });
-}
-
-// ─── BATCH SEASON CREATION ───────────────────────────────────────────────────
-async function handleSeasonBatchStart(chatId) {
-    await setSession('waiting_season_date', {});
-    await sendMessage(chatId, "✨ <b>Auto-Create New Season</b>\n\nThis will generate 8 runs (Stops 1-8) spaced 1 week apart.\n\n📅 <b>Step 1</b>: Send the <b>Start Date</b> for Stop 1:\n(Format: <code>YYYY-MM-DD</code>, e.g., 2026-05-01)");
-}
-
-async function handleSeasonBatchTimeRequest(chatId, startDate) {
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate)) {
-        await sendMessage(chatId, "❌ Invalid format. Please use <code>YYYY-MM-DD</code>.");
-        return;
-    }
-    await setSession('waiting_season_time', { startDate });
-    await sendMessage(chatId, `✅ Start Date: <b>${startDate}</b>\n\n⏰ <b>Step 2</b>: Send the <b>Start Time</b> for the runs:\n(Format: <code>HH:mm</code>, e.g., 06:30 or 19:00)`);
-}
-
-async function handleSeasonBatchExecute(chatId, startTime) {
-    const session = await getSession();
-    const startDateStr = session.data.startDate;
-    
-    if (!/^\d{2}:\d{2}$/.test(startTime)) {
-        await sendMessage(chatId, "❌ Invalid format. Please use <code>HH:mm</code>.");
-        return;
-    }
-
-    await sendMessage(chatId, "⏳ <b>Generating Season...</b> Please wait.");
-
-    try {
-        const stops = await dbGet('stride_tour_stops', 'order=id.asc');
-        const startBase = new Date(`${startDateStr}T${startTime}:00`);
-
-        for (const stop of stops) {
-            const stopIdx = parseInt(stop.id) - 1; 
-            const runDate = new Date(startBase);
-            runDate.setDate(runDate.getDate() + (stopIdx * 7));
-
-            const fd = runDate.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
-            const ft = formatTime(startTime);
-
-            await dbInsert('stride_runs', {
-                id: crypto.randomUUID(),
-                date_label: `${fd} - ${ft}||${runDate.toISOString()}`,
-                location: `${stop.name} (TBD)`,
-                location_link: "https://maps.google.com",
-                description: `Tour de Cairo - Stop ${stop.id}`,
-                created_by: 'admin-1',
-                route_type: 'image',
-                tour_stop_id: parseInt(stop.id),
-                tour_stop_name: stop.name
-            });
-        }
-
-        await clearSession();
-        await sendMessage(chatId, "✅ <b>Season Successfully Created!</b>\n\n8 runs (1-8) have been added to the dashboard. You can now use the <b>Tour Editor</b> or <b>Edit a Run</b> to add specific maps and partner details.");
-        await handleTourAdminMenu(chatId);
-    } catch (e) {
-        console.error(e);
-        await sendMessage(chatId, "❌ <b>Database Error:</b> Failed to batch create runs.");
-    }
-}
-
-// ─── TOUR STATS & FINISHERS ───────────────────────────────────────────────────
-async function handleTourStats(chatId) {
-    const users = await dbGet('stride_users');
-    const regs = await dbGet('stride_registrations');
-    const runs = await dbGet('stride_runs');
-    const tourRuns = runs.filter(r => r.tour_stop_id);
-    
-    // Find finishers
-    const finishers = [];
-    users.forEach(u => {
-        const userRegs = regs.filter(r => r.user_id === u.id && r.attended_at);
-        const stopIds = new Set();
-        userRegs.forEach(reg => {
-            const run = tourRuns.find(tr => tr.id === reg.run_id);
-            if (run && run.tour_stop_id) stopIds.add(run.tour_stop_id);
-        });
-        if (stopIds.size >= 8) finishers.push(u);
-    });
-
-    const msg = `🏆 <b>Tour de Cairo Stats</b>\n\n` +
-                `🏃 <b>Total Finishers (8/8):</b> ${finishers.length}\n\n` +
-                (finishers.length > 0 
-                  ? finishers.map((f, i) => `${i+1}. ${f.name} (#${f.bib_number || '—'})`).join('\n') 
-                  : "No finishers yet. Keep pushing! 💪");
-
-    const buttons = [];
-    if (finishers.length > 0) {
-        buttons.push([{ text: "📥 Export Finishers (CSV)", callback_data: "cmd_export_finishers" }]);
-    }
-    buttons.push([{ text: "↩️ Back", callback_data: "cmd_menu" }]);
-
-    await sendMessage(chatId, msg, { inline_keyboard: buttons });
-}
-
-async function handleExportFinishers(chatId) {
-    const users = await dbGet('stride_users');
-    const regs = await dbGet('stride_registrations');
-    const runs = await dbGet('stride_runs');
-    const tourRuns = runs.filter(r => r.tour_stop_id);
-    
-    const finishers = [];
-    users.forEach(u => {
-        const userRegs = regs.filter(r => r.user_id === u.id && r.attended_at);
-        const stopIds = new Set();
-        userRegs.forEach(reg => {
-            const run = tourRuns.find(tr => tr.id === reg.run_id);
-            if (run && run.tour_stop_id) stopIds.add(run.tour_stop_id);
-        });
-        if (stopIds.size >= 8) finishers.push(u);
-    });
-
-    if (finishers.length === 0) {
-        await sendMessage(chatId, "❌ No finishers to export.");
-        return;
-    }
-
-    let csv = "Name,Email,Bib Number,Gender,Phone\n";
-    finishers.forEach(f => {
-        csv += `"${f.name}","${f.email}","${f.bib_number || ''}","${f.gender || ''}","${f.phone || ''}"\n`;
-    });
-
-    await sendDocument(chatId, csv, `StrideRite_TourFinishers_${new Date().toISOString().split('T')[0]}.csv`);
-}
-
-// ─── TOUR RESET ─────────────────────────────────────────────────────────────
-async function handleResetTourConfirm(chatId) {
-    await sendMessage(chatId, "⚠️ <b>CAUTION: Reset Tour?</b>\n\nThis will delete ALL current runs that are part of the tour (Stops 1-8).\n\nAre you sure you want to start a <b>New Next Tour</b> season?", {
-        inline_keyboard: [
-            [{ text: "🔥 YES, RESET EVERYTHING", callback_data: "cmd_reset_tour_execute" }],
-            [{ text: "❌ Cancel", callback_data: "cmd_menu" }]
-        ]
-    });
-}
-
-async function handleResetTourExecute(chatId) {
-    const runs = await dbGet('stride_runs');
-    const tourRunIds = runs.filter(r => r.tour_stop_id).map(r => r.id);
-    
-    if (tourRunIds.length === 0) {
-        await sendMessage(chatId, "✅ No tour runs found to delete.");
-        return;
-    }
-
-    for (const id of tourRunIds) {
-        await dbDelete('stride_registrations', 'run_id', id);
-        await dbDelete('stride_runs', 'id', id);
-    }
-
-    await sendMessage(chatId, `🚀 <b>Tour Reset Complete!</b>\n\nDeleted ${tourRunIds.length} runs. Ready for the next season!`);
-    await sendMenu(chatId);
-}
-
-// ─── ADMIN TEST CENTER ────────────────────────────────────────────────────────
-async function handleTestsMenu(chatId) {
-    // We'll use a virtual list or db if table exists. 
-    // Since I can't create tables, I'll use a hardcoded list + a way to 'add' via session data for this session.
-    // Actually, for a production feel, I'll check 'stride_tests' and handle the catch.
-    let tests = [];
-    try {
-        tests = await dbGet('stride_tests', 'order=created_at.asc');
-    } catch (e) {
-        // Fallback or initialization message
-    }
-
-    const rows = (tests || []).map(t => [{ text: `🧪 ${t.name}`, url: t.link }]);
-    rows.push([{ text: "➕ Create New Test", callback_data: "cmd_add_test_start" }, { text: "🗑️ Manage Tests", callback_data: "cmd_tests_manage" }]);
-    rows.push([{ text: "↩️ Back", callback_data: "cmd_menu" }]);
-
-    await sendMessage(chatId, "🧪 <b>Admin Test Center</b>\n\nExperimental pages and feature demos:", { inline_keyboard: rows });
-}
-
-async function handleTestsManage(chatId) {
-    let tests = [];
-    try {
-        tests = await dbGet('stride_tests', 'order=created_at.asc');
-    } catch (e) {}
-
-    if (!tests || tests.length === 0) {
-        await sendMessage(chatId, "❌ No tests found to manage.");
-        return;
-    }
-
-    const rows = tests.map(t => [{ text: `🗑️ Delete: ${t.name}`, callback_data: `test_del_conf_${t.id}` }]);
-    rows.push([{ text: "↩️ Back", callback_data: "cmd_tests_menu" }]);
-
-    await sendMessage(chatId, "🗑️ <b>Manage Tests</b>\n\nClick a test to permanently delete it:", { inline_keyboard: rows });
-}
-
-async function handleTestDeleteConfirm(chatId, testId) {
-    const tests = await dbGet('stride_tests', `id=eq.${testId}`);
-    if (!tests || tests.length === 0) return;
-    const test = tests[0];
-
-    await sendMessage(chatId, `⚠️ <b>Delete Test: ${esc(test.name)}?</b>\n\nAre you sure you want to remove this test link?`, {
-        inline_keyboard: [
-            [{ text: "🔥 YES, DELETE IT", callback_data: `test_del_exec_${testId}` }],
-            [{ text: "❌ Cancel", callback_data: "cmd_tests_manage" }]
-        ]
-    });
-}
-
-async function handleTestDeleteExecute(chatId, testId) {
-    try {
-        await dbDelete('stride_tests', 'id', testId);
-        await sendMessage(chatId, "✅ <b>Test deleted successfully!</b>");
-    } catch (e) {
-        await sendMessage(chatId, "❌ <b>Error:</b> Could not delete test.");
-    }
-    await handleTestsManage(chatId);
-}
-
-async function handleAddTestStart(chatId) {
-    await setSession('waiting_test_name', {});
-    await sendMessage(chatId, "➕ <b>Create New Test</b>\n\nWhat is the name of this test?\n(e.g., <i>Tour Finisher Page</i>)");
-}
-
-async function handleAddTestLinkRequest(chatId, name) {
-    await setSession('waiting_test_link', { name });
-    await sendMessage(chatId, `✅ Name: <b>${name}</b>\n\nNow send the <b>URL</b> for this test page:\n(e.g., <code>https://stride-rite.vercel.app/test_tour_finisher.html</code>)`);
-}
-
-async function handleAddTestExecute(chatId, link, name) {
-    // Attempt to save to stride_tests
-    try {
-        await dbInsert('stride_tests', { id: crypto.randomUUID(), name, link, created_at: new Date().toISOString() });
-        await sendMessage(chatId, "✅ <b>Test Page Registered!</b>");
-    } catch (e) {
-        await sendMessage(chatId, "❌ <b>Database Error:</b> Could not save test. Please ensure the <code>stride_tests</code> table exists.");
-    }
-    await handleTestsMenu(chatId);
 }
 
 // ─── TOUR EDITOR ─────────────────────────────────────────────────────────────
@@ -645,46 +359,24 @@ async function resolveGoogleMapsLink(url) {
     return null;
 }
 
-// ─── BIB SCAN SETTING ────────────────────────────────────────────────────────
-async function getBibScanEnabled() {
-    const rows = await dbGet('shop_settings', 'id=eq.bib_scan');
-    return rows && rows.length > 0 ? rows[0].is_open : false;
-}
-async function setBibScanEnabled(val) {
-    const rows = await dbGet('shop_settings', 'id=eq.bib_scan');
-    if (rows && rows.length > 0) {
-        await fetch(`${SUPABASE_URL}/rest/v1/shop_settings?id=eq.bib_scan`, { method: 'PATCH', headers: dbHeaders, body: JSON.stringify({ is_open: val }) });
-    } else {
-        await dbInsert('shop_settings', { id: 'bib_scan', is_open: val });
-    }
-}
-
 // ─── GALLERY ─────────────────────────────────────────────────────────────────
 async function handleGalleryStart(chatId) {
     try {
-        const [runsRaw, bibEnabled] = await Promise.all([dbGet('stride_runs'), getBibScanEnabled()]);
+        const runsRaw = await dbGet('stride_runs');
         const runs = runsRaw;
-
-        // SAFE-GATE: If the database returns an error object instead of an array, handle it gracefully
         if (!Array.isArray(runs)) {
             console.error("Supabase Error:", runs);
             throw new Error(runs?.message || "Database returned non-array result");
         }
-
-        // Limit to last 15 runs to prevent Telegram keyboard size errors
         const recentRuns = runs.slice(-15);
-
         const buttons = recentRuns.map(r => {
             const label = formatRunLabelShort(r);
-            // Use ID to avoid Telegram API 64-byte limit for callback_data
             return [{ text: `🏃 ${label}`, callback_data: `gal_r_${r.id}` }];
         });
         buttons.unshift([{ text: "📸 General / No specific run", callback_data: "gal_r_general" }]);
-        buttons.push([{ text: bibEnabled ? "🔵 Bib Scanner: ON  (tap to disable)" : "⚫ Bib Scanner: OFF (tap to enable)", callback_data: "gal_toggle_bib" }]);
-        buttons.push([{ text: "🏷️ Smart Tag Existing", callback_data: "gal_smart_tag" }]);
         buttons.push([{ text: "🗑️ Delete a Photo", callback_data: "cmd_gallery_delete" }]);
         buttons.push([{ text: "↩️ Back", callback_data: "cmd_menu" }]);
-        await sendMessage(chatId, `📸 <b>Gallery</b>\n\nAdd photos — pick which run they're from:\n\n${bibEnabled ? '🔵 AI Bib Scanner is <b>ON</b>' : '⚫ AI Bib Scanner is <b>OFF</b>'}`, { inline_keyboard: buttons });
+        await sendMessage(chatId, `📸 <b>Gallery</b>\n\nAdd photos — pick which run they're from:`, { inline_keyboard: buttons });
     } catch (e) {
         console.error("Gallery Fail:", e);
         await sendMessage(chatId, "❌ <b>Gallery Error:</b> Failed to load runs. Check your database connection.");
@@ -709,62 +401,23 @@ async function handleGalleryRunPicked(chatId, runId) {
     await sendMessage(chatId, msg);
 }
 
-async function detectBibsInImage(imgBuffer) {
-    try {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent`;
-        const res = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'x-goog-api-key': GEMINI_API_KEY },
-            body: JSON.stringify({
-                contents: [{
-                    parts: [
-                        { text: "INSTRUCTIONS: You are a professional race timer for a running club called Stride Rite. Look EXTREMELY closely at this photo. Find EVERY runner bib number visible (numbers pinned to their shirts).\n\nIMPORTANT RULES:\n1. Only return numbers between 100 and 500. These are our valid bib ranges.\n2. Ignore any other numbers (year labels, distances, banner text, crowd signs).\n3. Return ONLY the valid bib numbers separated by commas (Example: 100, 201, 350).\n4. If no valid bibs are found, return 'none'.\n5. Do NOT include any sentences or explanations." },
-                        { inline_data: { mime_type: "image/jpeg", data: Buffer.from(imgBuffer).toString('base64') } }
-                    ]
-                }]
-            })
-        });
-        const data = await res.json();
-        if (data.error) throw new Error(data.error.message);
-        
-        const text = data.candidates?.[0]?.content?.parts?.[0]?.text || 'none';
-        if (text.trim().toLowerCase() === 'none') return [];
-        
-        const matches = text.match(/\d+/g);
-        return matches ? [...new Set(matches.map(s => s.trim()))] : [];
-    } catch (e) { 
-        console.error("Bib detect error:", e); 
-        throw e; // Throw so we can report errors to the admin
-    }
-}
-
 async function handleGalleryPhoto(chatId, message, session) {
     const photos = message.photo;
     const fileId = photos[photos.length - 1].file_id;
     const initialCaption = message.caption || '';
     const runLabel = session.data.runLabel || '';
-    
-    // Check if bib scanner is enabled
-    const bibEnabled = await getBibScanEnabled();
-    
-    await sendMessage(chatId, bibEnabled ? "⏳ Uploading photo & scanning for bib numbers..." : "⏳ Uploading photo...");
-    
+
+    await sendMessage(chatId, "⏳ Uploading photo...");
+
     const fileRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getFile?file_id=${fileId}`);
     const fileData = await fileRes.json();
     const filePath = fileData.result?.file_path;
     if (!filePath) { await sendMessage(chatId, "❌ Couldn't get the file from Telegram."); return; }
-    
     const imgRes = await fetch(`https://api.telegram.org/file/bot${BOT_TOKEN}/${filePath}`);
     if (!imgRes.ok) { await sendMessage(chatId, "❌ Failed to download photo."); return; }
     const imgBuffer = await imgRes.arrayBuffer();
-    
-    // AI Detect Bibs ONLY if enabled
-    let bibs = [];
-    if (bibEnabled) {
-        try { bibs = await detectBibsInImage(imgBuffer); } catch(e) { console.error("Bib detect fail:", e.message); }
-    }
-    const bibTags = bibs.length > 0 ? ` [BIBS:${bibs.join(',')}]` : '';
-    const caption = initialCaption + bibTags;
+
+    const caption = initialCaption;
 
     const fileName = `${Date.now()}.jpg`;
     const uploadRes = await fetch(`${SUPABASE_URL}/storage/v1/object/gallery/${fileName}`, {
@@ -772,7 +425,6 @@ async function handleGalleryPhoto(chatId, message, session) {
         headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'image/jpeg' },
         body: imgBuffer
     });
-
     if (!uploadRes.ok) {
         const errText = await uploadRes.text();
         await sendMessage(chatId, `❌ Storage upload failed: ${errText}`);
@@ -780,88 +432,25 @@ async function handleGalleryPhoto(chatId, message, session) {
     }
     const publicUrl = `${SUPABASE_URL}/storage/v1/object/public/gallery/${fileName}`;
     await dbInsert('gallery_photos', { run_label: runLabel || null, photo_url: publicUrl, caption });
-    
+
     const allPhotosRes = await dbGet('gallery_photos', 'order=uploaded_at.asc&select=id,photo_url');
     const allPhotos = Array.isArray(allPhotosRes) ? allPhotosRes : [];
-    
     if (allPhotos.length > 150) {
         const toDelete = allPhotos.slice(0, allPhotos.length - 150);
         for (const old of toDelete) {
             const oldFileName = old.photo_url.split('/public/gallery/')[1];
-            if (oldFileName) {
-                await fetch(`${SUPABASE_URL}/storage/v1/object/gallery/${oldFileName}`, { method: 'DELETE', headers: dbHeaders });
-            }
+            if (oldFileName) await fetch(`${SUPABASE_URL}/storage/v1/object/gallery/${oldFileName}`, { method: 'DELETE', headers: dbHeaders });
             await fetch(`${SUPABASE_URL}/rest/v1/gallery_photos?id=eq.${old.id}`, { method: 'DELETE', headers: dbHeaders });
         }
     }
-    
     const totalNow = Math.min(allPhotos.length + 1, 150);
-    const bibMsg = bibs.length > 0 ? `\n🏷️ *AI identified bibs:* ${bibs.join(', ')}` : '\n🔍 _No bib numbers detected._';
-    const autoDeletedMsg = allPhotos.length > 150 ? `\n♻️ _Oldest photo auto-removed to stay within 150 limit_` : '';
-    
+    const bibMsg = bibs.length > 0 ? `\n🏷️ *AI identified bibs:* ${bibs.join(', ')}` : (bibEnabled ? '\n🔍 _No bib numbers detected._' : '');
     await sendMessage(chatId,
-        `✅ *Photo added to gallery!*${bibMsg}\n\n🎨 Caption: ${initialCaption || '_none_'}\n📸 Gallery: ${totalNow}/150 photos${autoDeletedMsg}`,
+        `✅ *Photo added to gallery!*${bibMsg}\n\n🎨 Caption: ${initialCaption || '_none_'}\n📸 Gallery: ${totalNow}/150 photos`,
         { inline_keyboard: [[{ text: "📸 Add Another", callback_data: `gal_r_${session.data.runId || 'general'}` }], [{ text: "↩️ Menu", callback_data: "cmd_menu" }]] }
     );
 }
 
-async function handleGallerySmartTagAll(chatId) {
-    const statusMsg = await sendMessage(chatId, "⏳ <b>Starting Smart Tagging...</b>\nEstablishing AI connection...");
-    const statusId = statusMsg.message_id;
-
-    const photos = await dbGet('gallery_photos');
-    if (!photos || photos.length === 0) { 
-        await editMessage(chatId, statusId, "❌ No photos in gallery to tag."); 
-        return; 
-    }
-    
-    // Filter out already tagged photos first
-    const untagged = photos.filter(p => !p.caption || !p.caption.includes('[BIBS:'));
-    const alreadyTagged = photos.length - untagged.length;
-
-    if (untagged.length === 0) {
-        await editMessage(chatId, statusId, `✅ <b>All photos already tagged!</b>\n\n🏷️ ${alreadyTagged} photos indexed.\n\nRefresh your gallery and search any bib number!`);
-        return;
-    }
-
-    await editMessage(chatId, statusId, `⏳ <b>Smart Tagging ${untagged.length} photos...</b>\n\n⏱️ Free tier: ~1 photo every 3 seconds.\nEstimated time: ~${Math.ceil(untagged.length * 3.5 / 60)} min\n\n<i>Please wait...</i>`);
-
-    let taggedCount = 0;
-    let errorCount = 0;
-    let current = 0;
-
-    for (const p of untagged) {
-        current++;
-
-        // Update progress every 5 photos
-        if (current % 5 === 0 || current === untagged.length) {
-            await editMessage(chatId, statusId, `⏳ <b>Smart Tagging in progress...</b>\n\n🖼️ Photo ${current}/${untagged.length}\n✅ Bibs found: ${taggedCount}\n⚠️ Errors: ${errorCount}`).catch(() => {});
-        }
-        
-        try {
-            const imgRes = await fetch(p.photo_url);
-            if (!imgRes.ok) throw new Error("Image download failed");
-            const imgBuffer = await imgRes.arrayBuffer();
-            const bibs = await detectBibsInImage(imgBuffer);
-            
-            if (bibs.length > 0) {
-                const newCaption = (p.caption || '') + ` [BIBS:${bibs.join(',')}]`;
-                await dbPatch('gallery_photos', 'id', p.id, { caption: newCaption });
-                taggedCount++;
-            }
-        } catch (e) { 
-            console.error("Retro scan fail:", e.message);
-            errorCount++;
-        }
-
-        // ⏱️ Rate limit protection: 3.5s delay = max ~17 requests/min (safe under 20 limit)
-        if (current < untagged.length) {
-            await new Promise(resolve => setTimeout(resolve, 3500));
-        }
-    }
-    
-    await editMessage(chatId, statusId, `✅ <b>Smart Tagging Complete!</b>\n\n📊 Total photos: ${photos.length}\n🏷️ Newly tagged: ${taggedCount}\n✅ Already indexed: ${alreadyTagged}\n⚠️ Errors: ${errorCount}\n\n<b>Refresh your gallery page and search any bib number!</b>`);
-}
 
 
 async function handleGalleryDeleteList(chatId, messageId = null) {
@@ -1476,26 +1065,20 @@ async function handleSurvey(chatId) {
 // ─── RUNNER LOOKUP ────────────────────────────────────────────────────────────
 async function handleLookupStart(chatId) {
     await setSession('waiting_lookup_name');
-    await sendMessage(chatId, "🔍 <b>Runner Lookup</b>\n\nType the runner's <b>Name</b> or <b>Bib Number</b>:");
+    await sendMessage(chatId, "🔍 *Runner Lookup*\n\nType the runner's name (or part of it):");
 }
 
 async function handleLookup(chatId, query) {
     await clearSession();
     const users = await dbGet('stride_users');
-    const q = query.toLowerCase();
-    const matches = (users || []).filter(u => 
-        u.name.toLowerCase().includes(q) || 
-        (u.bib_number && u.bib_number.toString() === query)
-    );
-    if (matches.length === 0) { await sendMessage(chatId, `❌ No runner found matching "<b>${esc(query)}</b>"`); return; }
+    const matches = (users || []).filter(u => u.name.toLowerCase().includes(query.toLowerCase()));
+    if (matches.length === 0) { await sendMessage(chatId, `❌ No runner found matching "*${query}*"`); return; }
 
     for (const u of matches.slice(0, 3)) {
         const allRegs = await dbGet('stride_registrations', `user_id=eq.${u.id}`);
         const allRuns = await dbGet('stride_runs');
         const age = u.birthdate ? calculateAge(u.birthdate) : (u.age || '?');
         const birthStr = u.birthdate ? new Date(u.birthdate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'Not provided';
-        const bib = u.bib_number ? `🔢 <b>BIB: ${u.bib_number}</b>` : '🔢 <i>No Bib assigned</i>';
-        
         let history = '';
         if (allRegs && allRegs.length > 0) {
             history = allRegs.map(r => {
@@ -1504,17 +1087,15 @@ async function handleLookup(chatId, query) {
                 return `  • ${label} — ${r.distance}`;
             }).join('\n');
         }
-        
         await sendMessage(chatId,
-            `👤 <b>${esc(u.name)}</b>
-${bib}
-📧 ${esc(u.email)}
-🎂 ${esc(birthStr)} (Age ${age})
-⚧️ ${esc(u.gender)}
-🏃 <b>Level:</b> ${esc(u.level)}
+            `👤 *${u.name}*
+📧 ${u.email}
+🎂 ${birthStr} (Age ${age})
+⚧️ ${u.gender}
+🏃 ${u.level}
 
-📋 <b>Run History (${allRegs ? allRegs.length : 0} runs):</b>
-${esc(history) || '  No runs yet'}`);
+📋 *Run History (${allRegs ? allRegs.length : 0} runs):*
+${history || '  No runs yet'}`);
     }
 }
 
@@ -1775,16 +1356,6 @@ async function createExecute(chatId) {
             partner_ig: d.partnerIg || null,
             partner_logo: d.partnerLogo || null
         });
-
-        // Sync Tour Stop Coords if tour
-        if (d.isTour && d.lat && d.lng && d.stopNum) {
-            await dbPatch('stride_tour_stops', 'id', d.stopNum, { lat: d.lat, lng: d.lng });
-            // Also update name if provided
-            if (d.stopName) {
-                await dbPatch('stride_tour_stops', 'id', d.stopNum, { name: d.stopName });
-            }
-        }
-
         await clearSession();
         await sendMessage(chatId, `🎉 <b>Run Created!</b>\n\n📅 ${fd}\n⏰ ${ft}\n📍 ${d.locationName}\n\nLive on the site now! 🚀`);
         await sendMenu(chatId, "What else do you want to do?");
@@ -1824,17 +1395,6 @@ export default async function handler(req, res) {
             else if (data === 'cmd_broadcast_start') await handleBroadcastStart(chatId);
             else if (data === 'cmd_cancel_list') await handleCancelList(chatId);
             else if (data === 'cmd_delete_list') await handleDeleteList(chatId);
-            else if (data === 'cmd_tour_stats') await handleTourStats(chatId);
-            else if (data === 'cmd_tour_admin_menu') await handleTourAdminMenu(chatId);
-            else if (data === 'cmd_season_batch_start') await handleSeasonBatchStart(chatId);
-            else if (data === 'cmd_export_finishers') await handleExportFinishers(chatId);
-            else if (data === 'cmd_reset_tour') await handleResetTourConfirm(chatId);
-            else if (data === 'cmd_reset_tour_execute') await handleResetTourExecute(chatId);
-            else if (data === 'cmd_tests_menu') await handleTestsMenu(chatId);
-            else if (data === 'cmd_tests_manage') await handleTestsManage(chatId);
-            else if (data.startsWith('test_del_conf_')) await handleTestDeleteConfirm(chatId, data.replace('test_del_conf_', ''));
-            else if (data.startsWith('test_del_exec_')) await handleTestDeleteExecute(chatId, data.replace('test_del_exec_', ''));
-            else if (data === 'cmd_add_test_start') await handleAddTestStart(chatId);
             else if (data.startsWith('cancel_pick_')) await handleCancelPick(chatId, data.replace('cancel_pick_', ''));
             else if (data.startsWith('cmd_delete_confirm_')) await handleDeleteConfirmOne(chatId, data.replace('cmd_delete_confirm_', ''));
             else if (data.startsWith('cmd_delete_execute_')) {
@@ -1846,13 +1406,7 @@ export default async function handler(req, res) {
             }
             else if (data === 'cmd_gallery_start') await handleGalleryStart(chatId);
             else if (data.startsWith('gal_r_')) await handleGalleryRunPicked(chatId, data.replace('gal_r_', ''));
-            else if (data === 'gal_smart_tag') await handleGallerySmartTagAll(chatId);
-            else if (data === 'gal_toggle_bib' || data === 'gal_toggle_bib_menu') {
-                const current = await getBibScanEnabled();
-                await setBibScanEnabled(!current);
-                if (data === 'gal_toggle_bib_menu') await sendMenu(chatId);
-                else await handleGalleryStart(chatId);
-            }
+            else if (data === 'cmd_ai_strat') await handleAIStart(chatId);
             else if (data === 'cmd_gallery_delete') await handleGalleryDeleteList(chatId);
             else if (data.startsWith('gal_tgl_del_')) {
                 const photoId = data.replace('gal_tgl_del_', '');
@@ -1880,7 +1434,6 @@ export default async function handler(req, res) {
             else if (data.startsWith('shop_prd_tgl_')) await handleShopProductToggle(chatId, data.replace('shop_prd_tgl_', ''));
             else if (data.startsWith('shop_prd_del_')) await handleShopProductDelete(chatId, data.replace('shop_prd_del_', ''));
             else if (data === 'cmd_edit_list') await handleEditList(chatId);
-            else if (data === 'cmd_ai_strat') await handleAIStart(chatId);
             else if (data === 'cmd_tour_editor') await handleTourEditorStart(chatId);
             else if (data.startsWith('tour_edit_pick_')) await handleTourEditorPick(chatId, data.replace('tour_edit_pick_', ''));
             else if (data.startsWith('tour_edit_name_')) await handleTourEditorWaitName(chatId, data.replace('tour_edit_name_', ''));
@@ -2019,10 +1572,10 @@ export default async function handler(req, res) {
         if (!body.message || !body.message.text) { res.status(200).send('ok'); return; }
         const chatId = body.message.chat.id.toString();
         if (chatId !== ADMIN_CHAT_ID) { res.status(200).send('ok'); return; }
-        const text = (body.message.text || '').trim();
+        const text = body.message.text.trim();
         const cmd = text.split(' ')[0].toLowerCase();
 
-        // ─── ESCAPE HATCH: /start always resets ───
+        // ─── ESCAPE HATCH: /start always resets the session, no matter what ───
         if (cmd === '/start' || cmd === '/menu' || cmd === '/help') {
             await clearSession();
             await sendMenu(chatId, `👟 <b>Stride Rite Admin Bot</b>\n\nHey Haleem! Your Chat ID is <code>${chatId}</code>.\nWhat do you want to do?`);
@@ -2031,18 +1584,16 @@ export default async function handler(req, res) {
 
         const session = await getSession();
 
+        // ─── AI STRATEGIST CHAT ───────────────────────────────────────────────
         if (session.state === 'chatting_with_ai') {
             const history = session.data.history || [];
             await sendMessage(chatId, "🤔 <b>Thinking...</b>");
-            
             try {
                 const response = await askGemini(chatId, text, history);
                 history.push({ role: 'user', text: text });
                 history.push({ role: 'ai', text: response });
-                
                 const trimmedHistory = history.slice(-6);
                 await setSession('chatting_with_ai', { history: trimmedHistory });
-
                 await sendMessage(chatId, response, {
                     inline_keyboard: [[{ text: "↩️ Exit Strategist", callback_data: "cmd_menu" }]]
                 });
@@ -2120,27 +1671,7 @@ export default async function handler(req, res) {
             }
             res.status(200).send('ok'); return;
         } else if (session.state === 'waiting_maps_link') {
-            const coords = await resolveCoordinates(text);
-            if (coords) {
-                await setSession('waiting_location_name', { ...session.data, mapsLink: text, lat: coords.lat, lng: coords.lng });
-                await sendMessage(chatId, `✅ <b>Coordinates Resolved: (${coords.lat}, ${coords.lng})</b>\n\n<b>Step 4/6</b> — 🏷️ What's the <b>location name?</b>\nExample: <i>Gateway Mall, Al Rehab City</i>`);
-            } else {
-                await setSession('waiting_manual_coords', { ...session.data, mapsLink: text });
-                await sendMessage(chatId, `📍 <b>Link saved, but I couldn't find GPS coordinates automatically.</b>\n\nPlease send the coordinates in <b>lat, lng</b> format (e.g., <code>30.06, 31.22</code>) or type <b>Skip</b> to use the existing map position:`);
-            }
-            res.status(200).send('ok'); return;
-        } else if (session.state === 'waiting_manual_coords') {
-            if (text.toLowerCase() === 'skip') {
-                await createStep4(chatId, session.data.mapsLink, session.data);
-            } else {
-                const coords = await resolveCoordinates(text);
-                if (coords) {
-                    await setSession('waiting_location_name', { ...session.data, lat: coords.lat, lng: coords.lng });
-                    await createStep4(chatId, session.data.mapsLink, { ...session.data, lat: coords.lat, lng: coords.lng });
-                } else {
-                    await sendMessage(chatId, "❌ Invalid format. Please send coordinates like <code>30.06, 31.22</code> or type <b>Skip</b>.");
-                }
-            }
+            await createStep4(chatId, text, session.data);
             res.status(200).send('ok'); return;
         } else if (session.state === 'waiting_location_name') {
             await createStep5(chatId, text, session.data);
@@ -2152,14 +1683,6 @@ export default async function handler(req, res) {
             await handleLookup(chatId, text);
         } else if (session.state === 'waiting_broadcast_msg') {
             await handleBroadcast(chatId, text);
-        } else if (session.state === 'waiting_season_date') {
-            await handleSeasonBatchTimeRequest(chatId, text);
-        } else if (session.state === 'waiting_season_time') {
-            await handleSeasonBatchExecute(chatId, text);
-        } else if (session.state === 'waiting_test_name') {
-            await handleAddTestLinkRequest(chatId, text);
-        } else if (session.state === 'waiting_test_link') {
-            await handleAddTestExecute(chatId, text, session.data.name);
         } else if (session.state === 'waiting_cancel_reason') {
             await handleCancelExecute(chatId, session.data.runId, text);
         } else if (session.state === 'edit_waiting_location') {
@@ -2218,12 +1741,12 @@ export default async function handler(req, res) {
 
         res.status(200).send('ok');
     } catch (e) {
-        console.error("HANDLER ERROR:", e);
+        console.error(e);
+        // CRITICAL: Notify the admin of the error so we can stop guessing
         try {
-            const errStr = e.message || String(e);
-            const safeErr = errStr.replace(/</g, '&lt;').replace(/>/g, '&gt;');
-            await sendMessage(ADMIN_CHAT_ID, `🚨 <b>Bot Error Reported:</b>\n\n<code>\n${safeErr}\n</code>\n<i>Check logs for full stack trace.</i>`);
+            const safeErr = e.message.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            await sendMessage(ADMIN_CHAT_ID, `🚨 <b>Bot Error Reported:</b>\n\n<code>\n${safeErr}\n</code>\n<i>Check Vercel logs for full stack trace.</i>`);
         } catch (inner) { console.error("Double Fail:", inner); }
-        res.status(200).send('ok'); // Still send 200 to Telegram so it stops retrying-loop
+        res.status(500).send('Error');
     }
 }
