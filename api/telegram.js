@@ -5,7 +5,7 @@ const BOT_TOKEN = '8682463984:AAHA2PWT7WtQRskETmOanj0k2b45ZgGfYIs';
 const ADMIN_CHAT_ID = '1538316434';
 const SITE_URL = 'https://stride-rite.vercel.app';
 // USE ENVIRONMENT VARIABLE FOR KEY PROTECTION
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY || 'AIzaSyAG0XFFc8zJOZnkSuYfPaTFhvLXyrh8G4E';
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || 'AIzaSyAnJxWoxjwLYsr2Tw3GDM7FVf7VCXrMzJs';
 
 const dbHeaders = {
     'apikey': SUPABASE_KEY,
@@ -235,7 +235,7 @@ ${dbContext}
 
 Your goal:
 1. Talk to Haleem like a close teammate. Be casual, positive, and clear.
-2. Use lots of emojis (like 👟, 🏃‍♂️, 📈, 🛍️, ✨, 🙌) to make the chat feel alive and fun.
+2. Use lots of emojis (like 👟, 跑步, 📈, 🛍️, ✨, 🙌) to make the chat feel alive and fun.
 3. Avoid using "###" or too many markdown symbols (stars, hashes, bold headers). Keep the layout clean and easy to scan.
 4. Help him understand how the community is doing (runners, missions, shop stuff).
 5. If you see something interesting in the data (like a growth trend), mention it in a simple way.
@@ -795,19 +795,17 @@ async function handleShopExportOrders(chatId) {
     const orders = await dbGet('shop_orders');
     const items = await dbGet('shop_items');
     const users = await dbGet('stride_users');
-    let csv = "Date,Customer Name,Phone,Email,Item,Size,Price,Status,Reference Number,Payment Method\n";
+    let csv = "Date,Customer Name,Phone,Email,Item,Size,Price,Status,Reference Number\n";
     for (const o of (orders || [])) {
         const item = (items || []).find(i => i.id === o.item_id) || {};
         const user = (users || []).find(u => u.id === o.user_id) || {};
         csv += `"${new Date(o.created_at).toLocaleDateString()}","${user.name || 'Unknown'}","${o.phone_number || ''}","${user.email || ''}","${item.name || 'Unknown'}","${o.size}","${item.price || ''}","${o.status}","${o.receipt_ref || o.reference || ''}","${o.payment_method || 'InstaPay/Telda'}"\n`;
     }
-    const boundary = '----Boundary54321';
-    let body = `--${boundary}\r\nContent-Disposition: form-data; name="chat_id"\r\n\r\n${chatId}\r\n`;
-    body += `--${boundary}\r\nContent-Disposition: form-data; name="document"; filename="StrideRite_Shop_Orders.csv"\r\nContent-Type: text/csv\r\n\r\n${csv}\r\n--${boundary}\r\nContent-Disposition: form-data; name="caption"\r\n\r\n📦 Here is the full list of Shop Orders (${(orders || []).length} total).\r\n--${boundary}--`;
-    
-    await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendDocument`, {
-        method: 'POST', headers: { 'Content-Type': `multipart/form-data; boundary=${boundary}` }, body
-    });
+    const formData = new FormData();
+    formData.append('chat_id', chatId);
+    formData.append('document', new Blob([csv], { type: 'text/csv' }), `StrideRite_Shop_Orders.csv`);
+    formData.append('caption', `📦 Here is the full list of Shop Orders (${(orders || []).length} total).`);
+    await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendDocument`, { method: 'POST', body: formData });
 }
 
 async function handleShopProductMenu(chatId) {
@@ -1118,7 +1116,7 @@ async function handleGrowthGraph(chatId) {
             datasets: [{ label: 'Total Members', data, borderColor: '#7c6ffa', backgroundColor: 'rgba(88,74,220,0.15)', fill: true, tension: 0.4, pointBackgroundColor: '#ff9e6d', pointRadius: 6, borderWidth: 3 }]
         },
         options: {
-            plugins: { legend: { display: false }, title: { display: true, text: '🏃 Stride Rite — Community Growth', color: '#ffffff', font: { size: 16, weight: 'bold' } } },
+            plugins: { legend: { display: false }, title: { display: true, text: '🏃‍♂️ Stride Rite — Community Growth', color: '#ffffff', font: { size: 16, weight: 'bold' } } },
             scales: { y: { beginAtZero: true, ticks: { color: '#a1a1aa', stepSize: 1 }, grid: { color: 'rgba(255,255,255,0.08)' } }, x: { ticks: { color: '#a1a1aa' }, grid: { display: false } } }
         }
     };
@@ -1149,7 +1147,7 @@ async function handleStats(chatId) {
     });
     const avgAge = regs.length > 0 ? Math.round(totalAge / regs.length) : 0;
     const dt = formatRunLabelMultiline(nextRun);
-    await sendMessage(chatId, `📊 *Next Run Stats*\n${dt}\n\n👥 *Total RSVPs:* ${regs.length}\n🤸 *Gender:* ${males}M / ${females}F\n⏰ *Avg Age:* ${avgAge} years`);
+    await sendMessage(chatId, `📊 *Next Run Stats*\n${dt}\n\n👥 *Total RSVPs:* ${regs.length}\n🤸‍♀️ *Gender:* ${males}M / ${females}F\n⏰ *Avg Age:* ${avgAge} years`);
 }
 
 // ─── LIST RUNS ────────────────────────────────────────────────────────────────
@@ -1227,7 +1225,7 @@ async function handleSurvey(chatId) {
     const lastRun = runs[runs.length - 1];
     const dt = formatRunLabelShort(lastRun);
     const url = `${SITE_URL}/survey.html?run=${encodeURIComponent(dt)}`;
-    await sendMessage(chatId, `📝 *Post-Run Survey:*\n\n🏃 Hey Striders!\n\nHow did today's run feel? Tell us in 30 seconds 👇\n\n${url}\n\nThank you! See you next time 🙌`);
+    await sendMessage(chatId, `📝 *Post-Run Survey:*\n\n🏃‍♂️ Hey Striders!\n\nHow did today's run feel? Tell us in 30 seconds 👇\n\n${url}\n\nThank you! See you next time 🙌`);
 }
 
 // ─── RUNNER LOOKUP ────────────────────────────────────────────────────────────
@@ -1268,7 +1266,7 @@ ${bib}
 📧 ${esc(u.email)}
 🎂 ${esc(birthStr)} (Age ${age})
 ⚧️ ${esc(u.gender)}
-🏃 <b>Level:</b> ${esc(u.level)}
+🏃‍♂️ <b>Level:</b> ${esc(u.level)}
 
 📋 <b>Run History (${allRegs ? allRegs.length : 0} runs):</b>
 ${esc(history) || '  No runs yet'}`);
@@ -1286,7 +1284,7 @@ async function handleBroadcast(chatId, message) {
     const users = await dbGet('stride_users');
     const emails = (users || []).filter(u => !u.is_admin).map(u => u.email);
     const bccList = emails.join(',');
-    const subject = encodeURIComponent('Message from Stride Rite 🏃');
+    const subject = encodeURIComponent('Message from Stride Rite 🏃‍♂️');
     const body = encodeURIComponent(message);
     const mailtoLink = `https://mail.google.com/mail/?view=cm&bcc=${encodeURIComponent(bccList)}&su=${subject}&body=${body}`;
     await sendMessage(chatId,
@@ -1592,7 +1590,7 @@ export default async function handler(req, res) {
             }
             else if (data === 'cmd_gallery_start') await handleGalleryStart(chatId);
             else if (data.startsWith('gal_r_')) await handleGalleryRunPicked(chatId, data.replace('gal_r_', ''));
-            else if (data === 'gal_smart_tag') await handleGallerySmartTagAll(chatId);
+            else if (data === 'gal_smart_tag') await handleGalleryTagAll(chatId);
             else if (data === 'gal_toggle_bib' || data === 'gal_toggle_bib_menu') {
                 const current = await getBibScanEnabled();
                 await setBibScanEnabled(!current);
