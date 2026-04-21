@@ -24,7 +24,6 @@
         .registered-badge { background: rgba(34,197,94,0.15); color: #22c55e; padding: 6px 12px; border-radius: 50px; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; display: inline-block; margin-bottom: 1rem; }
 
         /* Tour Map controls */
-        .fix-swal-scroll { overflow: visible !important; }
         #tourMap { height: 480px; border-radius: 20px; overflow: hidden; position: relative; border: 1px solid var(--border-color); background: #0b0b0f; }
         #tourMap .leaflet-control-attribution, #tourMap .leaflet-control-zoom { display: none !important; }
 
@@ -33,13 +32,9 @@
         .m-wrap.visible { opacity: 1; transform: scale(1); }
         .m-core { position: absolute; width: 14px; height: 14px; background: #ff6b35; border-radius: 50%; border: 2px solid #1a1a1f; transform: translate(-50%,-50%); top: 0; left: 0; z-index: 2; }
         .m-core.completed { background: #22c55e; border-color: #16a34a; box-shadow: 0 0 10px rgba(34,197,94,0.6); }
-        .m-core.registered { background: #3b82f6; border-color: #2563eb; box-shadow: 0 0 10px rgba(59,130,246,0.6); }
         .m-label { position: absolute; transform: translateX(-50%); top: 14px; left: 0; background: rgba(10,10,15,0.95); border: 1px solid #ff6b35; padding: 3px 8px; border-radius: 4px; white-space: nowrap; z-index: 3; font-family:'Outfit'; font-weight: 800; font-size: 10px; color: #ff6b35; }
         .m-label.completed { border-color: #22c55e; color: #22c55e; }
-        .m-label.registered { border-color: #3b82f6; color: #3b82f6; }
         .tour-map-overlay { position: absolute; inset: 0; pointer-events: none; z-index: 400; background: radial-gradient(circle at center, transparent 30%, rgba(10,10,15,0.7) 100%); }
-        
-        .green-animated-line { animation: dash-flow 0.7s linear infinite; }
         @keyframes dash-flow { to { stroke-dashoffset: -24; } }
 
         /* Modal inputs */
@@ -59,37 +54,9 @@
         .logo-title { font-family: 'Outfit'; font-weight: 800; font-size: 1.2rem; }
         .logo-subtitle { font-size: 0.6rem; color: var(--text-muted); text-transform: uppercase; border-top: 1px solid var(--neon-accent); padding-top: 2px; margin-top: 2px; }
 
-        /* Finisher Celebration */
-        .finisher-celebration {
-            display: none;
-            background: linear-gradient(135deg, #ffd700 0%, #ff8b6a 100%);
-            color: #000;
-            padding: 1.5rem 2rem;
-            border-radius: 20px;
-            margin-bottom: 2rem;
-            text-align: center;
-            font-family: 'Outfit';
-            font-weight: 800;
-            box-shadow: 0 10px 40px rgba(255, 139, 106, 0.3);
-            animation: slideDownCeleb 0.8s cubic-bezier(0.18, 0.89, 0.32, 1.28);
-            position: relative;
-            overflow: hidden;
-            border: 2px solid rgba(255,255,255,0.2);
-        }
-        @keyframes slideDownCeleb { 
-            from { transform: translateY(-30px); opacity: 0; } 
-            to { transform: translateY(0); opacity: 1; } 
-        }
-        .celeb-title { font-size: 1.8rem; margin: 0; text-transform: uppercase; letter-spacing: 2px; line-height: 1.2; }
-        .celeb-subtitle { margin: 5px 0 0; font-size: 1rem; opacity: 0.9; font-weight: 700; letter-spacing: 1px; }
-        
-        .sparkle { position: absolute; background: white; border-radius: 50%; opacity: 0.6; animation: sparkleAnim 2s infinite; }
-        @keyframes sparkleAnim { 0%, 100% { transform: scale(0); opacity: 0; } 50% { transform: scale(1); opacity: 0.6; } }
-
-        .legendary-glow { box-shadow: 0 0 30px rgba(255, 215, 0, 0.15) !important; border-color: #ffd700 !important; }
-        
-        .nav-avatar { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 1.5px solid var(--neon-accent); margin-right: 8px; vertical-align: middle; display: none; }
-        .header-avatar { width: 60px; height: 60px; border-radius: 50%; object-fit: cover; border: 2px solid var(--neon-accent); margin-bottom: 1rem; box-shadow: 0 5px 15px rgba(88, 74, 220, 0.3); display: none; }
+        /* Avatar System */
+        .nav-avatar { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 1.5px solid rgba(255,255,255,0.15); display: none; }
+        .header-avatar { width: 64px; height: 64px; border-radius: 50%; object-fit: cover; border: 3px solid var(--neon-accent); display: none; margin-bottom: 1rem; box-shadow: 0 0 20px rgba(255, 115, 0, 0.2); }
     </style>
 </head>
 <body>
@@ -104,39 +71,17 @@
         <div class="nav-links" id="navLinks">
             <a href="shop.html">🛍 Shop</a>
             <a href="gallery.html">📸 Gallery</a>
-            <a href="profile.html"><img id="navAvatar" src="" class="nav-avatar">👤 My Profile</a>
+            <a href="profile.html" style="display:flex; align-items:center; gap:8px;">
+                <img id="navPfp" src="" class="nav-avatar">
+                👤 My Profile
+            </a>
             <a href="#" onclick="event.preventDefault(); AuthService.logout()">Logout</a>
         </div>
-        <button class="hamburger-btn" onclick="toggleMobileNav()" style="display: none;">
-            <div class="bar"></div>
-            <div class="bar"></div>
-            <div class="bar"></div>
-        </button>
     </nav>
 
-    <!-- Mobile Nav Panel -->
-    <div class="mobile-nav-overlay" id="navOverlay" onclick="toggleMobileNav()"></div>
-    <div class="mobile-nav-panel" id="navPanel">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2rem;">
-            <div class="custom-logo" style="font-size:1.5rem;">S<span class="dot"></span></div>
-            <button onclick="toggleMobileNav()" style="background:none; border:none; color:white; font-size:1.5rem;">&times;</button>
-        </div>
-        <a href="dashboard.html" onclick="toggleMobileNav()">🏠 Dashboard</a>
-        <a href="shop.html" onclick="toggleMobileNav()">🛍 Store</a>
-        <a href="gallery.html" onclick="toggleMobileNav()">📸 Gallery</a>
-        <a href="profile.html" onclick="toggleMobileNav()">👤 Profile</a>
-        <a href="admin.html" onclick="toggleMobileNav()">🛠 Admin</a>
-        <a href="#" onclick="event.preventDefault(); AuthService.logout()">Logout</a>
-    </div>
-
     <div class="main-container">
-        <div id="finisherCelebration" class="finisher-celebration">
-            <div class="celeb-title">🏆 TOUR DE CAIRO COMPLETED</div>
-            <div class="celeb-subtitle">WELCOME TO THE HALL OF LEGENDS</div>
-        </div>
-
         <header class="dashboard-header">
-            <img id="headerAvatar" src="" class="header-avatar">
+            <img id="headerPfp" src="" class="header-avatar">
             <h1 id="welcomeUser">Welcome, Runner!</h1>
             <p class="welcome-text">Your central hub for community runs and rewards.</p>
         </header>
@@ -186,14 +131,14 @@
 
             document.getElementById('welcomeUser').innerText = 'Welcome back, ' + user.name.split(' ')[0] + '!';
             
-            // Handle User Avatar
+            // Set Avatars if they exist
             if (user.avatar_url) {
-                const navAv = document.getElementById('navAvatar');
-                const headerAv = document.getElementById('headerAvatar');
-                if (navAv) { navAv.src = user.avatar_url; navAv.style.display = 'inline-block'; }
-                if (headerAv) { headerAv.src = user.avatar_url; headerAv.style.display = 'block'; }
+                const navPfp = document.getElementById('navPfp');
+                const headPfp = document.getElementById('headerPfp');
+                if (navPfp) { navPfp.src = user.avatar_url; navPfp.style.display = 'block'; }
+                if (headPfp) { headPfp.src = user.avatar_url; headPfp.style.display = 'block'; }
             }
-
+            
             try { await initDashboard(); } catch(e) { console.error("Dash error", e); }
             initTourMap();
         });
@@ -204,41 +149,7 @@
         async function initDashboard() {
             const container = document.getElementById('runsContainer');
             try {
-                const [runs, myRegs, stats] = await Promise.all([
-                    AppService.getRuns(), 
-                    AppService.getUserRegistrations(user.id),
-                    AppService.getUserStats(user.id)
-                ]);
-
-                // Finisher UI (Only for CURRENT season)
-                if (stats.isCurrentFinisher) {
-                    const celebration = document.getElementById('finisherCelebration');
-                    if (celebration) {
-                        celebration.style.display = 'block';
-                        document.body.classList.add('legendary-mode');
-                        const mapCard = document.querySelector('.glass-card');
-                        if (mapCard) mapCard.classList.add('legendary-glow');
-                        
-                        // Add sparkles to banner
-                        for(let i=0; i<15; i++) {
-                            const s = document.createElement('div');
-                            s.className = 'sparkle';
-                            s.style.top = Math.random() * 100 + '%';
-                            s.style.left = Math.random() * 100 + '%';
-                            s.style.width = s.style.height = (Math.random() * 4 + 2) + 'px';
-                            s.style.animationDelay = (Math.random() * 2) + 's';
-                            celebration.appendChild(s);
-                        }
-                    }
-                }
-                
-                // Sort numerically by Stop ID (1-8)
-                runs.sort((a, b) => {
-                    const idA = a.tour_stop_id || 999;
-                    const idB = b.tour_stop_id || 999;
-                    return idA - idB;
-                });
-
+                const [runs, myRegs] = await Promise.all([AppService.getRuns(), AppService.getUserRegistrations(user.id)]);
                 window.lastFetchedRuns = runs;
                 window.myRegistrations = myRegs;
 
@@ -252,7 +163,7 @@
                     const dist = runSelections[run.id] || '5K';
                     const logoHtml = run.partner_logo
                         ? '<div style="width:40px;height:40px;border-radius:8px;background:#0d0d11;border:1px solid rgba(255,255,255,0.07);display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;"><img src="' + run.partner_logo + '" style="max-width:36px;max-height:36px;object-fit:contain;"></div>'
-                        : '<div style="width:40px;height:40px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-right:2px;"><div class="custom-logo" style="font-size:1.6rem; margin-bottom: 2px;">S<span class="dot" style="width:6px;height:6px;top:4px;right:-7px;"></span></div></div>';
+                        : '<div style="width:40px;height:40px;background:var(--neon-accent);border-radius:8px;display:flex;align-items:center;justify-content:center;color:#000;font-weight:800;flex-shrink:0;">S.</div>';
                     // Extract clean IG handle (handles full URLs too)
                     const igHandle = typeof parseIgHandle === 'function' ? parseIgHandle(run.partner_ig) : (run.partner_ig ? run.partner_ig.replace('@','').split('?')[0].split('/').filter(Boolean).pop() : null);
                     const igIconSvg = '<svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>';
@@ -273,7 +184,7 @@
                         + '<div style="display:flex;align-items:center;gap:12px;margin-bottom:1rem;padding-bottom:1rem;border-bottom:1px solid rgba(255,255,255,0.05);">'
                         + logoHtml
                         + '<div><div style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;font-weight:700;">Hosted By</div>'
-                        + '<div style="font-weight:700;color:#fff;">' + (run.partner_name ? run.partner_name + ' × Stride Rite' : 'Stride Rite') + igLink + '</div></div>'
+                        + '<div style="font-weight:700;color:#fff;">' + (run.partner_name || 'Stride Rite') + ' × Stride Rite' + igLink + '</div></div>'
                         + '</div>'
                         + '<div style="font-family:Outfit;font-weight:800;color:var(--neon-accent);letter-spacing:2px;text-transform:uppercase;margin-bottom:0.8rem;font-size:0.9rem;">' + topLabel + '</div>'
                         + '<div class="run-date" style="font-size:2rem; line-height:1.1; margin-bottom:1rem;">' + mainTitle + '</div>'
@@ -410,7 +321,6 @@
                 background: '#141419',
                 color: '#fff',
                 padding: '1.25rem',
-                customClass: { htmlContainer: 'fix-swal-scroll' },
                 showConfirmButton: !isReg,
                 confirmButtonText: '🚀 Lock In My Spot',
                 confirmButtonColor: 'var(--neon-accent)',
@@ -525,25 +435,21 @@
             const mapEl = document.getElementById('tourMap');
             if (!mapEl) return;
             
-            // Fix: window.tourMap points to the DOM element! We must use a different variable name.
             if (window.myLeafletMap) {
                 window.myLeafletMap.remove();
             }
             
-            // Initialize with zoomSnap for fractional zoom support
             window.myLeafletMap = L.map(mapEl, { 
                 zoomControl: false, 
                 attributionControl: false,
                 zoomSnap: 0.1
             }).setView([30.035, 31.25], 9.5);
 
-            // Dark Matter Tiles
             L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png', {
                 maxZoom: 20,
                 subdomains: 'abcd'
             }).addTo(window.myLeafletMap);
             
-            // Fix map rendering by continuously checking size
             const resizeObserver = new ResizeObserver(() => {
                 if(window.myLeafletMap) window.myLeafletMap.invalidateSize();
             });
@@ -551,7 +457,6 @@
             setTimeout(() => { if(window.myLeafletMap) window.myLeafletMap.invalidateSize(); }, 600);
             setTimeout(() => { if(window.myLeafletMap) window.myLeafletMap.invalidateSize(); }, 1200);
 
-            // Remove old overlay if any
             const oldOverlay = mapEl.querySelector('.tour-map-overlay');
             if (oldOverlay) oldOverlay.remove();
             mapEl.insertAdjacentHTML('afterbegin', '<div class="tour-map-overlay"></div>');
@@ -559,19 +464,31 @@
             const stops = await AppService.getTourProgress(user.id);
             if (!stops || stops.length === 0) return;
             
-            // Fix: Use the new safe Leaflet map variable
             const tourMap = window.myLeafletMap;
 
+            const polylineAll  = L.polyline([], { color: '#ff6b35', weight: 2.5, dashArray: '6 8', opacity: 0.8 }).addTo(tourMap);
+            const polylineDone = L.polyline([], { color: '#22c55e', weight: 4, opacity: 0.95 }).addTo(tourMap);
+
+            const styleTag = document.createElement('style');
+            styleTag.textContent = `
+                .leaflet-overlay-pane svg path.animated-done {
+                    stroke-dasharray: 12 12;
+                    animation: dash-flow 0.6s linear infinite;
+                }
+            `;
+            document.head.appendChild(styleTag);
+
             async function animateStops() {
+                const completedLatLngs = [];
+
+                let lastCompletedIdx = -1;
+                stops.forEach((s, i) => { if (s.status === 'completed') lastCompletedIdx = i; });
+
                 for (let i = 0; i < stops.length; i++) {
                     const s = stops[i];
                     const isDone = s.status === 'completed';
-                    // The dashboard.html pulls stops from getTourProgress where status='unlocked' means next available/registered
-                    // But we also check myRegistrations for safety
-                    const isReg = s.status === 'unlocked' || (window.myRegistrations && window.myRegistrations.includes(s.runId));
-                    
-                    const coreClass = isDone ? 'completed' : (isReg ? 'registered' : '');
-                    const labelClass = isDone ? 'completed' : (isReg ? 'registered' : '');
+                    const coreClass = isDone ? 'completed' : '';
+                    const labelClass = isDone ? 'completed' : '';
 
                     const icon = L.divIcon({
                         html: `<div class="m-wrap" id="mwrap-${s.id}"><div class="m-core ${coreClass}"></div><div class="m-label ${labelClass}">${String(s.id).padStart(2,'0')} \u2014 ${s.name}</div></div>`,
@@ -584,55 +501,37 @@
                         if (el) el.classList.add('visible');
                     }, 40);
 
-                    // Draw segment to next stop
-                    if (i + 1 < stops.length) {
-                        const nextS = stops[i+1];
+                    if (lastCompletedIdx === -1 || i >= lastCompletedIdx + 1) {
+                        polylineAll.addLatLng([s.lat, s.lng]);
+                    }
 
-                        if (isDone) {
-                            // 1. Completed = Flowing Green
-                            L.polyline([[s.lat, s.lng], [nextS.lat, nextS.lng]], { 
-                                color: '#22c55e', weight: 4, opacity: 0.95, dashArray: '12 12', className: 'green-animated-line'
-                            }).addTo(tourMap);
-                            
-                        } else if (isReg) {
-                            // 2. Registered = Fade Blue to Orange
-                            const gradId = 'dashFadeGrad-' + s.id;
-                            
-                            setTimeout(() => {
-                                const svg = document.querySelector('.leaflet-overlay-pane svg');
-                                if (svg && !document.getElementById(gradId)) {
-                                    const p1 = tourMap.latLngToLayerPoint([s.lat, s.lng]);
-                                    const p2 = tourMap.latLngToLayerPoint([nextS.lat, nextS.lng]);
-                                    
-                                    const x1 = p1.x <= p2.x ? "0%" : "100%";
-                                    const x2 = p1.x <= p2.x ? "100%" : "0%";
-                                    const y1 = p1.y <= p2.y ? "0%" : "100%";
-                                    const y2 = p1.y <= p2.y ? "100%" : "0%";
-                                    
-                                    const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
-                                    defs.innerHTML = `
-                                        <linearGradient id="${gradId}" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}">
-                                            <stop offset="0%" stop-color="#3b82f6" stop-opacity="1"/>
-                                            <stop offset="100%" stop-color="#ff6b35" stop-opacity="1"/>
-                                        </linearGradient>
-                                    `;
-                                    svg.appendChild(defs);
-                                }
-                            }, 50);
-
-                            L.polyline([[s.lat, s.lng], [nextS.lat, nextS.lng]], { 
-                                color: `url(#${gradId})`, weight: 3.5, dashArray: '6 8', opacity: 1 
-                            }).addTo(tourMap);
-                            
-                        } else {
-                            // 3. Locked = Weak Orange
-                            L.polyline([[s.lat, s.lng], [nextS.lat, nextS.lng]], { 
-                                color: '#ff6b35', weight: 2.5, dashArray: '6 8', opacity: 0.8 
-                            }).addTo(tourMap);
+                    if (isDone) {
+                        completedLatLngs.push([s.lat, s.lng]);
+                        if (i + 1 < stops.length) {
+                            completedLatLngs.push([stops[i+1].lat, stops[i+1].lng]);
                         }
                     }
 
                     await new Promise(r => setTimeout(r, 280));
+                }
+
+                if (completedLatLngs.length > 1) {
+                    const greenLine = L.polyline(completedLatLngs, {
+                        color: '#22c55e',
+                        weight: 4,
+                        opacity: 0.95,
+                        dashArray: '12 12'
+                    }).addTo(tourMap);
+                    setTimeout(() => {
+                        const svgPaths = document.querySelectorAll('.leaflet-overlay-pane svg path');
+                        if (svgPaths.length > 0) {
+                            const lastPath = svgPaths[svgPaths.length - 1];
+                            lastPath.style.animationName = 'dash-flow';
+                            lastPath.style.animationDuration = '0.7s';
+                            lastPath.style.animationTimingFunction = 'linear';
+                            lastPath.style.animationIterationCount = 'infinite';
+                        }
+                    }, stops.length * 280 + 100);
                 }
             }
 
@@ -645,7 +544,6 @@
                 }
             }, { threshold: 0.1 });
             observer.observe(mapEl);
-            // Fallback for cases where observer might not trigger
             setTimeout(() => { if (!animated) { animated = true; animateStops(); } }, 1500);
         }
 
@@ -658,7 +556,6 @@
         }
 
         async function showStopModal(stop, allStops) {
-            // Fetch full run data for this stop
             let run = null;
             if (stop.runId) {
                 const rows = await dbGet('stride_runs', `id=eq.${stop.runId}`);
@@ -731,7 +628,6 @@
     ${run.location_link ? `<a href="${run.location_link}" target="_blank" style="display:flex;align-items:center;gap:8px;background:rgba(88,74,220,0.05);border:1px solid rgba(88,74,220,0.18);border-radius:8px;padding:0.6rem 0.9rem;color:var(--neon-accent);text-decoration:none;font-size:0.82rem;font-weight:600;">📍 Open Start Location in Google Maps →</a>` : ''}
   </div>
   
-  <!-- Map Container Added Here -->
   <div style="background:#0d0d11; border-bottom:1px solid rgba(255,255,255,0.06);">
     <div id="sm-map" style="width:100%;height:200px;background:#111;"></div>
   </div>` : ''}
@@ -747,7 +643,6 @@
                 background: '#141419',
                 color: '#fff',
                 padding: '1.25rem',
-                customClass: { htmlContainer: 'fix-swal-scroll' },
                 showConfirmButton: !!showRegBtn,
                 confirmButtonText: '🚀 Lock In My Spot',
                 confirmButtonColor: 'var(--neon-accent)',
@@ -768,15 +663,7 @@
                     const smMap = L.map('sm-map', { zoomControl: true }).setView([stop.lat, stop.lng], 13);
                     L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19 }).addTo(smMap);
                     
-                    // Force size recalc for Leaflet in modal
-        function toggleMobileNav() {
-            const panel = document.getElementById('navPanel');
-            const overlay = document.getElementById('navOverlay');
-            panel.classList.toggle('open');
-            overlay.classList.toggle('open');
-        }
-
-        setTimeout(() => smMap.invalidateSize(), 200);
+                    setTimeout(() => smMap.invalidateSize(), 200);
 
                     if (run && run.route_preview_url && run.route_type === 'gpx') {
                         new L.GPX(run.route_preview_url, {
