@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>⚡ FAST Attendance Scanner Test</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css?v=27">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <style>
+        .scanner-container { max-width: 1000px; margin: 0 auto; padding: 1.5rem; margin-top: 60px; }
+        .scanner-card { background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); border-radius: 20px; padding: 1.5rem; margin-bottom: 2rem; }
+        #reader { width: 100%; border-radius: 12px; overflow: hidden; border: none !important; }
+        #reader__scan_region { background: #000 !important; }
+        
+        /* Added styling for instant visual feedback flash */
+        .flash-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(34, 197, 94, 0.4);
+            pointer-events: none; opacity: 0; z-index: 9999;
+            transition: opacity 0.1s ease-out;
+        }
+        .flash-active {
+            opacity: 1; transition: none;
+        }
+
+        .manual-input-wrap { display: flex; gap: 10px; margin-top: 1.5rem; }
+        .scanner-input { flex: 1; background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); padding: 12px 16px; border-radius: 10px; color: white; font-family: 'Inter'; }
+        .scan-list { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+        .scan-list th { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--border-color); color: var(--text-muted); font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1px; }
+        .scan-list td { padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 0.85rem; }
+        .btn-remove { background: rgba(239,68,68,0.1); color: #ef4444; border: 1px solid rgba(239,68,68,0.2); width: 28px; height: 28px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: bold; transition: 0.2s; }
+        .btn-remove:hover { background: #ef4444; color: white; }
+        .run-selector { width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--neon-accent); padding: 12px; border-radius: 10px; color: white; margin-bottom: 1.5rem; font-family: 'Outfit'; font-weight: 600; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <div id="flashOverlay" class="flash-overlay"></div>
+
+    <nav class="navbar">
+        <div style="font-family:'Outfit'; font-weight:800; font-size:1.5rem;">S<span style="color:var(--peach-accent);">.</span> SCANNER <span style="color:#22c55e;font-size:0.8rem;">(FAST PROTOTYPE)</span></div>
+        <div class="nav-links">
+            <a href="dashboard.html">📊 Dashboard</a>
+            <button onclick="exportToExcel()" class="btn-primary" style="padding: 8px 16px; font-size: 0.8rem;">📥 Export Excel</button>
+        </div>
+    </nav>
+
+    <div class="scanner-container animate-up">
+        <div class="scanner-card">
+            <h2 style="font-family:'Outfit'; margin-bottom: 1.5rem;">📍 Fast Attendance Tracking</h2>
+            
+            <select id="runSelect" class="run-selector" onchange="loadAttendance()">
+                <option value="">Choose a Tour Stop / Run...</option>
+            </select>
+
+            <div id="reader"></div>
+
+            <div class="manual-input-wrap">
+                <input type="number" id="manualBib" class="scanner-input" placeholder="Enter Bib Number manually...">
+                <button onclick="checkInByBib()" class="btn-primary">Check In</button>
+            </div>
+        </div>
+
+        <div class="scanner-card">
+            <h3 style="font-family:'Outfit'; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center;">
+                👥 Attendance List 
+                <span id="scanCount" style="font-size: 0.9rem; color: var(--neon-accent);">0 Runners</span>
+            </h3>
+            <table class="scan-list">
+                <thead>
+                    <tr>
+                        <th>Bib</th>
+                        <th>Name</th>
+                        <th>Scan Time</th>
+                        <th style="width: 40px;"></th>
+                    </tr>
+                </thead>
+                <tbody id="attendanceBody">
+                    <!-- Loaded dynamically -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script src="app.js?v=33"></script>
+    <script>
+        const user = AuthService.getCurrentUser();
+        // Removed the redirect code so you can test it locally without an admin login breaking it.
+
+        let html5QrCode;
+        let attendance = [];
+
+        // Cashier beep function using Web Audio API
+        function playCashierBeep() {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                
+                // Primary high beep
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.type = 'sine'; // Sine wave for a smooth 'supermarket' beep
+                osc.frequency.setValueAtTime(2000, ctx.currentTime);
+                
+                // Fast envelope
+                gain.gain.setValueAtTime(0, ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.5, ctx.currentTime + 0.02);
+                gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.15);
+                
+                osc.start(ctx.currentTime);
+                osc.stop(ctx.currentTime + 0.15);
+
+                // Visual flash
+                const flash = document.getElementById('flashOverlay');
+                flash.classList.add('flash-active');
+                setTimeout(() => flash.classList.remove('flash-active'), 50);
+
+            } catch (e) {
+                console.log("Audio not supported");
+            }
+        }
+
+        // Setup Fast Toast
+        const Toast = Swal.mixin({
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 1500, // Very fast clear so it's ready for next
+            timerProgressBar: true,
+            background: '#1a1a24',
+            color: '#fff',
+            didOpen: (toast) => {
+                toast.addEventListener('mouseenter', Swal.stopTimer)
+                toast.addEventListener('mouseleave', Swal.resumeTimer)
+            }
+        });
+
+        async function init() {
+            // Load all tour/upcoming runs for selector
+            const allRuns = await dbGet('stride_runs', 'order=date_label.desc');
+            const select = document.getElementById('runSelect');
+            allRuns.forEach(run => {
+                const label = run.date_label.split('||')[0].replace('[EXPORTED] ', '');
+                const opt = document.createElement('option');
+                opt.value = run.id;
+                opt.innerText = label + ' - ' + run.location;
+                select.appendChild(opt);
+            });
+
+            // Start Scanner - OPTIMIZED FOR EXTREME SPEED
+            html5QrCode = new Html5Qrcode("reader");
+            const config = { 
+                fps: 30, // Tripled framerate
+                qrbox: { width: 300, height: 300 }, // Slightly larger box to catch early
+                formatsToSupport: [ Html5QrcodeSupportedFormats.QR_CODE ] // ONLY look for QR codes (huge CPU limit removal)
+            };
+            
+            html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess);
+        }
+
+        async function onScanSuccess(decodedText) {
+            const runId = document.getElementById('runSelect').value;
+            if (!runId) {
+                Toast.fire({ icon: 'warning', title: 'Select a run first!' });
+                return;
+            }
+
+            // 1. INSTANT FEEDBACK
+            playCashierBeep();
+            
+            // 2. PAUSE SCANNER so it doesn't scan the same code twice immediately
+            html5QrCode.pause();
+            
+            try {
+                // 3. DO DATABASE WORK IN BACKGROUND
+                const result = await AppService.checkInRunner(runId, decodedText);
+                
+                // Show success toast (non-blocking, smaller than center popup)
+                Toast.fire({
+                    icon: 'success',
+                    title: 'Checked In',
+                    text: `#${result.bib} - ${result.name}`
+                });
+                
+                loadAttendance();
+            } catch (e) {
+                // If it fails, do an error beep and block with error
+                Toast.fire({ icon: 'error', title: 'Error', text: e.message, timer: 3000 });
+            } finally {
+                // RESUME SCANNING IN HALF THE TIME (1s instead of 2s)
+                setTimeout(() => html5QrCode.resume(), 1000);
+            }
+        }
+
+        async function checkInByBib() {
+            const runId = document.getElementById('runSelect').value;
+            const bib = document.getElementById('manualBib').value;
+            if (!runId || !bib) return;
+
+            playCashierBeep();
+
+            try {
+                const result = await AppService.checkInRunner(runId, bib);
+                Toast.fire({
+                    icon: 'success',
+                    title: 'Checked In',
+                    text: `#${result.bib} - ${result.name}`
+                });
+                document.getElementById('manualBib').value = '';
+                loadAttendance();
+            } catch (e) {
+                Swal.fire('❌ Error', e.message, 'error');
+            }
+        }
+
+        async function loadAttendance() {
+            const runId = document.getElementById('runSelect').value;
+            if (!runId) return;
+
+            const list = await AppService.getAttendanceList(runId);
+            attendance = list;
+            
+            const body = document.getElementById('attendanceBody');
+            document.getElementById('scanCount').innerText = list.length + ' Runners';
+            
+            let html = '';
+            for(let i=0; i<list.length; i++) {
+                let r = list[i];
+                html += '<tr id="row-'+r.bib+'">';
+                html += '<td style="font-weight:800;">#' + r.bib + '</td>';
+                html += '<td style="font-weight:600; font-size: 0.8rem;">' + r.name + '</td>';
+                html += '<td style="color:var(--text-muted); font-size:0.75rem;">' + r.time + '</td>';
+                html += '<td style="text-align: right;"><button class="btn-remove" onclick="removeCheckIn(' + r.bib + ')" title="Remove / Cancel Registration">✕</button></td>';
+                html += '</tr>';
+            }
+            body.innerHTML = html;
+        }
+
+        async function removeCheckIn(bib) {
+            const runId = document.getElementById('runSelect').value;
+            if (!runId) return;
+
+            const conf = await Swal.fire({
+                title: 'Sure?',
+                text: 'Remove runner #' + bib + ' and cancel their registration permanently?',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#ef4444',
+                cancelButtonColor: 'rgba(255,255,255,0.1)',
+                confirmButtonText: 'Yes, cancel it',
+                background: '#141419',
+                color: '#fff'
+            });
+
+            if (conf.isConfirmed) {
+                const success = await AppService.cancelRunnerRegistration(runId, bib);
+                if (success) {
+                    loadAttendance();
+                    Toast.fire({ icon: 'success', title: 'Cancelled' });
+                }
+            }
+        }
+
+        init();
+    </script>
+</body>
+</html>
