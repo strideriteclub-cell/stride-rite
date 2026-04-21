@@ -274,10 +274,10 @@ async function sendMenu(chatId, msg) {
             [{ text: "📸 Add to Gallery", callback_data: "cmd_gallery_start" }, { text: "🛍️ VIP Shop Admin", callback_data: "cmd_shop_menu" }],
             [{ text: "📥 Export Excel", callback_data: "cmd_export" }, { text: "🤖 AI Strategist", callback_data: "cmd_ai_strat" }],
             [{ text: "📲 WhatsApp Blast", callback_data: "cmd_blast" }, { text: "📝 Feedbacks", callback_data: "cmd_survey_menu" }],
-            [{ text: "🎂 Birthdays", callback_data: "cmd_birthdays" }, { text: "🔍 Runner Lookup", callback_data: "cmd_lookup_start" }],
-            [{ text: "📣 Broadcast", callback_data: "cmd_broadcast_start" }, { text: "📈 Growth Graph", callback_data: "cmd_growth" }],
-            [{ text: "✏️ Edit a Run", callback_data: "cmd_edit_list" }, { text: "🗺️ Tour Map Editor", callback_data: "cmd_tour_editor" }],
-            [{ text: "👤 Set Profile Pic", callback_data: "cmd_set_pfp_start" }, { text: "↩️ Close Menu", callback_data: "cmd_close" }],
+            [{ text: "🔍 Runner Lookup", callback_data: "cmd_lookup_start" }, { text: "📣 Broadcast", callback_data: "cmd_broadcast_start" }],
+            [{ text: "📈 Growth Graph", callback_data: "cmd_growth" }, { text: "✏️ Edit a Run", callback_data: "cmd_edit_list" }],
+            [{ text: "🗺️ Tour Map Editor", callback_data: "cmd_tour_editor" }, { text: "🛠️ Tour Admin", callback_data: "cmd_tour_admin_menu" }],
+            [{ text: "👤 Set Profile Pic", callback_data: "cmd_set_pfp_start" }, { text: "🧪 Tests", callback_data: "cmd_tests_menu" }],
             [{ text: "🆕 Create New Run", callback_data: "create_setup_start" }, { text: "🚫 Cancel a Run", callback_data: "cmd_cancel_list" }],
             [{ text: "🗑️ Delete a Run", callback_data: "cmd_delete_list" }]
         ]
@@ -1424,7 +1424,9 @@ export default async function handler(req, res) {
 
             if (data === 'cmd_menu') await sendMenu(chatId);
             else if (data === 'cmd_set_pfp_start') await handleSetPfpStart(chatId);
-            else if (data === 'cmd_stats') await handleStats(chatId);
+            else if (data === 'cmd_tour_stats' || data === 'cmd_stats') await handleStats(chatId);
+            else if (data === 'cmd_tour_admin_menu') await handleTourEditorStart(chatId); // Mapping to available editor
+            else if (data === 'cmd_tour_editor') await handleTourEditorStart(chatId);
             else if (data === 'cmd_runs') await handleListRuns(chatId);
             else if (data === 'cmd_export') await handleExport(chatId);
             else if (data === 'cmd_blast') await handleBlast(chatId);
