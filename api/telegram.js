@@ -318,10 +318,144 @@ async function sendMenu(chatId, msg) {
             [{ text: "📝 Feedbacks", callback_data: "cmd_survey_menu" }, { text: "🎂 Birthdays", callback_data: "cmd_birthdays" }],
             [{ text: "🔍 Runner Lookup", callback_data: "cmd_lookup_start" }, { text: "📣 Broadcast", callback_data: "cmd_broadcast_start" }],
             [{ text: "📈 Growth Graph", callback_data: "cmd_growth" }, { text: "✏️ Edit a Run", callback_data: "cmd_edit_list" }],
-            [{ text: "🗺️ Tour Map Editor", callback_data: "cmd_tour_editor" }, { text: "🆕 Create New Run", callback_data: "create_setup_start" }],
+            [{ text: "🏆 Tour Stats", callback_data: "cmd_tour_stats" }, { text: "🗺️ Tour Editor", callback_data: "cmd_tour_editor" }],
+            [{ text: "🧪 Tests", callback_data: "cmd_tests_menu" }, { text: "🏁 Next Tour", callback_data: "cmd_reset_tour" }],
+            [{ text: "🆕 Create New Run", callback_data: "create_setup_start" }],
             [{ text: "🚫 Cancel a Run", callback_data: "cmd_cancel_list" }, { text: "🗑️ Delete a Run", callback_data: "cmd_delete_list" }]
         ]
     });
+}
+
+// ─── TOUR STATS & FINISHERS ───────────────────────────────────────────────────
+async function handleTourStats(chatId) {
+    const users = await dbGet('stride_users');
+    const regs = await dbGet('stride_registrations');
+    const runs = await dbGet('stride_runs');
+    const tourRuns = runs.filter(r => r.tour_stop_id);
+    
+    // Find finishers
+    const finishers = [];
+    users.forEach(u => {
+        const userRegs = regs.filter(r => r.user_id === u.id && r.attended_at);
+        const stopIds = new Set();
+        userRegs.forEach(reg => {
+            const run = tourRuns.find(tr => tr.id === reg.run_id);
+            if (run && run.tour_stop_id) stopIds.add(run.tour_stop_id);
+        });
+        if (stopIds.size >= 8) finishers.push(u);
+    });
+
+    const msg = `🏆 <b>Tour de Cairo Stats</b>\n\n` +
+                `🏃 <b>Total Finishers (8/8):</b> ${finishers.length}\n\n` +
+                (finishers.length > 0 
+                  ? finishers.map((f, i) => `${i+1}. ${f.name} (#${f.bib_number || '—'})`).join('\n') 
+                  : "No finishers yet. Keep pushing! 💪");
+
+    const buttons = [];
+    if (finishers.length > 0) {
+        buttons.push([{ text: "📥 Export Finishers (CSV)", callback_data: "cmd_export_finishers" }]);
+    }
+    buttons.push([{ text: "↩️ Back", callback_data: "cmd_menu" }]);
+
+    await sendMessage(chatId, msg, { inline_keyboard: buttons });
+}
+
+async function handleExportFinishers(chatId) {
+    const users = await dbGet('stride_users');
+    const regs = await dbGet('stride_registrations');
+    const runs = await dbGet('stride_runs');
+    const tourRuns = runs.filter(r => r.tour_stop_id);
+    
+    const finishers = [];
+    users.forEach(u => {
+        const userRegs = regs.filter(r => r.user_id === u.id && r.attended_at);
+        const stopIds = new Set();
+        userRegs.forEach(reg => {
+            const run = tourRuns.find(tr => tr.id === reg.run_id);
+            if (run && run.tour_stop_id) stopIds.add(run.tour_stop_id);
+        });
+        if (stopIds.size >= 8) finishers.push(u);
+    });
+
+    if (finishers.length === 0) {
+        await sendMessage(chatId, "❌ No finishers to export.");
+        return;
+    }
+
+    let csv = "Name,Email,Bib Number,Gender,Phone\n";
+    finishers.forEach(f => {
+        csv += `"${f.name}","${f.email}","${f.bib_number || ''}","${f.gender || ''}","${f.phone || ''}"\n`;
+    });
+
+    await sendDocument(chatId, csv, `StrideRite_TourFinishers_${new Date().toISOString().split('T')[0]}.csv`);
+}
+
+// ─── TOUR RESET ─────────────────────────────────────────────────────────────
+async function handleResetTourConfirm(chatId) {
+    await sendMessage(chatId, "⚠️ <b>CAUTION: Reset Tour?</b>\n\nThis will delete ALL current runs that are part of the tour (Stops 1-8).\n\nAre you sure you want to start a <b>New Next Tour</b> season?", {
+        inline_keyboard: [
+            [{ text: "🔥 YES, RESET EVERYTHING", callback_data: "cmd_reset_tour_execute" }],
+            [{ text: "❌ Cancel", callback_data: "cmd_menu" }]
+        ]
+    });
+}
+
+async function handleResetTourExecute(chatId) {
+    const runs = await dbGet('stride_runs');
+    const tourRunIds = runs.filter(r => r.tour_stop_id).map(r => r.id);
+    
+    if (tourRunIds.length === 0) {
+        await sendMessage(chatId, "✅ No tour runs found to delete.");
+        return;
+    }
+
+    for (const id of tourRunIds) {
+        await dbDelete('stride_registrations', 'run_id', id);
+        await dbDelete('stride_runs', 'id', id);
+    }
+
+    await sendMessage(chatId, `🚀 <b>Tour Reset Complete!</b>\n\nDeleted ${tourRunIds.length} runs. Ready for the next season!`);
+    await sendMenu(chatId);
+}
+
+// ─── ADMIN TEST CENTER ────────────────────────────────────────────────────────
+async function handleTestsMenu(chatId) {
+    // We'll use a virtual list or db if table exists. 
+    // Since I can't create tables, I'll use a hardcoded list + a way to 'add' via session data for this session.
+    // Actually, for a production feel, I'll check 'stride_tests' and handle the catch.
+    let tests = [];
+    try {
+        tests = await dbGet('stride_tests', 'order=created_at.asc');
+    } catch (e) {
+        // Fallback or initialization message
+    }
+
+    const rows = (tests || []).map(t => [{ text: `🧪 ${t.name}`, url: t.link }]);
+    rows.push([{ text: "➕ Create New Test", callback_data: "cmd_add_test_start" }]);
+    rows.push([{ text: "↩️ Back", callback_data: "cmd_menu" }]);
+
+    await sendMessage(chatId, "🧪 <b>Admin Test Center</b>\n\nExperimental pages and feature demos:", { inline_keyboard: rows });
+}
+
+async function handleAddTestStart(chatId) {
+    await setSession('waiting_test_name', {});
+    await sendMessage(chatId, "➕ <b>Create New Test</b>\n\nWhat is the name of this test?\n(e.g., <i>Tour Finisher Page</i>)");
+}
+
+async function handleAddTestLinkRequest(chatId, name) {
+    await setSession('waiting_test_link', { name });
+    await sendMessage(chatId, `✅ Name: <b>${name}</b>\n\nNow send the <b>URL</b> for this test page:\n(e.g., <code>https://stride-rite.vercel.app/test_tour_finisher.html</code>)`);
+}
+
+async function handleAddTestExecute(chatId, link, name) {
+    // Attempt to save to stride_tests
+    try {
+        await dbInsert('stride_tests', { id: crypto.randomUUID(), name, link, created_at: new Date().toISOString() });
+        await sendMessage(chatId, "✅ <b>Test Page Registered!</b>");
+    } catch (e) {
+        await sendMessage(chatId, "❌ <b>Database Error:</b> Could not save test. Please ensure the <code>stride_tests</code> table exists.");
+    }
+    await handleTestsMenu(chatId);
 }
 
 // ─── TOUR EDITOR ─────────────────────────────────────────────────────────────
@@ -1579,6 +1713,12 @@ export default async function handler(req, res) {
             else if (data === 'cmd_broadcast_start') await handleBroadcastStart(chatId);
             else if (data === 'cmd_cancel_list') await handleCancelList(chatId);
             else if (data === 'cmd_delete_list') await handleDeleteList(chatId);
+            else if (data === 'cmd_tour_stats') await handleTourStats(chatId);
+            else if (data === 'cmd_export_finishers') await handleExportFinishers(chatId);
+            else if (data === 'cmd_reset_tour') await handleResetTourConfirm(chatId);
+            else if (data === 'cmd_reset_tour_execute') await handleResetTourExecute(chatId);
+            else if (data === 'cmd_tests_menu') await handleTestsMenu(chatId);
+            else if (data === 'cmd_add_test_start') await handleAddTestStart(chatId);
             else if (data.startsWith('cancel_pick_')) await handleCancelPick(chatId, data.replace('cancel_pick_', ''));
             else if (data.startsWith('cmd_delete_confirm_')) await handleDeleteConfirmOne(chatId, data.replace('cmd_delete_confirm_', ''));
             else if (data.startsWith('cmd_delete_execute_')) {
