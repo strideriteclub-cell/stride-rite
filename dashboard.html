@@ -24,6 +24,7 @@
         .registered-badge { background: rgba(34,197,94,0.15); color: #22c55e; padding: 6px 12px; border-radius: 50px; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; display: inline-block; margin-bottom: 1rem; }
 
         /* Tour Map controls */
+        .fix-swal-scroll { overflow: visible !important; }
         #tourMap { height: 480px; border-radius: 20px; overflow: hidden; position: relative; border: 1px solid var(--border-color); background: #0b0b0f; }
         #tourMap .leaflet-control-attribution, #tourMap .leaflet-control-zoom { display: none !important; }
 
@@ -32,9 +33,13 @@
         .m-wrap.visible { opacity: 1; transform: scale(1); }
         .m-core { position: absolute; width: 14px; height: 14px; background: #ff6b35; border-radius: 50%; border: 2px solid #1a1a1f; transform: translate(-50%,-50%); top: 0; left: 0; z-index: 2; }
         .m-core.completed { background: #22c55e; border-color: #16a34a; box-shadow: 0 0 10px rgba(34,197,94,0.6); }
+        .m-core.registered { background: #3b82f6; border-color: #2563eb; box-shadow: 0 0 10px rgba(59,130,246,0.6); }
         .m-label { position: absolute; transform: translateX(-50%); top: 14px; left: 0; background: rgba(10,10,15,0.95); border: 1px solid #ff6b35; padding: 3px 8px; border-radius: 4px; white-space: nowrap; z-index: 3; font-family:'Outfit'; font-weight: 800; font-size: 10px; color: #ff6b35; }
         .m-label.completed { border-color: #22c55e; color: #22c55e; }
+        .m-label.registered { border-color: #3b82f6; color: #3b82f6; }
         .tour-map-overlay { position: absolute; inset: 0; pointer-events: none; z-index: 400; background: radial-gradient(circle at center, transparent 30%, rgba(10,10,15,0.7) 100%); }
+        
+        .green-animated-line { animation: dash-flow 0.7s linear infinite; }
         @keyframes dash-flow { to { stroke-dashoffset: -24; } }
 
         /* Modal inputs */
@@ -45,18 +50,6 @@
         .dist-opt:focus { outline: none; }
         .dist-opt.active { background: var(--neon-accent) !important; color: #000 !important; border-color: var(--neon-accent) !important; }
         .dist-opt:hover:not(.active) { background: rgba(255,255,255,0.1); color: #fff; }
-
-        /* Custom Logo */
-        .custom-logo-container { display: flex; align-items: center; gap: 12px; }
-        .custom-logo { font-family: 'Outfit', sans-serif; font-size: 2rem; font-weight: 800; color: #fff; position: relative; }
-        .custom-logo .dot { position: absolute; top: 4px; right: -8px; width: 8px; height: 8px; background-color: var(--peach-accent); border-radius: 50%; }
-        .logo-text-stack { display: flex; flex-direction: column; line-height: 1; }
-        .logo-title { font-family: 'Outfit'; font-weight: 800; font-size: 1.2rem; }
-        .logo-subtitle { font-size: 0.6rem; color: var(--text-muted); text-transform: uppercase; border-top: 1px solid var(--neon-accent); padding-top: 2px; margin-top: 2px; }
-
-        /* Avatar System */
-        .nav-avatar { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 1.5px solid rgba(255,255,255,0.15); display: none; }
-        .header-avatar { width: 64px; height: 64px; border-radius: 50%; object-fit: cover; border: 3px solid var(--neon-accent); display: none; margin-bottom: 1rem; box-shadow: 0 0 20px rgba(255, 115, 0, 0.2); }
     </style>
 </head>
 <body>
@@ -427,21 +420,25 @@
             const mapEl = document.getElementById('tourMap');
             if (!mapEl) return;
             
+            // Fix: window.tourMap points to the DOM element! We must use a different variable name.
             if (window.myLeafletMap) {
                 window.myLeafletMap.remove();
             }
             
+            // Initialize with zoomSnap for fractional zoom support
             window.myLeafletMap = L.map(mapEl, { 
                 zoomControl: false, 
                 attributionControl: false,
                 zoomSnap: 0.1
             }).setView([30.035, 31.25], 9.5);
 
+            // Dark Matter Tiles
             L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png', {
                 maxZoom: 20,
                 subdomains: 'abcd'
             }).addTo(window.myLeafletMap);
             
+            // Fix map rendering by continuously checking size
             const resizeObserver = new ResizeObserver(() => {
                 if(window.myLeafletMap) window.myLeafletMap.invalidateSize();
             });
@@ -449,6 +446,7 @@
             setTimeout(() => { if(window.myLeafletMap) window.myLeafletMap.invalidateSize(); }, 600);
             setTimeout(() => { if(window.myLeafletMap) window.myLeafletMap.invalidateSize(); }, 1200);
 
+            // Remove old overlay if any
             const oldOverlay = mapEl.querySelector('.tour-map-overlay');
             if (oldOverlay) oldOverlay.remove();
             mapEl.insertAdjacentHTML('afterbegin', '<div class="tour-map-overlay"></div>');
@@ -456,31 +454,19 @@
             const stops = await AppService.getTourProgress(user.id);
             if (!stops || stops.length === 0) return;
             
+            // Fix: Use the new safe Leaflet map variable
             const tourMap = window.myLeafletMap;
 
-            const polylineAll  = L.polyline([], { color: '#ff6b35', weight: 2.5, dashArray: '6 8', opacity: 0.8 }).addTo(tourMap);
-            const polylineDone = L.polyline([], { color: '#22c55e', weight: 4, opacity: 0.95 }).addTo(tourMap);
-
-            const styleTag = document.createElement('style');
-            styleTag.textContent = `
-                .leaflet-overlay-pane svg path.animated-done {
-                    stroke-dasharray: 12 12;
-                    animation: dash-flow 0.6s linear infinite;
-                }
-            `;
-            document.head.appendChild(styleTag);
-
             async function animateStops() {
-                const completedLatLngs = [];
-
-                let lastCompletedIdx = -1;
-                stops.forEach((s, i) => { if (s.status === 'completed') lastCompletedIdx = i; });
-
                 for (let i = 0; i < stops.length; i++) {
                     const s = stops[i];
                     const isDone = s.status === 'completed';
-                    const coreClass = isDone ? 'completed' : '';
-                    const labelClass = isDone ? 'completed' : '';
+                    // The dashboard.html pulls stops from getTourProgress where status='unlocked' means next available/registered
+                    // But we also check myRegistrations for safety
+                    const isReg = s.status === 'unlocked' || (window.myRegistrations && window.myRegistrations.includes(s.runId));
+                    
+                    const coreClass = isDone ? 'completed' : (isReg ? 'registered' : '');
+                    const labelClass = isDone ? 'completed' : (isReg ? 'registered' : '');
 
                     const icon = L.divIcon({
                         html: `<div class="m-wrap" id="mwrap-${s.id}"><div class="m-core ${coreClass}"></div><div class="m-label ${labelClass}">${String(s.id).padStart(2,'0')} \u2014 ${s.name}</div></div>`,
@@ -493,37 +479,55 @@
                         if (el) el.classList.add('visible');
                     }, 40);
 
-                    if (lastCompletedIdx === -1 || i >= lastCompletedIdx + 1) {
-                        polylineAll.addLatLng([s.lat, s.lng]);
-                    }
+                    // Draw segment to next stop
+                    if (i + 1 < stops.length) {
+                        const nextS = stops[i+1];
 
-                    if (isDone) {
-                        completedLatLngs.push([s.lat, s.lng]);
-                        if (i + 1 < stops.length) {
-                            completedLatLngs.push([stops[i+1].lat, stops[i+1].lng]);
+                        if (isDone) {
+                            // 1. Completed = Flowing Green
+                            L.polyline([[s.lat, s.lng], [nextS.lat, nextS.lng]], { 
+                                color: '#22c55e', weight: 4, opacity: 0.95, dashArray: '12 12', className: 'green-animated-line'
+                            }).addTo(tourMap);
+                            
+                        } else if (isReg) {
+                            // 2. Registered = Fade Blue to Orange
+                            const gradId = 'dashFadeGrad-' + s.id;
+                            
+                            setTimeout(() => {
+                                const svg = document.querySelector('.leaflet-overlay-pane svg');
+                                if (svg && !document.getElementById(gradId)) {
+                                    const p1 = tourMap.latLngToLayerPoint([s.lat, s.lng]);
+                                    const p2 = tourMap.latLngToLayerPoint([nextS.lat, nextS.lng]);
+                                    
+                                    const x1 = p1.x <= p2.x ? "0%" : "100%";
+                                    const x2 = p1.x <= p2.x ? "100%" : "0%";
+                                    const y1 = p1.y <= p2.y ? "0%" : "100%";
+                                    const y2 = p1.y <= p2.y ? "100%" : "0%";
+                                    
+                                    const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+                                    defs.innerHTML = `
+                                        <linearGradient id="${gradId}" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}">
+                                            <stop offset="0%" stop-color="#3b82f6" stop-opacity="1"/>
+                                            <stop offset="100%" stop-color="#ff6b35" stop-opacity="1"/>
+                                        </linearGradient>
+                                    `;
+                                    svg.appendChild(defs);
+                                }
+                            }, 50);
+
+                            L.polyline([[s.lat, s.lng], [nextS.lat, nextS.lng]], { 
+                                color: `url(#${gradId})`, weight: 3.5, dashArray: '6 8', opacity: 1 
+                            }).addTo(tourMap);
+                            
+                        } else {
+                            // 3. Locked = Weak Orange
+                            L.polyline([[s.lat, s.lng], [nextS.lat, nextS.lng]], { 
+                                color: '#ff6b35', weight: 2.5, dashArray: '6 8', opacity: 0.8 
+                            }).addTo(tourMap);
                         }
                     }
 
                     await new Promise(r => setTimeout(r, 280));
-                }
-
-                if (completedLatLngs.length > 1) {
-                    const greenLine = L.polyline(completedLatLngs, {
-                        color: '#22c55e',
-                        weight: 4,
-                        opacity: 0.95,
-                        dashArray: '12 12'
-                    }).addTo(tourMap);
-                    setTimeout(() => {
-                        const svgPaths = document.querySelectorAll('.leaflet-overlay-pane svg path');
-                        if (svgPaths.length > 0) {
-                            const lastPath = svgPaths[svgPaths.length - 1];
-                            lastPath.style.animationName = 'dash-flow';
-                            lastPath.style.animationDuration = '0.7s';
-                            lastPath.style.animationTimingFunction = 'linear';
-                            lastPath.style.animationIterationCount = 'infinite';
-                        }
-                    }, stops.length * 280 + 100);
                 }
             }
 
@@ -536,6 +540,7 @@
                 }
             }, { threshold: 0.1 });
             observer.observe(mapEl);
+            // Fallback for cases where observer might not trigger
             setTimeout(() => { if (!animated) { animated = true; animateStops(); } }, 1500);
         }
 
@@ -548,6 +553,7 @@
         }
 
         async function showStopModal(stop, allStops) {
+            // Fetch full run data for this stop
             let run = null;
             if (stop.runId) {
                 const rows = await dbGet('stride_runs', `id=eq.${stop.runId}`);
@@ -620,6 +626,7 @@
     ${run.location_link ? `<a href="${run.location_link}" target="_blank" style="display:flex;align-items:center;gap:8px;background:rgba(88,74,220,0.05);border:1px solid rgba(88,74,220,0.18);border-radius:8px;padding:0.6rem 0.9rem;color:var(--neon-accent);text-decoration:none;font-size:0.82rem;font-weight:600;">📍 Open Start Location in Google Maps →</a>` : ''}
   </div>
   
+  <!-- Map Container Added Here -->
   <div style="background:#0d0d11; border-bottom:1px solid rgba(255,255,255,0.06);">
     <div id="sm-map" style="width:100%;height:200px;background:#111;"></div>
   </div>` : ''}
@@ -635,6 +642,7 @@
                 background: '#141419',
                 color: '#fff',
                 padding: '1.25rem',
+                customClass: { htmlContainer: 'fix-swal-scroll' },
                 showConfirmButton: !!showRegBtn,
                 confirmButtonText: '🚀 Lock In My Spot',
                 confirmButtonColor: 'var(--neon-accent)',
@@ -655,6 +663,7 @@
                     const smMap = L.map('sm-map', { zoomControl: true }).setView([stop.lat, stop.lng], 13);
                     L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19 }).addTo(smMap);
                     
+                    // Force size recalc for Leaflet in modal
                     setTimeout(() => smMap.invalidateSize(), 200);
 
                     if (run && run.route_preview_url && run.route_type === 'gpx') {
