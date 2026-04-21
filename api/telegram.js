@@ -318,8 +318,9 @@ async function sendMenu(chatId, msg) {
             [{ text: "📝 Feedbacks", callback_data: "cmd_survey_menu" }, { text: "🎂 Birthdays", callback_data: "cmd_birthdays" }],
             [{ text: "🔍 Runner Lookup", callback_data: "cmd_lookup_start" }, { text: "📣 Broadcast", callback_data: "cmd_broadcast_start" }],
             [{ text: "📈 Growth Graph", callback_data: "cmd_growth" }, { text: "✏️ Edit a Run", callback_data: "cmd_edit_list" }],
-            [{ text: "🗺️ Tour Map Editor", callback_data: "cmd_tour_editor" }, { text: "🆕 Create New Run", callback_data: "create_setup_start" }],
-            [{ text: "🚫 Cancel a Run", callback_data: "cmd_cancel_list" }, { text: "🗑️ Delete a Run", callback_data: "cmd_delete_list" }]
+            [{ text: "🛠️ Tour Admin", callback_data: "cmd_tour_admin" }, { text: "🆕 Create New Run", callback_data: "create_setup_start" }],
+            [{ text: "🧪 Test Center", callback_data: "cmd_test_center" }, { text: "🚫 Cancel a Run", callback_data: "cmd_cancel_list" }],
+            [{ text: "🗑️ Delete a Run", callback_data: "cmd_delete_list" }]
         ]
     });
 }
@@ -364,6 +365,181 @@ async function handleTourEditorWaitName(chatId, stopId) {
 async function handleTourEditorWaitLoc(chatId, stopId) {
     await setSession('tour_edit_waiting_loc', { stopId });
     await sendMessage(chatId, `📍 *Type/paste the Google Maps link for Stop ${stopId}:*`);
+}
+
+// ─── TOUR ADMIN SUBMENU ───────────────────────────────────────────────────────
+async function handleTourAdmin(chatId) {
+    await sendMessage(chatId, `🛠️ <b>Tour Admin Center</b>\n\nManage the entire Tour de Cairo season from here.`, {
+        inline_keyboard: [
+            [{ text: "🗺️ Edit Stop Names & Locations", callback_data: "cmd_tour_editor" }],
+            [{ text: "✨ Auto-Create New Season", callback_data: "tour_new_season" }],
+            [{ text: "🗑️ Delete ALL Tour Runs (Season Reset)", callback_data: "tour_delete_all_confirm" }],
+            [{ text: "↩️ Back to Menu", callback_data: "cmd_menu" }]
+        ]
+    });
+}
+
+// ─── DELETE ALL TOUR RUNS ─────────────────────────────────────────────────────
+async function handleTourDeleteAllConfirm(chatId) {
+    const tourRuns = await dbGet('stride_runs', 'select=id&tour_stop_id=not.is.null');
+    const count = (tourRuns || []).length;
+    await sendMessage(chatId,
+        `⚠️ <b>DANGER ZONE — Season Reset</b>\n\nYou are about to permanently delete <b>${count} Tour Run${count !== 1 ? 's' : ''}</b> and <b>all their registrations</b>.\n\n<i>This cannot be undone. Only do this at the end of a season to clean up before the next one.</i>`,
+        {
+            inline_keyboard: [
+                [{ text: `🗑️ YES — Delete All ${count} Tour Runs`, callback_data: "tour_delete_all_yes" }],
+                [{ text: "❌ No, Take Me Back", callback_data: "cmd_tour_admin" }]
+            ]
+        }
+    );
+}
+
+async function handleTourDeleteAllExecute(chatId) {
+    await sendMessage(chatId, "⏳ <b>Deleting all tour runs and registrations...</b>");
+    const tourRuns = await dbGet('stride_runs', 'select=id&tour_stop_id=not.is.null');
+    let deleted = 0;
+    for (const run of (tourRuns || [])) {
+        await dbDelete('stride_registrations', 'run_id', run.id);
+        await dbDelete('stride_runs', 'id', run.id);
+        deleted++;
+    }
+    await sendMessage(chatId,
+        `✅ <b>Season Reset Complete!</b>\n\n🗑️ Removed ${deleted} tour run${deleted !== 1 ? 's' : ''} and all their registrations.\n\n<i>Dashboard is clean and ready for the next season!</i>`,
+        {
+            inline_keyboard: [
+                [{ text: "✨ Create New Season", callback_data: "tour_new_season" }],
+                [{ text: "↩️ Back", callback_data: "cmd_tour_admin" }]
+            ]
+        }
+    );
+}
+
+// ─── AUTO-CREATE NEW SEASON ───────────────────────────────────────────────────
+async function handleTourNewSeasonStart(chatId) {
+    await setSession('tour_season_waiting_date', {});
+    await sendMessage(chatId,
+        `✨ <b>Auto-Create New Season</b>\n\n<b>Step 1/2 — Start Date</b>\n\nSend me the date of <b>Stop 1</b> (the first run of the season).\n\nFormat: <code>YYYY-MM-DD</code>\nExample: <code>2026-05-02</code>`
+    );
+}
+
+async function handleTourSeasonDate(chatId, text) {
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!dateRegex.test(text.trim())) {
+        await sendMessage(chatId, "❌ Invalid format. Please send the date as <code>YYYY-MM-DD</code>\nExample: <code>2026-05-02</code>");
+        return;
+    }
+    await setSession('tour_season_waiting_time', { startDate: text.trim() });
+    await sendMessage(chatId,
+        `✅ <b>Date saved: ${esc(text.trim())}</b>\n\n<b>Step 2/2 — Start Time</b>\n\nWhat time should all 8 runs start?\n\nFormat: <code>HH:MM</code>\nExample: <code>06:00</code>`
+    );
+}
+
+async function handleTourSeasonTime(chatId, text) {
+    const session = await getSession();
+    const timeRegex = /^\d{2}:\d{2}$/;
+    if (!timeRegex.test(text.trim())) {
+        await sendMessage(chatId, "❌ Invalid format. Please send the time as <code>HH:MM</code>\nExample: <code>06:00</code>");
+        return;
+    }
+    const startDate = session.data.startDate;
+    const startTime = text.trim();
+    const baseDate = new Date(`${startDate}T${startTime}:00`);
+    let preview = `✨ <b>New Season Preview</b>\n\nHere are the 8 stops I'll create:\n\n`;
+    for (let i = 0; i < 8; i++) {
+        const d = new Date(baseDate.getTime() + i * 7 * 24 * 60 * 60 * 1000);
+        const fd = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+        preview += `🏁 <b>Stop ${i + 1}</b> — ${fd} at ${formatTime(startTime)}\n`;
+    }
+    preview += `\n<i>Tap ✅ to create all 8 runs instantly!</i>`;
+    await setSession('tour_season_confirming', { startDate, startTime });
+    await sendMessage(chatId, preview, {
+        inline_keyboard: [
+            [{ text: "✅ Create All 8 Stops!", callback_data: "tour_season_confirm_yes" }],
+            [{ text: "❌ Cancel", callback_data: "cmd_tour_admin" }]
+        ]
+    });
+}
+
+async function handleTourSeasonExecute(chatId) {
+    const session = await getSession();
+    const { startDate, startTime } = session.data;
+    await sendMessage(chatId, "⏳ <b>Creating all 8 tour stops...</b>");
+    const baseDate = new Date(`${startDate}T${startTime}:00`);
+    const tourStops = await dbGet('stride_tour_stops');
+    const stopsMap = {};
+    (tourStops || []).forEach(s => { stopsMap[s.id] = s.name; });
+    let created = 0;
+    for (let i = 0; i < 8; i++) {
+        const stopNum = i + 1;
+        const d = new Date(baseDate.getTime() + i * 7 * 24 * 60 * 60 * 1000);
+        const fd = d.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+        const stopName = stopsMap[stopNum] || `Stop ${stopNum}`;
+        await dbInsert('stride_runs', {
+            id: crypto.randomUUID(),
+            date_label: `${fd} - ${formatTime(startTime)}||${d.toISOString()}`,
+            location: stopName,
+            location_link: null,
+            description: 'Every pace is welcome!',
+            created_by: 'admin-1',
+            route_preview_url: null,
+            route_type: 'image',
+            tour_stop_id: stopNum,
+            tour_stop_name: stopName,
+            partner_name: null,
+            partner_ig: null,
+            partner_logo: null
+        });
+        created++;
+    }
+    await clearSession();
+    await sendMessage(chatId,
+        `🎉 <b>New Season is Live!</b>\n\n✅ ${created} tour runs have been added to your dashboard.\n\n<i>Use the Tour Map Editor to update stop locations, and Edit a Run to add Maps links and route previews.</i>`,
+        {
+            inline_keyboard: [
+                [{ text: "🗺️ Open Tour Map Editor", callback_data: "cmd_tour_editor" }],
+                [{ text: "↩️ Back to Tour Admin", callback_data: "cmd_tour_admin" }]
+            ]
+        }
+    );
+}
+
+// ─── TEST CENTER ──────────────────────────────────────────────────────────────
+async function handleTestCenter(chatId) {
+    const tests = await dbGet('stride_tests', 'select=*&order=created_at.desc');
+    const rows = [];
+    if (tests && tests.length > 0) {
+        for (const t of tests) {
+            rows.push([
+                { text: `🔗 ${t.name}`, url: t.url },
+                { text: `🗑️ Delete`, callback_data: `test_del_${t.id}` }
+            ]);
+        }
+    }
+    rows.push([{ text: "➕ Add New Test Link", callback_data: "test_add" }]);
+    rows.push([{ text: "↩️ Back to Menu", callback_data: "cmd_menu" }]);
+    const count = tests ? tests.length : 0;
+    await sendMessage(chatId,
+        `🧪 <b>Test Center</b>\n\n${count > 0 ? `You have <b>${count}</b> saved test${count > 1 ? 's' : ''}. Tap any link to open it.` : 'No tests saved yet. Tap ➕ to add your first one!'}`,
+        { inline_keyboard: rows }
+    );
+}
+
+async function handleTestAdd(chatId) {
+    await setSession('test_waiting_name', {});
+    await sendMessage(chatId, `🧪 <b>Add New Test — Step 1/2</b>\n\nWhat should I call this test?\n\nExample: <code>Registration Flow v2</code>`);
+}
+
+async function handleTestDelete(chatId, testId) {
+    const testRes = await dbGet('stride_tests', `id=eq.${testId}`);
+    if (!testRes || testRes.length === 0) {
+        await sendMessage(chatId, "❌ Test not found.");
+        await handleTestCenter(chatId);
+        return;
+    }
+    const test = testRes[0];
+    await dbDelete('stride_tests', 'id', testId);
+    await sendMessage(chatId, `✅ <b>"${esc(test.name)}"</b> has been deleted.`);
+    await handleTestCenter(chatId);
 }
 
 async function resolveGoogleMapsLink(url) {
@@ -1629,6 +1805,16 @@ export default async function handler(req, res) {
             else if (data.startsWith('tour_edit_pick_')) await handleTourEditorPick(chatId, data.replace('tour_edit_pick_', ''));
             else if (data.startsWith('tour_edit_name_')) await handleTourEditorWaitName(chatId, data.replace('tour_edit_name_', ''));
             else if (data.startsWith('tour_edit_loc_')) await handleTourEditorWaitLoc(chatId, data.replace('tour_edit_loc_', ''));
+            // Tour Admin
+            else if (data === 'cmd_tour_admin') await handleTourAdmin(chatId);
+            else if (data === 'tour_new_season') await handleTourNewSeasonStart(chatId);
+            else if (data === 'tour_delete_all_confirm') await handleTourDeleteAllConfirm(chatId);
+            else if (data === 'tour_delete_all_yes') await handleTourDeleteAllExecute(chatId);
+            else if (data === 'tour_season_confirm_yes') await handleTourSeasonExecute(chatId);
+            // Test Center
+            else if (data === 'cmd_test_center') await handleTestCenter(chatId);
+            else if (data === 'test_add') await handleTestAdd(chatId);
+            else if (data.startsWith('test_del_')) await handleTestDelete(chatId, data.replace('test_del_', ''));
             else if (data.startsWith('edit_pick_')) await handleEditPickField(chatId, data.replace('edit_pick_', ''));
             else if (data === 'edit_field_datetime') await handleEditDateTime(chatId);
             else if (data === 'edit_field_location') await handleEditLocation(chatId);
@@ -1916,6 +2102,19 @@ export default async function handler(req, res) {
             await clearSession();
             await sendMessage(chatId, `✅ *GPX Map cleared.*`);
             await sendMenu(chatId, "What else?");
+        } else if (session.state === 'tour_season_waiting_date') {
+            await handleTourSeasonDate(chatId, text);
+        } else if (session.state === 'tour_season_waiting_time') {
+            await handleTourSeasonTime(chatId, text);
+        } else if (session.state === 'test_waiting_name') {
+            await setSession('test_waiting_url', { testName: text });
+            await sendMessage(chatId, `✅ <b>Name: "${esc(text)}"</b>\n\n<b>Step 2/2 — Test URL</b>\n\nNow send me the full link to the test page.\nExample: <code>https://stride-rite.vercel.app/test-v2.html</code>`);
+        } else if (session.state === 'test_waiting_url') {
+            const testName = session.data.testName;
+            await dbInsert('stride_tests', { id: crypto.randomUUID(), name: testName, url: text.trim(), created_at: new Date().toISOString() });
+            await clearSession();
+            await sendMessage(chatId, `✅ <b>"${esc(testName)}"</b> has been saved to your Test Center!`);
+            await handleTestCenter(chatId);
         } else if (session.state === 'tour_edit_waiting_name') {
             await dbPatch('stride_tour_stops', 'id', session.data.stopId, { name: text });
             await clearSession();
