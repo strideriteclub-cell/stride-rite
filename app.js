@@ -578,7 +578,8 @@ const AppService = {
             totalKms: totalKms.toFixed(1),
             pastRuns: pastRuns,
             tourProgress: tourProgress,
-            completionRate: Math.round((completedCount / TOUR_STOPS_COUNT) * 100)
+            completionRate: Math.round((completedCount / TOUR_STOPS_COUNT) * 100),
+            isFinisher: completedCount >= TOUR_STOPS_COUNT
         };
     },
 
