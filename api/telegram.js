@@ -542,9 +542,15 @@ async function handleTestCenter(chatId) {
     if (tests && tests.length > 0) {
         msgText += `You have <b>${tests.length}</b> saved test${tests.length > 1 ? 's' : ''}:\n\n`;
         for (const t of tests) {
-            // Show link in message text (safe), delete button in keyboard
-            msgText += `🔗 <b>${esc(t.name)}</b>\n<a href="${t.url}">${esc(t.url)}</a>\n\n`;
-            rows.push([{ text: `🗑️ Delete "${t.name}"`, callback_data: `test_del_${t.id}` }]);
+            // Ensure URL has a valid protocol for Telegram URL buttons
+            const safeUrl = t.url && (t.url.startsWith('http://') || t.url.startsWith('https://'))
+                ? t.url
+                : `https://${t.url || ''}`;
+            msgText += `🔗 <b>${esc(t.name)}</b>\n`;
+            rows.push([
+                { text: `🔗 Open: ${t.name}`, url: safeUrl },
+                { text: `🗑️ Delete`, callback_data: `test_del_${t.id}` }
+            ]);
         }
     } else {
         msgText += `No tests saved yet. Tap ➕ to add your first one!`;
