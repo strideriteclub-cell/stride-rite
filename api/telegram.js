@@ -464,13 +464,25 @@ async function handleTourSeasonTime(chatId, text) {
 async function handleTourSeasonExecute(chatId) {
     const session = await getSession();
     const { startDate, startTime } = session.data;
-    await sendMessage(chatId, "⏳ <b>Creating all 8 tour stops...</b>");
+
+    // Validate session data before doing anything
+    if (!startDate || !startTime) {
+        await sendMessage(chatId, `❌ <b>Session Error</b>\n\nCouldn't read the date/time.\nDebug: <code>${JSON.stringify(session.data)}</code>\n\nPlease start again from Tour Admin → Auto-Create New Season.`);
+        return;
+    }
+
     const baseDate = new Date(`${startDate}T${startTime}:00`);
+    if (isNaN(baseDate.getTime())) {
+        await sendMessage(chatId, `❌ <b>Invalid Date</b>: <code>${startDate}T${startTime}:00</code>\n\nPlease use <code>YYYY-MM-DD</code> format for date and <code>HH:MM</code> for time.`);
+        return;
+    }
+
+    await sendMessage(chatId, `⏳ <b>Creating all 8 tour stops...</b>\n<i>Start: ${startDate} at ${startTime}</i>`);
     const tourStops = await dbGet('stride_tour_stops');
     const stopsMap = {};
     (tourStops || []).forEach(s => { stopsMap[s.id] = s.name; });
     let created = 0;
-    let errors = 0;
+    let lastError = '';
     for (let i = 0; i < 8; i++) {
         const stopNum = i + 1;
         const d = new Date(baseDate.getTime() + i * 7 * 24 * 60 * 60 * 1000);
@@ -492,25 +504,26 @@ async function handleTourSeasonExecute(chatId) {
                 partner_ig: null,
                 partner_logo: null
             });
-            if (result && !result.error && !result.message) {
+            // Success: array returned, or truthy without error fields
+            if (Array.isArray(result) || (result && !result.message && !result.error && !result.code)) {
                 created++;
             } else {
-                console.error(`Stop ${stopNum} insert failed:`, JSON.stringify(result));
-                errors++;
+                lastError = result ? (result.message || result.error || result.code || JSON.stringify(result)) : 'null response';
+                console.error(`Stop ${stopNum} failed:`, lastError);
+                break; // stop on first error so we can see it clearly
             }
         } catch (e) {
-            console.error(`Stop ${stopNum} exception:`, e.message);
-            errors++;
+            lastError = e.message;
+            break;
         }
     }
     await clearSession();
-    if (errors > 0) {
-        await sendMessage(chatId, `⚠️ <b>Partial Season Created</b>\n\n✅ ${created} runs created, ❌ ${errors} failed.\n\nCheck Vercel logs for details.`);
-        await sendMenu(chatId, "What else?");
+    if (created < 8) {
+        await sendMessage(chatId, `⚠️ <b>Season Creation Failed</b>\n\n✅ ${created}/8 stops created\n❌ <b>Error:</b> <code>${esc(lastError)}</code>`);
         return;
     }
     await sendMessage(chatId,
-        `🎉 <b>New Season is Live!</b>\n\n✅ ${created} tour runs added to your dashboard!\n\n<i>Use the Tour Map Editor to update stop locations, and Edit a Run to add Maps links.</i>`,
+        `🎉 <b>New Season is Live!</b>\n\n✅ All 8 tour runs added to your dashboard!\n\n<i>Use the Tour Map Editor to update stop locations, and Edit a Run to add Maps links.</i>`,
         {
             inline_keyboard: [
                 [{ text: "🗺️ Open Tour Map Editor", callback_data: "cmd_tour_editor" }],
