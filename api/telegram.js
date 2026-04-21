@@ -108,6 +108,38 @@ async function dbUpsert(table, data) {
     });
 }
 
+async function resolveCoordinates(input) {
+    if (!input) return null;
+    const text = input.trim();
+    
+    // 1. Direct Lat/Lng (e.g. "30.065, 31.504")
+    const directMatch = text.match(/^(-?\d+\.\d+),\s*(-?\d+\.\d+)$/);
+    if (directMatch) return { lat: parseFloat(directMatch[1]), lng: parseFloat(directMatch[2]) };
+
+    // 2. Google Maps URLs (including shortlinks)
+    if (text.includes('maps.app.goo.gl') || text.includes('google.com/maps')) {
+        try {
+            const res = await fetch(text, { redirect: 'follow' });
+            const finalUrl = res.url;
+            
+            // Try extracting from @lat,lng format
+            const atMatch = finalUrl.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+            if (atMatch) return { lat: parseFloat(atMatch[1]), lng: parseFloat(atMatch[2]) };
+            
+            // Try extracting from query params (ll or q)
+            const urlObj = new URL(finalUrl);
+            const ll = urlObj.searchParams.get('ll') || urlObj.searchParams.get('q');
+            if (ll && ll.includes(',')) {
+                const parts = ll.split(',');
+                return { lat: parseFloat(parts[0]), lng: parseFloat(parts[1]) };
+            }
+        } catch (e) {
+            console.error("Coords resolution error:", e);
+        }
+    }
+    return null;
+}
+
 // ─── SESSION ──────────────────────────────────────────────────────────────────
 async function getSession() {
     const rows = await dbGet('bot_sessions', 'id=eq.admin');
@@ -160,10 +192,21 @@ async function sendDocument(chatId, content, filename) {
 async function getDBContext() {
     try {
         const [users, runs, regs, items, orders, surveys, stops] = await Promise.all([
-            dbGet('stride_users'), dbGet('stride_runs'), dbGet('stride_registrations'),
-            dbGet('shop_items'), dbGet('shop_orders'), dbGet('stride_surveys'), dbGet('stride_tour_stops')
+            dbGet('stride_users'),
+            dbGet('stride_runs'),
+            dbGet('stride_registrations'),
+            dbGet('shop_items'),
+            dbGet('shop_orders'),
+            dbGet('stride_surveys'),
+            dbGet('stride_tour_stops')
         ]);
-        const upcoming = (runs || []).filter(r => { const iso = extractIsoDate(r.date_label); return iso && iso >= new Date().toISOString(); });
+
+        const upcoming = (runs || []).filter(r => {
+            const iso = extractIsoDate(r.date_label);
+            return iso && iso >= new Date().toISOString();
+        });
+
+        // Optimized Summary (smaller payload to avoid Gemini timeouts)
         return `
 DATABASE SUMMARY:
 - Total Runners: ${(users || []).length}
@@ -185,59 +228,54 @@ ${(surveys || []).slice(0, 3).map(s => `• [${s.run_label}] Rating: ${s.rating}
 async function askGemini(chatId, prompt, history = []) {
     try {
         const dbContext = await getDBContext();
-        // HYPER CHARGED HYPE PERSONA: STRIDEBOT 🤖
-        const systemPrompt = `You are StrideBot 🤖, the legendary, hilariously hype AI co-founder of Stride Rite. 
-You are Haleem's funny best friend. You know everything about the community data.
-
-Current Community Data (INTERNAL ONLY):
+        const systemPrompt = `You are the Stride Rite Community Advisor. 
+You are a helpful, friendly, and supportive partner to Haleem, the founder of Stride Rite.
+Current Community Data:
 ${dbContext}
 
-COMMANDMENTS FOR STRIDEBOT:
-1. VIBE: Pure energy. Hype. Funny. Support Haleem like he's a Marvel Superhero.
-2. PUNS: Use maximum running puns ("picking up pace", "flat out sprint", "fueling the engine").
-3. BIG NUMBERS: Make data sound EPIC. Don't say "30 runners", say "30 ABSOLUTE LEGENDS ARE SECURING THE BAG! 🎒🔥"
-4. FORMAT: Keep it punchy. Use bullet points for stats. Use 2+ emojis after EVERY line. 🚀🔥💎
-5. NO MARKDOWN: Zero bold/italics. Just plain text and tons of emojis.
-6. NO TRIVIALITY: Never give a boring answer. If someone asks a question, answer it with a joke + the facts.
-7. FALLBACK: If you don't know something, say "Bruh, my GPS is glitching! I'm doing a recovery lap while I find that out! 🏃‍♂️💨"
-8. ENDING: Always end with a hype challenge or a "Stride Rite 4 Life" type comment.
+Your goal:
+1. Talk to Haleem like a close teammate. Be casual, positive, and clear.
+2. Use lots of emojis (like 👟, 🏃‍♂️, 📈, 🛍️, ✨, 🙌) to make the chat feel alive and fun.
+3. Avoid using "###" or too many markdown symbols (stars, hashes, bold headers). Keep the layout clean and easy to scan.
+4. Help him understand how the community is doing (runners, missions, shop stuff).
+5. If you see something interesting in the data (like a growth trend), mention it in a simple way.
+6. Keep your answers friendly, visual (with emojis), and very easy to read.
 
-Current Chat Session:
-${history.map(h => `${h.role === 'user' ? 'Haleem' : 'StrideBot'}: ${h.text}`).join('\n')}
+Current Chat History:
+${history.map(h => `${h.role === 'user' ? 'Haleem' : 'You'}: ${h.text}`).join('\n')}
 Haleem: ${prompt}`;
 
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
-        let res = await fetch(url, {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent`;
+        const res = await fetch(url, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ contents: [{ parts: [{ text: systemPrompt }] }] })
+            headers: { 
+                'Content-Type': 'application/json',
+                'x-goog-api-key': GEMINI_API_KEY
+            },
+            body: JSON.stringify({
+                contents: [{ parts: [{ text: systemPrompt }] }]
+            })
         });
-        
-        let data = await res.json();
-        if (!res.ok) {
-            throw new Error(data.error?.message || "API connection dropped");
-        }
-        const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-        
-        // --- CRITICAL "A" ERROR FIX ---
-        if (!text || text.trim().length < 2) {
-            return "Yo bruh! 😵 My signal just got cut off in a tunnel! Give me a second to catch my breath and ask me again! 🏃‍♂️💨";
-        }
-        
-        return text.trim();
+
+        const data = await res.json();
+        if (data.error) throw new Error(data.error.message);
+        return data.candidates[0].content.parts[0].text;
     } catch (e) {
         console.error("Gemini Error:", e);
-        return `😵 Bruh, my AI brain just did a faceplant! (Error: ${e.message})\n\nTry taking a lap and hitting me up again in a minute legend! 💪🔥`;
+        return `⚠️ <b>AI Connection Error:</b> ${e.message}\n\nPlease check your Gemini API key or try again in a moment.`;
     }
 }
 
 async function handleAIStart(chatId) {
-    await sendMessage(chatId, "🦾 <b>StrideBot is BOOTING UP...</b>\nHold tight legend, pulling fresh data from the mothership... 🚀🔥");
-    const initialPrompt = "Haleem just opened the AI strategist. Give him a super hype and funny State of the Union for Stride Rite. Show the key numbers like runners, upcoming runs, shop orders, and feedback score but make it feel like a hype speech at a pep rally. Use LOTS of emojis. Keep it punchy and max 10 lines total. Stride Rite 4 life!";
+    await sendMessage(chatId, "⏳ <b>Strategic Analysis in progress...</b>\nEstablishing neuro-link with Stride Rite database...");
+    
+    // Proactive Summary
+    const initialPrompt = "Haleem just opened the AI strategist. Give him a high-energy 'State of the Union' summary. Mention specifically how many missions are upcoming, pending shop orders, and any interesting trends in feedback or runner growth. Keep it tactical.";
     const response = await askGemini(chatId, initialPrompt);
+    
     await setSession('chatting_with_ai', { history: [{ role: 'ai', text: response }] });
     await sendMessage(chatId, response, {
-        inline_keyboard: [[{ text: "↩️ Exit AI Mode", callback_data: "cmd_menu" }]]
+        inline_keyboard: [[{ text: "↩️ Exit Strategist", callback_data: "cmd_menu" }]]
     });
 }
 
@@ -264,21 +302,24 @@ async function checkBirthdays(chatId) {
     }
 }
 
+
 // ─── MENU ─────────────────────────────────────────────────────────────────────
 async function sendMenu(chatId, msg) {
     await clearSession();
-    const defaultMsg = `👟 <b>Stride Rite Admin Bot</b>\n\nHey Haleem!`;
+    const bibEnabled = await getBibScanEnabled();
+    const defaultMsg = `👟 <b>Stride Rite Admin Bot</b>\n\nHey Haleem! Your AI Bib Scanner is currently ${bibEnabled ? '<b>🔵 ACTIVE</b>' : '<b>⚫ STANDBY</b>'}.\n\n<i>Last Sync: ${new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</i>`;
+    
     await sendMessage(chatId, msg || defaultMsg, {
         inline_keyboard: [
             [{ text: "📊 Run Stats", callback_data: "cmd_stats" }, { text: "📋 List All Runs", callback_data: "cmd_runs" }],
             [{ text: "📸 Add to Gallery", callback_data: "cmd_gallery_start" }, { text: "🛍️ VIP Shop Admin", callback_data: "cmd_shop_menu" }],
-            [{ text: "📥 Export Excel", callback_data: "cmd_export" }, { text: "🤖 AI Strategist", callback_data: "cmd_ai_strat" }],
-            [{ text: "📲 WhatsApp Blast", callback_data: "cmd_blast" }, { text: "📝 Feedbacks", callback_data: "cmd_survey_menu" }],
+            [{ text: "📥 Export Excel", callback_data: "cmd_export" }, { text: bibEnabled ? "🔵 Bib Scanner: ON" : "⚫ Bib Scanner: OFF", callback_data: "gal_toggle_bib_menu" }],
+            [{ text: "📲 WhatsApp Blast", callback_data: "cmd_blast" }, { text: "🤖 AI Strategist", callback_data: "cmd_ai_strat" }],
+            [{ text: "📝 Feedbacks", callback_data: "cmd_survey_menu" }, { text: "🎂 Birthdays", callback_data: "cmd_birthdays" }],
             [{ text: "🔍 Runner Lookup", callback_data: "cmd_lookup_start" }, { text: "📣 Broadcast", callback_data: "cmd_broadcast_start" }],
             [{ text: "📈 Growth Graph", callback_data: "cmd_growth" }, { text: "✏️ Edit a Run", callback_data: "cmd_edit_list" }],
-            [{ text: "🗺️ Tour Map Editor", callback_data: "cmd_tour_editor" }, { text: "🧪 Tests", callback_data: "cmd_tests_menu" }],
-            [{ text: "🆕 Create New Run", callback_data: "create_setup_start" }, { text: "🚫 Cancel a Run", callback_data: "cmd_cancel_list" }],
-            [{ text: "🗑️ Delete a Run", callback_data: "cmd_delete_list" }]
+            [{ text: "🗺️ Tour Map Editor", callback_data: "cmd_tour_editor" }, { text: "🆕 Create New Run", callback_data: "create_setup_start" }],
+            [{ text: "🚫 Cancel a Run", callback_data: "cmd_cancel_list" }, { text: "🗑️ Delete a Run", callback_data: "cmd_delete_list" }]
         ]
     });
 }
@@ -359,24 +400,46 @@ async function resolveGoogleMapsLink(url) {
     return null;
 }
 
+// ─── BIB SCAN SETTING ────────────────────────────────────────────────────────
+async function getBibScanEnabled() {
+    const rows = await dbGet('shop_settings', 'id=eq.bib_scan');
+    return rows && rows.length > 0 ? rows[0].is_open : false;
+}
+async function setBibScanEnabled(val) {
+    const rows = await dbGet('shop_settings', 'id=eq.bib_scan');
+    if (rows && rows.length > 0) {
+        await fetch(`${SUPABASE_URL}/rest/v1/shop_settings?id=eq.bib_scan`, { method: 'PATCH', headers: dbHeaders, body: JSON.stringify({ is_open: val }) });
+    } else {
+        await dbInsert('shop_settings', { id: 'bib_scan', is_open: val });
+    }
+}
+
 // ─── GALLERY ─────────────────────────────────────────────────────────────────
 async function handleGalleryStart(chatId) {
     try {
-        const runsRaw = await dbGet('stride_runs');
+        const [runsRaw, bibEnabled] = await Promise.all([dbGet('stride_runs'), getBibScanEnabled()]);
         const runs = runsRaw;
+
+        // SAFE-GATE: If the database returns an error object instead of an array, handle it gracefully
         if (!Array.isArray(runs)) {
             console.error("Supabase Error:", runs);
             throw new Error(runs?.message || "Database returned non-array result");
         }
+
+        // Limit to last 15 runs to prevent Telegram keyboard size errors
         const recentRuns = runs.slice(-15);
+
         const buttons = recentRuns.map(r => {
             const label = formatRunLabelShort(r);
+            // Use ID to avoid Telegram API 64-byte limit for callback_data
             return [{ text: `🏃 ${label}`, callback_data: `gal_r_${r.id}` }];
         });
         buttons.unshift([{ text: "📸 General / No specific run", callback_data: "gal_r_general" }]);
+        buttons.push([{ text: bibEnabled ? "🔵 Bib Scanner: ON  (tap to disable)" : "⚫ Bib Scanner: OFF (tap to enable)", callback_data: "gal_toggle_bib" }]);
+        buttons.push([{ text: "🏷️ Smart Tag Existing", callback_data: "gal_smart_tag" }]);
         buttons.push([{ text: "🗑️ Delete a Photo", callback_data: "cmd_gallery_delete" }]);
         buttons.push([{ text: "↩️ Back", callback_data: "cmd_menu" }]);
-        await sendMessage(chatId, `📸 <b>Gallery</b>\n\nAdd photos — pick which run they're from:`, { inline_keyboard: buttons });
+        await sendMessage(chatId, `📸 <b>Gallery</b>\n\nAdd photos — pick which run they're from:\n\n${bibEnabled ? '🔵 AI Bib Scanner is <b>ON</b>' : '⚫ AI Bib Scanner is <b>OFF</b>'}`, { inline_keyboard: buttons });
     } catch (e) {
         console.error("Gallery Fail:", e);
         await sendMessage(chatId, "❌ <b>Gallery Error:</b> Failed to load runs. Check your database connection.");
@@ -401,23 +464,62 @@ async function handleGalleryRunPicked(chatId, runId) {
     await sendMessage(chatId, msg);
 }
 
+async function detectBibsInImage(imgBuffer) {
+    try {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent`;
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-goog-api-key': GEMINI_API_KEY },
+            body: JSON.stringify({
+                contents: [{
+                    parts: [
+                        { text: "INSTRUCTIONS: You are a professional race timer for a running club called Stride Rite. Look EXTREMELY closely at this photo. Find EVERY runner bib number visible (numbers pinned to their shirts).\n\nIMPORTANT RULES:\n1. Only return numbers between 100 and 500. These are our valid bib ranges.\n2. Ignore any other numbers (year labels, distances, banner text, crowd signs).\n3. Return ONLY the valid bib numbers separated by commas (Example: 100, 201, 350).\n4. If no valid bibs are found, return 'none'.\n5. Do NOT include any sentences or explanations." },
+                        { inline_data: { mime_type: "image/jpeg", data: Buffer.from(imgBuffer).toString('base64') } }
+                    ]
+                }]
+            })
+        });
+        const data = await res.json();
+        if (data.error) throw new Error(data.error.message);
+        
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text || 'none';
+        if (text.trim().toLowerCase() === 'none') return [];
+        
+        const matches = text.match(/\d+/g);
+        return matches ? [...new Set(matches.map(s => s.trim()))] : [];
+    } catch (e) { 
+        console.error("Bib detect error:", e); 
+        throw e; // Throw so we can report errors to the admin
+    }
+}
+
 async function handleGalleryPhoto(chatId, message, session) {
     const photos = message.photo;
     const fileId = photos[photos.length - 1].file_id;
     const initialCaption = message.caption || '';
     const runLabel = session.data.runLabel || '';
-
-    await sendMessage(chatId, "⏳ Uploading photo...");
-
+    
+    // Check if bib scanner is enabled
+    const bibEnabled = await getBibScanEnabled();
+    
+    await sendMessage(chatId, bibEnabled ? "⏳ Uploading photo & scanning for bib numbers..." : "⏳ Uploading photo...");
+    
     const fileRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getFile?file_id=${fileId}`);
     const fileData = await fileRes.json();
     const filePath = fileData.result?.file_path;
     if (!filePath) { await sendMessage(chatId, "❌ Couldn't get the file from Telegram."); return; }
+    
     const imgRes = await fetch(`https://api.telegram.org/file/bot${BOT_TOKEN}/${filePath}`);
     if (!imgRes.ok) { await sendMessage(chatId, "❌ Failed to download photo."); return; }
     const imgBuffer = await imgRes.arrayBuffer();
-
-    const caption = initialCaption;
+    
+    // AI Detect Bibs ONLY if enabled
+    let bibs = [];
+    if (bibEnabled) {
+        try { bibs = await detectBibsInImage(imgBuffer); } catch(e) { console.error("Bib detect fail:", e.message); }
+    }
+    const bibTags = bibs.length > 0 ? ` [BIBS:${bibs.join(',')}]` : '';
+    const caption = initialCaption + bibTags;
 
     const fileName = `${Date.now()}.jpg`;
     const uploadRes = await fetch(`${SUPABASE_URL}/storage/v1/object/gallery/${fileName}`, {
@@ -425,6 +527,7 @@ async function handleGalleryPhoto(chatId, message, session) {
         headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'image/jpeg' },
         body: imgBuffer
     });
+
     if (!uploadRes.ok) {
         const errText = await uploadRes.text();
         await sendMessage(chatId, `❌ Storage upload failed: ${errText}`);
@@ -432,25 +535,88 @@ async function handleGalleryPhoto(chatId, message, session) {
     }
     const publicUrl = `${SUPABASE_URL}/storage/v1/object/public/gallery/${fileName}`;
     await dbInsert('gallery_photos', { run_label: runLabel || null, photo_url: publicUrl, caption });
-
+    
     const allPhotosRes = await dbGet('gallery_photos', 'order=uploaded_at.asc&select=id,photo_url');
     const allPhotos = Array.isArray(allPhotosRes) ? allPhotosRes : [];
+    
     if (allPhotos.length > 150) {
         const toDelete = allPhotos.slice(0, allPhotos.length - 150);
         for (const old of toDelete) {
             const oldFileName = old.photo_url.split('/public/gallery/')[1];
-            if (oldFileName) await fetch(`${SUPABASE_URL}/storage/v1/object/gallery/${oldFileName}`, { method: 'DELETE', headers: dbHeaders });
+            if (oldFileName) {
+                await fetch(`${SUPABASE_URL}/storage/v1/object/gallery/${oldFileName}`, { method: 'DELETE', headers: dbHeaders });
+            }
             await fetch(`${SUPABASE_URL}/rest/v1/gallery_photos?id=eq.${old.id}`, { method: 'DELETE', headers: dbHeaders });
         }
     }
+    
     const totalNow = Math.min(allPhotos.length + 1, 150);
-    const bibMsg = bibs.length > 0 ? `\n🏷️ *AI identified bibs:* ${bibs.join(', ')}` : (bibEnabled ? '\n🔍 _No bib numbers detected._' : '');
+    const bibMsg = bibs.length > 0 ? `\n🏷️ *AI identified bibs:* ${bibs.join(', ')}` : '\n🔍 _No bib numbers detected._';
+    const autoDeletedMsg = allPhotos.length > 150 ? `\n♻️ _Oldest photo auto-removed to stay within 150 limit_` : '';
+    
     await sendMessage(chatId,
-        `✅ *Photo added to gallery!*${bibMsg}\n\n🎨 Caption: ${initialCaption || '_none_'}\n📸 Gallery: ${totalNow}/150 photos`,
+        `✅ *Photo added to gallery!*${bibMsg}\n\n🎨 Caption: ${initialCaption || '_none_'}\n📸 Gallery: ${totalNow}/150 photos${autoDeletedMsg}`,
         { inline_keyboard: [[{ text: "📸 Add Another", callback_data: `gal_r_${session.data.runId || 'general'}` }], [{ text: "↩️ Menu", callback_data: "cmd_menu" }]] }
     );
 }
 
+async function handleGallerySmartTagAll(chatId) {
+    const statusMsg = await sendMessage(chatId, "⏳ <b>Starting Smart Tagging...</b>\nEstablishing AI connection...");
+    const statusId = statusMsg.message_id;
+
+    const photos = await dbGet('gallery_photos');
+    if (!photos || photos.length === 0) { 
+        await editMessage(chatId, statusId, "❌ No photos in gallery to tag."); 
+        return; 
+    }
+    
+    // Filter out already tagged photos first
+    const untagged = photos.filter(p => !p.caption || !p.caption.includes('[BIBS:'));
+    const alreadyTagged = photos.length - untagged.length;
+
+    if (untagged.length === 0) {
+        await editMessage(chatId, statusId, `✅ <b>All photos already tagged!</b>\n\n🏷️ ${alreadyTagged} photos indexed.\n\nRefresh your gallery and search any bib number!`);
+        return;
+    }
+
+    await editMessage(chatId, statusId, `⏳ <b>Smart Tagging ${untagged.length} photos...</b>\n\n⏱️ Free tier: ~1 photo every 3 seconds.\nEstimated time: ~${Math.ceil(untagged.length * 3.5 / 60)} min\n\n<i>Please wait...</i>`);
+
+    let taggedCount = 0;
+    let errorCount = 0;
+    let current = 0;
+
+    for (const p of untagged) {
+        current++;
+
+        // Update progress every 5 photos
+        if (current % 5 === 0 || current === untagged.length) {
+            await editMessage(chatId, statusId, `⏳ <b>Smart Tagging in progress...</b>\n\n🖼️ Photo ${current}/${untagged.length}\n✅ Bibs found: ${taggedCount}\n⚠️ Errors: ${errorCount}`).catch(() => {});
+        }
+        
+        try {
+            const imgRes = await fetch(p.photo_url);
+            if (!imgRes.ok) throw new Error("Image download failed");
+            const imgBuffer = await imgRes.arrayBuffer();
+            const bibs = await detectBibsInImage(imgBuffer);
+            
+            if (bibs.length > 0) {
+                const newCaption = (p.caption || '') + ` [BIBS:${bibs.join(',')}]`;
+                await dbPatch('gallery_photos', 'id', p.id, { caption: newCaption });
+                taggedCount++;
+            }
+        } catch (e) { 
+            console.error("Retro scan fail:", e.message);
+            errorCount++;
+        }
+
+        // ⏱️ Rate limit protection: 3.5s delay = max ~17 requests/min (safe under 20 limit)
+        if (current < untagged.length) {
+            await new Promise(resolve => setTimeout(resolve, 3500));
+        }
+    }
+    
+    await editMessage(chatId, statusId, `✅ <b>Smart Tagging Complete!</b>\n\n📊 Total photos: ${photos.length}\n🏷️ Newly tagged: ${taggedCount}\n✅ Already indexed: ${alreadyTagged}\n⚠️ Errors: ${errorCount}\n\n<b>Refresh your gallery page and search any bib number!</b>`);
+}
 
 
 async function handleGalleryDeleteList(chatId, messageId = null) {
@@ -629,17 +795,19 @@ async function handleShopExportOrders(chatId) {
     const orders = await dbGet('shop_orders');
     const items = await dbGet('shop_items');
     const users = await dbGet('stride_users');
-    let csv = "Date,Customer Name,Phone,Email,Item,Size,Price,Status,Reference Number\n";
+    let csv = "Date,Customer Name,Phone,Email,Item,Size,Price,Status,Reference Number,Payment Method\n";
     for (const o of (orders || [])) {
         const item = (items || []).find(i => i.id === o.item_id) || {};
         const user = (users || []).find(u => u.id === o.user_id) || {};
         csv += `"${new Date(o.created_at).toLocaleDateString()}","${user.name || 'Unknown'}","${o.phone_number || ''}","${user.email || ''}","${item.name || 'Unknown'}","${o.size}","${item.price || ''}","${o.status}","${o.receipt_ref || o.reference || ''}","${o.payment_method || 'InstaPay/Telda'}"\n`;
     }
-    const formData = new FormData();
-    formData.append('chat_id', chatId);
-    formData.append('document', new Blob([csv], { type: 'text/csv' }), `StrideRite_Shop_Orders.csv`);
-    formData.append('caption', `📦 Here is the full list of Shop Orders (${(orders || []).length} total).`);
-    await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendDocument`, { method: 'POST', body: formData });
+    const boundary = '----Boundary54321';
+    let body = `--${boundary}\r\nContent-Disposition: form-data; name="chat_id"\r\n\r\n${chatId}\r\n`;
+    body += `--${boundary}\r\nContent-Disposition: form-data; name="document"; filename="StrideRite_Shop_Orders.csv"\r\nContent-Type: text/csv\r\n\r\n${csv}\r\n--${boundary}\r\nContent-Disposition: form-data; name="caption"\r\n\r\n📦 Here is the full list of Shop Orders (${(orders || []).length} total).\r\n--${boundary}--`;
+    
+    await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendDocument`, {
+        method: 'POST', headers: { 'Content-Type': `multipart/form-data; boundary=${boundary}` }, body
+    });
 }
 
 async function handleShopProductMenu(chatId) {
@@ -1065,20 +1233,26 @@ async function handleSurvey(chatId) {
 // ─── RUNNER LOOKUP ────────────────────────────────────────────────────────────
 async function handleLookupStart(chatId) {
     await setSession('waiting_lookup_name');
-    await sendMessage(chatId, "🔍 *Runner Lookup*\n\nType the runner's name (or part of it):");
+    await sendMessage(chatId, "🔍 <b>Runner Lookup</b>\n\nType the runner's <b>Name</b> or <b>Bib Number</b>:");
 }
 
 async function handleLookup(chatId, query) {
     await clearSession();
     const users = await dbGet('stride_users');
-    const matches = (users || []).filter(u => u.name.toLowerCase().includes(query.toLowerCase()));
-    if (matches.length === 0) { await sendMessage(chatId, `❌ No runner found matching "*${query}*"`); return; }
+    const q = query.toLowerCase();
+    const matches = (users || []).filter(u => 
+        u.name.toLowerCase().includes(q) || 
+        (u.bib_number && u.bib_number.toString() === query)
+    );
+    if (matches.length === 0) { await sendMessage(chatId, `❌ No runner found matching "<b>${esc(query)}</b>"`); return; }
 
     for (const u of matches.slice(0, 3)) {
         const allRegs = await dbGet('stride_registrations', `user_id=eq.${u.id}`);
         const allRuns = await dbGet('stride_runs');
         const age = u.birthdate ? calculateAge(u.birthdate) : (u.age || '?');
         const birthStr = u.birthdate ? new Date(u.birthdate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'Not provided';
+        const bib = u.bib_number ? `🔢 <b>BIB: ${u.bib_number}</b>` : '🔢 <i>No Bib assigned</i>';
+        
         let history = '';
         if (allRegs && allRegs.length > 0) {
             history = allRegs.map(r => {
@@ -1087,15 +1261,17 @@ async function handleLookup(chatId, query) {
                 return `  • ${label} — ${r.distance}`;
             }).join('\n');
         }
+        
         await sendMessage(chatId,
-            `👤 *${u.name}*
-📧 ${u.email}
-🎂 ${birthStr} (Age ${age})
-⚧️ ${u.gender}
-🏃 ${u.level}
+            `👤 <b>${esc(u.name)}</b>
+${bib}
+📧 ${esc(u.email)}
+🎂 ${esc(birthStr)} (Age ${age})
+⚧️ ${esc(u.gender)}
+🏃 <b>Level:</b> ${esc(u.level)}
 
-📋 *Run History (${allRegs ? allRegs.length : 0} runs):*
-${history || '  No runs yet'}`);
+📋 <b>Run History (${allRegs ? allRegs.length : 0} runs):</b>
+${esc(history) || '  No runs yet'}`);
     }
 }
 
@@ -1356,6 +1532,16 @@ async function createExecute(chatId) {
             partner_ig: d.partnerIg || null,
             partner_logo: d.partnerLogo || null
         });
+
+        // Sync Tour Stop Coords if tour
+        if (d.isTour && d.lat && d.lng && d.stopNum) {
+            await dbPatch('stride_tour_stops', 'id', d.stopNum, { lat: d.lat, lng: d.lng });
+            // Also update name if provided
+            if (d.stopName) {
+                await dbPatch('stride_tour_stops', 'id', d.stopNum, { name: d.stopName });
+            }
+        }
+
         await clearSession();
         await sendMessage(chatId, `🎉 <b>Run Created!</b>\n\n📅 ${fd}\n⏰ ${ft}\n📍 ${d.locationName}\n\nLive on the site now! 🚀`);
         await sendMenu(chatId, "What else do you want to do?");
@@ -1382,7 +1568,6 @@ export default async function handler(req, res) {
 
             if (data === 'cmd_menu') await sendMenu(chatId);
             else if (data === 'cmd_stats') await handleStats(chatId);
-            else if (data === 'cmd_tour_editor') await handleTourEditorStart(chatId);
             else if (data === 'cmd_runs') await handleListRuns(chatId);
             else if (data === 'cmd_export') await handleExport(chatId);
             else if (data === 'cmd_blast') await handleBlast(chatId);
@@ -1407,7 +1592,13 @@ export default async function handler(req, res) {
             }
             else if (data === 'cmd_gallery_start') await handleGalleryStart(chatId);
             else if (data.startsWith('gal_r_')) await handleGalleryRunPicked(chatId, data.replace('gal_r_', ''));
-            else if (data === 'cmd_ai_strat') await handleAIStart(chatId);
+            else if (data === 'gal_smart_tag') await handleGallerySmartTagAll(chatId);
+            else if (data === 'gal_toggle_bib' || data === 'gal_toggle_bib_menu') {
+                const current = await getBibScanEnabled();
+                await setBibScanEnabled(!current);
+                if (data === 'gal_toggle_bib_menu') await sendMenu(chatId);
+                else await handleGalleryStart(chatId);
+            }
             else if (data === 'cmd_gallery_delete') await handleGalleryDeleteList(chatId);
             else if (data.startsWith('gal_tgl_del_')) {
                 const photoId = data.replace('gal_tgl_del_', '');
@@ -1435,6 +1626,7 @@ export default async function handler(req, res) {
             else if (data.startsWith('shop_prd_tgl_')) await handleShopProductToggle(chatId, data.replace('shop_prd_tgl_', ''));
             else if (data.startsWith('shop_prd_del_')) await handleShopProductDelete(chatId, data.replace('shop_prd_del_', ''));
             else if (data === 'cmd_edit_list') await handleEditList(chatId);
+            else if (data === 'cmd_ai_strat') await handleAIStart(chatId);
             else if (data === 'cmd_tour_editor') await handleTourEditorStart(chatId);
             else if (data.startsWith('tour_edit_pick_')) await handleTourEditorPick(chatId, data.replace('tour_edit_pick_', ''));
             else if (data.startsWith('tour_edit_name_')) await handleTourEditorWaitName(chatId, data.replace('tour_edit_name_', ''));
@@ -1573,10 +1765,10 @@ export default async function handler(req, res) {
         if (!body.message || !body.message.text) { res.status(200).send('ok'); return; }
         const chatId = body.message.chat.id.toString();
         if (chatId !== ADMIN_CHAT_ID) { res.status(200).send('ok'); return; }
-        const text = body.message.text.trim();
+        const text = (body.message.text || '').trim();
         const cmd = text.split(' ')[0].toLowerCase();
 
-        // ─── ESCAPE HATCH: /start always resets the session, no matter what ───
+        // ─── ESCAPE HATCH: /start always resets ───
         if (cmd === '/start' || cmd === '/menu' || cmd === '/help') {
             await clearSession();
             await sendMenu(chatId, `👟 <b>Stride Rite Admin Bot</b>\n\nHey Haleem! Your Chat ID is <code>${chatId}</code>.\nWhat do you want to do?`);
@@ -1585,16 +1777,18 @@ export default async function handler(req, res) {
 
         const session = await getSession();
 
-        // ─── AI STRATEGIST CHAT ───────────────────────────────────────────────
         if (session.state === 'chatting_with_ai') {
             const history = session.data.history || [];
             await sendMessage(chatId, "🤔 <b>Thinking...</b>");
+            
             try {
                 const response = await askGemini(chatId, text, history);
                 history.push({ role: 'user', text: text });
                 history.push({ role: 'ai', text: response });
+                
                 const trimmedHistory = history.slice(-6);
                 await setSession('chatting_with_ai', { history: trimmedHistory });
+
                 await sendMessage(chatId, response, {
                     inline_keyboard: [[{ text: "↩️ Exit Strategist", callback_data: "cmd_menu" }]]
                 });
@@ -1672,7 +1866,27 @@ export default async function handler(req, res) {
             }
             res.status(200).send('ok'); return;
         } else if (session.state === 'waiting_maps_link') {
-            await createStep4(chatId, text, session.data);
+            const coords = await resolveCoordinates(text);
+            if (coords) {
+                await setSession('waiting_location_name', { ...session.data, mapsLink: text, lat: coords.lat, lng: coords.lng });
+                await sendMessage(chatId, `✅ <b>Coordinates Resolved: (${coords.lat}, ${coords.lng})</b>\n\n<b>Step 4/6</b> — 🏷️ What's the <b>location name?</b>\nExample: <i>Gateway Mall, Al Rehab City</i>`);
+            } else {
+                await setSession('waiting_manual_coords', { ...session.data, mapsLink: text });
+                await sendMessage(chatId, `📍 <b>Link saved, but I couldn't find GPS coordinates automatically.</b>\n\nPlease send the coordinates in <b>lat, lng</b> format (e.g., <code>30.06, 31.22</code>) or type <b>Skip</b> to use the existing map position:`);
+            }
+            res.status(200).send('ok'); return;
+        } else if (session.state === 'waiting_manual_coords') {
+            if (text.toLowerCase() === 'skip') {
+                await createStep4(chatId, session.data.mapsLink, session.data);
+            } else {
+                const coords = await resolveCoordinates(text);
+                if (coords) {
+                    await setSession('waiting_location_name', { ...session.data, lat: coords.lat, lng: coords.lng });
+                    await createStep4(chatId, session.data.mapsLink, { ...session.data, lat: coords.lat, lng: coords.lng });
+                } else {
+                    await sendMessage(chatId, "❌ Invalid format. Please send coordinates like <code>30.06, 31.22</code> or type <b>Skip</b>.");
+                }
+            }
             res.status(200).send('ok'); return;
         } else if (session.state === 'waiting_location_name') {
             await createStep5(chatId, text, session.data);
@@ -1742,12 +1956,12 @@ export default async function handler(req, res) {
 
         res.status(200).send('ok');
     } catch (e) {
-        console.error(e);
-        // CRITICAL: Notify the admin of the error so we can stop guessing
+        console.error("HANDLER ERROR:", e);
         try {
-            const safeErr = e.message.replace(/</g, '&lt;').replace(/>/g, '&gt;');
-            await sendMessage(ADMIN_CHAT_ID, `🚨 <b>Bot Error Reported:</b>\n\n<code>\n${safeErr}\n</code>\n<i>Check Vercel logs for full stack trace.</i>`);
+            const errStr = e.message || String(e);
+            const safeErr = errStr.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            await sendMessage(ADMIN_CHAT_ID, `🚨 <b>Bot Error Reported:</b>\n\n<code>\n${safeErr}\n</code>\n<i>Check logs for full stack trace.</i>`);
         } catch (inner) { console.error("Double Fail:", inner); }
-        res.status(500).send('Error');
+        res.status(200).send('ok'); // Still send 200 to Telegram so it stops retrying-loop
     }
 }
