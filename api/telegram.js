@@ -431,10 +431,50 @@ async function handleTestsMenu(chatId) {
     }
 
     const rows = (tests || []).map(t => [{ text: `🧪 ${t.name}`, url: t.link }]);
-    rows.push([{ text: "➕ Create New Test", callback_data: "cmd_add_test_start" }]);
+    rows.push([{ text: "➕ Create New Test", callback_data: "cmd_add_test_start" }, { text: "🗑️ Manage Tests", callback_data: "cmd_tests_manage" }]);
     rows.push([{ text: "↩️ Back", callback_data: "cmd_menu" }]);
 
     await sendMessage(chatId, "🧪 <b>Admin Test Center</b>\n\nExperimental pages and feature demos:", { inline_keyboard: rows });
+}
+
+async function handleTestsManage(chatId) {
+    let tests = [];
+    try {
+        tests = await dbGet('stride_tests', 'order=created_at.asc');
+    } catch (e) {}
+
+    if (!tests || tests.length === 0) {
+        await sendMessage(chatId, "❌ No tests found to manage.");
+        return;
+    }
+
+    const rows = tests.map(t => [{ text: `🗑️ Delete: ${t.name}`, callback_data: `test_del_conf_${t.id}` }]);
+    rows.push([{ text: "↩️ Back", callback_data: "cmd_tests_menu" }]);
+
+    await sendMessage(chatId, "🗑️ <b>Manage Tests</b>\n\nClick a test to permanently delete it:", { inline_keyboard: rows });
+}
+
+async function handleTestDeleteConfirm(chatId, testId) {
+    const tests = await dbGet('stride_tests', `id=eq.${testId}`);
+    if (!tests || tests.length === 0) return;
+    const test = tests[0];
+
+    await sendMessage(chatId, `⚠️ <b>Delete Test: ${esc(test.name)}?</b>\n\nAre you sure you want to remove this test link?`, {
+        inline_keyboard: [
+            [{ text: "🔥 YES, DELETE IT", callback_data: `test_del_exec_${testId}` }],
+            [{ text: "❌ Cancel", callback_data: "cmd_tests_manage" }]
+        ]
+    });
+}
+
+async function handleTestDeleteExecute(chatId, testId) {
+    try {
+        await dbDelete('stride_tests', 'id', testId);
+        await sendMessage(chatId, "✅ <b>Test deleted successfully!</b>");
+    } catch (e) {
+        await sendMessage(chatId, "❌ <b>Error:</b> Could not delete test.");
+    }
+    await handleTestsManage(chatId);
 }
 
 async function handleAddTestStart(chatId) {
@@ -1718,6 +1758,9 @@ export default async function handler(req, res) {
             else if (data === 'cmd_reset_tour') await handleResetTourConfirm(chatId);
             else if (data === 'cmd_reset_tour_execute') await handleResetTourExecute(chatId);
             else if (data === 'cmd_tests_menu') await handleTestsMenu(chatId);
+            else if (data === 'cmd_tests_manage') await handleTestsManage(chatId);
+            else if (data.startsWith('test_del_conf_')) await handleTestDeleteConfirm(chatId, data.replace('test_del_conf_', ''));
+            else if (data.startsWith('test_del_exec_')) await handleTestDeleteExecute(chatId, data.replace('test_del_exec_', ''));
             else if (data === 'cmd_add_test_start') await handleAddTestStart(chatId);
             else if (data.startsWith('cancel_pick_')) await handleCancelPick(chatId, data.replace('cancel_pick_', ''));
             else if (data.startsWith('cmd_delete_confirm_')) await handleDeleteConfirmOne(chatId, data.replace('cmd_delete_confirm_', ''));
