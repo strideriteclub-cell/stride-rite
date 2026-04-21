@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Badge Rank Tester | Stride Rite</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@700;800&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #0a0a0c;
+            --bg-card: rgba(255, 255, 255, 0.03);
+            --text-main: #ffffff;
+            --text-muted: #a1a1aa;
+            --border-color: rgba(255, 255, 255, 0.08);
+            --peach-accent: #ff6b35;
+            --neon-accent: #584adc;
+        }
+
+        body {
+            background: var(--bg-dark);
+            color: var(--text-main);
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 40px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .tester-container {
+            max-width: 600px;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 40px;
+        }
+
+        .header { text-align: center; }
+        .header h1 { font-family: 'Outfit'; font-size: 2.5rem; margin-bottom: 0.5rem; background: linear-gradient(to right, #fff, var(--text-muted)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+
+        /* Simulator UI */
+        .simulator-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 30px;
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            gap: 20px;
+            backdrop-filter: blur(10px);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .simulator-card::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at top right, rgba(88, 74, 220, 0.1), transparent);
+            pointer-events: none;
+        }
+
+        .avatar-preview {
+            width: 120px;
+            height: 120px;
+            background: linear-gradient(135deg, var(--neon-accent), var(--peach-accent));
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            font-weight: 800;
+            font-family: 'Outfit';
+            box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+            margin-bottom: 10px;
+        }
+
+        .username { font-family: 'Outfit'; font-size: 2.2rem; margin: 0; }
+        .email-preview { color: var(--text-muted); font-size: 0.9rem; margin-top: -10px; }
+
+        /* BADGE STYLES (MATCHING SITE) */
+        .badge-wrap { margin-top: 10px; }
+        .finisher-badge { 
+            display: inline-block; 
+            padding: 8px 24px; 
+            background: rgba(0, 0, 0, 0.6); 
+            backdrop-filter: blur(10px);
+            color: #ffffff !important; 
+            border-radius: 50px; 
+            font-size: 1rem; 
+            font-weight: 800; 
+            text-transform: uppercase; 
+            letter-spacing: 2px; 
+            border: 1.5px solid rgba(255, 255, 255, 0.6); 
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.1);
+            animation: luminousBreath 3s infinite ease-in-out;
+            transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .finisher-badge.tier-2 { border-color: #00f2fe; color: #00f2fe !important; box-shadow: 0 0 15px rgba(0, 242, 254, 0.2); }
+        .finisher-badge.tier-3 { border-color: #f5576c; color: #f5576c !important; box-shadow: 0 0 15px rgba(245, 87, 108, 0.2); }
+        .finisher-badge.tier-4 { border-color: #ffd700; color: #ffd700 !important; box-shadow: 0 0 15px rgba(255, 215, 0, 0.2); }
+        .finisher-badge.tier-5 { 
+            border-width: 1.5px;
+            border-style: solid;
+            border-image: linear-gradient(135deg, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #4b0082, #9400d3) 1;
+            animation: rainbow-border 3s linear infinite, luminousBreath 3s infinite ease-in-out;
+            color: #fff !important;
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
+        }
+
+        @keyframes rainbow-border {
+            0% { border-image-source: linear-gradient(0deg, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #4b0082, #9400d3); }
+            100% { border-image-source: linear-gradient(360deg, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #4b0082, #9400d3); }
+        }
+
+        @keyframes luminousBreath {
+            0%, 100% { opacity: 0.9; box-shadow: 0 0 10px rgba(255, 255, 255, 0.1); }
+            50% { opacity: 1; box-shadow: 0 0 20px rgba(255, 255, 255, 0.2); }
+        }
+
+        /* Controls */
+        .controls {
+            background: rgba(255,255,255,0.02);
+            border: 1px solid var(--border-color);
+            padding: 30px;
+            border-radius: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .control-label {
+            display: flex;
+            justify-content: space-between;
+            font-weight: 700;
+            font-size: 1.1rem;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            accent-color: var(--peach-accent);
+            cursor: pointer;
+        }
+
+        .tier-info {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            text-align: center;
+            border-top: 1px solid var(--border-color);
+            padding-top: 15px;
+        }
+
+        .back-link {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.9rem;
+            margin-top: 20px;
+            transition: color 0.3s;
+        }
+        .back-link:hover { color: #fff; }
+    </style>
+</head>
+<body>
+
+    <div class="tester-container">
+        <div class="header">
+            <h1>Badge Rank Simulator</h1>
+            <p style="color:var(--text-muted)">Preview how the profile evolves as a runner finishes more seasons.</p>
+        </div>
+
+        <div class="simulator-card">
+            <div class="avatar-preview">H</div>
+            <h2 class="username">Haleem Mamdouh</h2>
+            <div class="email-preview">tsmhaleem@gmail.com</div>
+            <div class="badge-wrap" id="badgeContainer">
+                <span class="finisher-badge" id="finisherBadge">🏆 TOUR FINISHER</span>
+            </div>
+        </div>
+
+        <div class="controls">
+            <div class="control-label">
+                <span>Number of Tour Finishes</span>
+                <span id="countValue" style="color:var(--peach-accent)">1</span>
+            </div>
+            <input type="range" id="finishSlider" min="1" max="15" value="1">
+            
+            <div class="tier-info" id="tierInfo">
+                Rank: <b>Classic Finisher</b>
+            </div>
+        </div>
+
+        <div style="text-align: center;">
+            <a href="../dashboard.html" class="back-link">↩ Back to Dashboard</a>
+        </div>
+    </div>
+
+    <script>
+        const slider = document.getElementById('finishSlider');
+        const countVal = document.getElementById('countValue');
+        const badge = document.getElementById('finisherBadge');
+        const info = document.getElementById('tierInfo');
+
+        function updateUI(count) {
+            countVal.innerText = count;
+            let label = '🏆 TOUR FINISHER';
+            let tierClass = '';
+            let rankName = 'Classic Finisher';
+            let countSuffix = count > 1 ? ` x${count}` : '';
+
+            if (count >= 10) { 
+                label = '👑 GRANDMASTER'; 
+                tierClass = 'tier-5'; 
+                rankName = 'The Immortal Legend';
+            }
+            else if (count >= 5) { 
+                label = '💎 MASTER'; 
+                tierClass = 'tier-4'; 
+                rankName = 'Community Pillar';
+            }
+            else if (count >= 3) { 
+                label = '🔥 ELITE'; 
+                tierClass = 'tier-3'; 
+                rankName = 'Seasoned Outrunner';
+            }
+            else if (count >= 2) { 
+                label = '🛡️ VETERAN'; 
+                tierClass = 'tier-2'; 
+                rankName = 'Repeat Champion';
+            }
+
+            badge.className = 'finisher-badge ' + tierClass;
+            badge.innerText = `${label}${countSuffix}`;
+            info.innerHTML = `Rank: <b style="color:white">${rankName}</b>`;
+        }
+
+        slider.addEventListener('input', (e) => {
+            updateUI(parseInt(e.target.value));
+        });
+
+        // Initialize
+        updateUI(1);
+    </script>
+</body>
+</html>
