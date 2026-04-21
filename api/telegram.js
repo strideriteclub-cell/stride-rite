@@ -1423,6 +1423,7 @@ export default async function handler(req, res) {
             const data = cq.data;
 
             if (data === 'cmd_menu') await sendMenu(chatId);
+            else if (data === 'cmd_set_pfp_start') await handleSetPfpStart(chatId);
             else if (data === 'cmd_stats') await handleStats(chatId);
             else if (data === 'cmd_runs') await handleListRuns(chatId);
             else if (data === 'cmd_export') await handleExport(chatId);
