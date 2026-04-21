@@ -58,6 +58,35 @@
         .logo-text-stack { display: flex; flex-direction: column; line-height: 1; }
         .logo-title { font-family: 'Outfit'; font-weight: 800; font-size: 1.2rem; }
         .logo-subtitle { font-size: 0.6rem; color: var(--text-muted); text-transform: uppercase; border-top: 1px solid var(--neon-accent); padding-top: 2px; margin-top: 2px; }
+
+        /* Finisher Celebration */
+        .finisher-celebration {
+            display: none;
+            background: linear-gradient(135deg, #ffd700 0%, #ff8b6a 100%);
+            color: #000;
+            padding: 1.5rem 2rem;
+            border-radius: 20px;
+            margin-bottom: 2rem;
+            text-align: center;
+            font-family: 'Outfit';
+            font-weight: 800;
+            box-shadow: 0 10px 40px rgba(255, 139, 106, 0.3);
+            animation: slideDownCeleb 0.8s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+            position: relative;
+            overflow: hidden;
+            border: 2px solid rgba(255,255,255,0.2);
+        }
+        @keyframes slideDownCeleb { 
+            from { transform: translateY(-30px); opacity: 0; } 
+            to { transform: translateY(0); opacity: 1; } 
+        }
+        .celeb-title { font-size: 1.8rem; margin: 0; text-transform: uppercase; letter-spacing: 2px; line-height: 1.2; }
+        .celeb-subtitle { margin: 5px 0 0; font-size: 1rem; opacity: 0.9; font-weight: 700; letter-spacing: 1px; }
+        
+        .sparkle { position: absolute; background: white; border-radius: 50%; opacity: 0.6; animation: sparkleAnim 2s infinite; }
+        @keyframes sparkleAnim { 0%, 100% { transform: scale(0); opacity: 0; } 50% { transform: scale(1); opacity: 0.6; } }
+
+        .legendary-glow { box-shadow: 0 0 30px rgba(255, 215, 0, 0.15) !important; border-color: #ffd700 !important; }
     </style>
 </head>
 <body>
@@ -78,6 +107,11 @@
     </nav>
 
     <div class="main-container">
+        <div id="finisherCelebration" class="finisher-celebration">
+            <div class="celeb-title">🏆 TOUR DE CAIRO COMPLETED</div>
+            <div class="celeb-subtitle">WELCOME TO THE HALL OF LEGENDS</div>
+        </div>
+
         <header class="dashboard-header">
             <h1 id="welcomeUser">Welcome, Runner!</h1>
             <p class="welcome-text">Your central hub for community runs and rewards.</p>
@@ -138,7 +172,33 @@
         async function initDashboard() {
             const container = document.getElementById('runsContainer');
             try {
-                const [runs, myRegs] = await Promise.all([AppService.getRuns(), AppService.getUserRegistrations(user.id)]);
+                const [runs, myRegs, stats] = await Promise.all([
+                    AppService.getRuns(), 
+                    AppService.getUserRegistrations(user.id),
+                    AppService.getUserStats(user.id)
+                ]);
+
+                // Finisher UI
+                if (stats.isFinisher) {
+                    const celebration = document.getElementById('finisherCelebration');
+                    if (celebration) {
+                        celebration.style.display = 'block';
+                        document.body.classList.add('legendary-mode');
+                        const mapCard = document.querySelector('.glass-card');
+                        if (mapCard) mapCard.classList.add('legendary-glow');
+                        
+                        // Add sparkles to banner
+                        for(let i=0; i<15; i++) {
+                            const s = document.createElement('div');
+                            s.className = 'sparkle';
+                            s.style.top = Math.random() * 100 + '%';
+                            s.style.left = Math.random() * 100 + '%';
+                            s.style.width = s.style.height = (Math.random() * 4 + 2) + 'px';
+                            s.style.animationDelay = (Math.random() * 2) + 's';
+                            celebration.appendChild(s);
+                        }
+                    }
+                }
                 
                 // Sort numerically by Stop ID (1-8)
                 runs.sort((a, b) => {
