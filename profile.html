@@ -5,10 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My Profile | Stride Rite</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=27">
+    <link rel="stylesheet" href="styles.css?v=22">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <style>
         .profile-container { max-width: 900px; margin: 0 auto; padding: 2rem; margin-top: 100px; }
         .profile-header { display: flex; align-items: center; gap: 2rem; margin-bottom: 2rem; flex-wrap: wrap; }
@@ -21,111 +20,22 @@
         .stat-value { font-size: 3rem; font-weight: 800; font-family: 'Outfit'; line-height: 1; margin-bottom: 0.5rem; }
         .stat-label { color: var(--text-muted); text-transform: uppercase; letter-spacing: 2px; font-size: 0.75rem; font-weight: 600; }
         .history-title { font-family: 'Outfit'; font-size: 1.8rem; margin-bottom: 1.5rem; color: white; }
-        
-        .finisher-badge { 
-            display: inline-block; 
-            padding: 6px 16px; 
-            background: rgba(0, 0, 0, 0.6); 
-            backdrop-filter: blur(10px);
-            color: #ffffff !important; 
-            border-radius: 50px; 
-            font-size: 0.8rem; 
-            font-weight: 800; 
-            text-transform: uppercase; 
-            letter-spacing: 2px; 
-            border: 1.5px solid rgba(255, 255, 255, 0.6); 
-            box-shadow: 0 0 15px rgba(255, 255, 255, 0.1);
-            margin-left: 8px;
-            animation: luminousBreath 3s infinite ease-in-out;
-            vertical-align: middle;
-        }
-
-        .finisher-badge.tier-2 { border-color: #00f2fe; color: #00f2fe !important; box-shadow: 0 0 15px rgba(0, 242, 254, 0.2); }
-        .finisher-badge.tier-3 { border-color: #f5576c; color: #f5576c !important; box-shadow: 0 0 15px rgba(245, 87, 108, 0.2); }
-        .finisher-badge.tier-4 { border-color: #ffd700; color: #ffd700 !important; box-shadow: 0 0 15px rgba(255, 215, 0, 0.2); }
-        .finisher-badge.tier-5 { 
-            border-width: 1.5px;
-            border-style: solid;
-            border-image: linear-gradient(135deg, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #4b0082, #9400d3) 1;
-            animation: rainbow-border 3s linear infinite, luminousBreath 3s infinite ease-in-out;
-            color: #fff !important;
-            box-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
-        }
-
-        @keyframes rainbow-border {
-            0% { border-image-source: linear-gradient(0deg, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #4b0082, #9400d3); }
-            100% { border-image-source: linear-gradient(360deg, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #4b0082, #9400d3); }
-        }
-
-        @keyframes luminousBreath {
-            0%, 100% { opacity: 0.9; box-shadow: 0 0 10px rgba(255, 255, 255, 0.1); }
-            50% { opacity: 1; box-shadow: 0 0 20px rgba(255, 255, 255, 0.2); }
-        }
 
         /* Bib Card Styles */
-        .bib-container { margin-bottom: 3rem; position: relative; display: flex; justify-content: center; }
-        .bib-card { 
-            width: 300px; 
-            height: 480px; 
-            background: rgba(13, 12, 17, 0.85); 
-            backdrop-filter: blur(20px); 
-            border-radius: 30px; 
-            padding: 30px; 
-            position: relative; 
-            border: 2px solid rgba(255, 107, 53, 0.3); 
-            box-shadow: 0 0 40px rgba(255, 107, 53, 0.15), inset 0 0 20px rgba(255, 255, 255, 0.02); 
-            display: flex; 
-            flex-direction: column; 
-            align-items: center; 
-            overflow: hidden;
-            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-        .bib-card:hover { transform: scale(1.02); border-color: rgba(255, 107, 53, 0.6); }
-        .bib-card::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: radial-gradient(circle at center, rgba(255, 107, 53, 0.1) 0%, transparent 70%);
-            pointer-events: none;
-        }
-        .shimmer {
-            position: absolute;
-            top: 0; left: -100%;
-            width: 100%; height: 100%;
-            background: linear-gradient(120deg, transparent, rgba(255,255,255,0.05), transparent);
-            animation: shimmer 4s infinite;
-        }
-        @keyframes shimmer { 100% { left: 200%; } }
-        
-        .bib-logo { font-family: 'Outfit'; font-weight: 800; font-size: 1rem; color: #ff6b35; letter-spacing: 4px; margin-bottom: 40px; text-transform: uppercase; }
-        .bib-label { font-family: 'Outfit'; font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 3px; font-weight: 700; margin-bottom: 5px; }
-        .bib-name { font-family: 'Outfit'; font-weight: 800; font-size: 1.4rem; color: white; margin-bottom: 30px; line-height: 1.1; }
-        .bib-number { 
-            font-family: 'Outfit'; 
-            font-size: 6rem; 
-            font-weight: 900; 
-            line-height: 1; 
-            color: white; 
-            margin-bottom: 40px; 
-            text-shadow: 0 0 20px rgba(255, 107, 53, 0.3);
-        }
-        .qr-wrap { 
-            background: white; 
-            padding: 12px; 
-            border-radius: 18px; 
-            box-shadow: 0 10px 20px rgba(0,0,0,0.5); 
-            margin-top: auto;
-        }
-        .bib-status { margin-top: 15px; font-size: 0.7rem; font-weight: 800; color: #ff6b35; text-transform: uppercase; letter-spacing: 2px; }
+        .bib-container { margin-bottom: 3rem; perspective: 1000px; }
+        .bib-card { background: white; color: #1a1a1f; border-radius: 12px; padding: 24px; position: relative; border: 12px solid #ff6b35; box-shadow: 0 30px 60px rgba(0,0,0,0.5); display: flex; flex-direction: column; align-items: center; text-align: center; overflow: hidden; width: min(100%, 340px); margin: 0 auto; }
+        .bib-card::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 50px; background: #ff6b35; z-index: 0; }
+        .bib-logo { font-family: 'Outfit'; font-weight: 900; font-size: 1.6rem; color: white; position: relative; z-index: 1; margin-bottom: 20px; letter-spacing: -1px; }
+        .bib-number { font-family: 'Outfit'; font-size: 6.5rem; font-weight: 800; line-height: 1; margin: 15px 0; letter-spacing: -3px; color: #1a1a1f; z-index: 1; }
+        .bib-name { font-weight: 700; font-size: 1.3rem; text-transform: uppercase; letter-spacing: 1px; color: #1a1a1f; z-index: 1; margin-bottom: 15px; opacity: 0.9; }
+        .qr-wrap { background: white; padding: 12px; border-radius: 12px; border: 1px solid rgba(0,0,0,0.1); margin-top: 10px; z-index: 1; }
+        .bib-footer { margin-top: 20px; font-size: 0.75rem; font-weight: 700; color: rgba(0,0,0,0.3); text-transform: uppercase; letter-spacing: 3px; }
     </style>
 </head>
 <body>
     <nav class="navbar">
         <div style="font-family:'Outfit'; font-weight:800; font-size:1.5rem;">S<span style="color:var(--peach-accent);">.</span></div>
-        <div class="nav-links">
+        <div class="nav-links" id="navLinks">
             <a href="dashboard.html">📊 Dashboard</a>
             <a href="index.html">🏠 Home</a>
             <a href="#" onclick="AuthService.logout()">Logout</a>
@@ -144,19 +54,18 @@
 
         <div class="bib-container animate-up" id="bibSection" style="display: none; margin-top: 1rem;">
             <div class="bib-card">
-                <div class="shimmer"></div>
-                <div class="bib-logo">Stride Rite</div>
-                <div class="bib-label">Verified Runner</div>
+                <div class="bib-logo">STRIDE RITE</div>
                 <div class="bib-name" id="bibName">RUNNER</div>
                 <div class="bib-number" id="bibNumber">000</div>
                 <div class="qr-wrap" id="qrcode" style="display: flex; justify-content: center;"></div>
-                <div class="bib-status">Digital Passport</div>
+                <div class="bib-footer">Check-In Passport</div>
             </div>
             <p style="text-align:center; color:var(--text-muted); font-size:0.8rem; margin: 1rem 0;">Scan this QR code at the event check-in point 📍</p>
         </div>
 
-        <div class="stats-grid" style="grid-template-columns: 1fr 1fr;">
+        <div class="stats-grid">
             <div class="profile-stat-card"><div class="stat-value" id="totalRuns">0</div><div class="stat-label">Total Runs</div></div>
+            <div class="profile-stat-card peach"><div class="stat-value" id="totalKms">0.0</div><div class="stat-label">Total KM</div></div>
             <div class="profile-stat-card" style="border-bottom-color: #22c55e;">
                 <div class="stat-value" id="tourProgress">0%</div>
                 <div class="stat-label">Tour Progress</div>
@@ -173,85 +82,61 @@
         <div class="b-grid" id="historyContainer"></div>
     </div>
 
-    <script src="app.js?v=32"></script>
+    <script src="app.js?v=22"></script>
     <script>
         const user = AuthService.getCurrentUser();
         if (!user) window.location.href = 'index.html';
 
         document.getElementById('userName').innerText = user.name;
         document.getElementById('userEmail').innerText = user.email;
-        document.getElementById('userInitial').innerText = user.name.charAt(0).toUpperCase();
-        document.getElementById('userLevelBadge').innerText = user.level || 'Runner';
-
-        // Display Avatar if it exists
+        
+        // Handle Avatar rendering
+        const initialEl = document.getElementById('userInitial');
         if (user.avatar_url) {
-            const avatarEl = document.getElementById('userInitial');
-            avatarEl.style.backgroundImage = `url('${user.avatar_url}')`;
-            avatarEl.style.backgroundSize = 'cover';
-            avatarEl.style.backgroundPosition = 'center';
-            avatarEl.innerText = ''; // Clear initial if we have an image
+            initialEl.innerText = '';
+            initialEl.style.backgroundImage = `url('${user.avatar_url}')`;
+            initialEl.style.backgroundSize = 'cover';
+            initialEl.style.backgroundPosition = 'center';
+            initialEl.style.border = '4px solid var(--neon-accent)';
+        } else {
+            initialEl.innerText = user.name.charAt(0).toUpperCase();
         }
+        
+        // Add Admin Link if applicable
+        if (user.email === 'tsmhaleem@gmail.com') {
+            const nl = document.getElementById('navLinks');
+            if (nl && !nl.innerHTML.includes('admin-scanner.html')) {
+                nl.innerHTML = '<a href="admin-scanner.html" style="color:var(--peach-accent); font-weight:800;">📡 Admin Scan</a>' + nl.innerHTML;
+            }
+        }
+        document.getElementById('userLevelBadge').innerText = user.level || 'Runner';
 
         async function loadProfile() {
             const stats = await AppService.getUserStats(user.id);
             document.getElementById('totalRuns').innerText = stats.totalRuns;
+            document.getElementById('totalKms').innerText = stats.totalKms;
             document.getElementById('tourProgress').innerText = `${stats.completionRate}%`;
 
-            if (stats.isFinisher) {
-                const badgeContainer = document.getElementById('userLevelBadge').parentElement;
-                if (badgeContainer && !document.getElementById('finisherTag')) {
-                    const tag = document.createElement('span');
-                    tag.id = 'finisherTag';
-                    
-                    let label = '🏆 TOUR FINISHER';
-                    let tierClass = '';
-                    let countSuffix = stats.finisherCount > 1 ? ` x${stats.finisherCount}` : '';
-
-                    if (stats.finisherCount >= 10) { label = '👑 GRANDMASTER'; tierClass = 'tier-5'; }
-                    else if (stats.finisherCount >= 5) { label = '💎 MASTER'; tierClass = 'tier-4'; }
-                    else if (stats.finisherCount >= 3) { label = '🔥 ELITE'; tierClass = 'tier-3'; }
-                    else if (stats.finisherCount >= 2) { label = '🛡️ VETERAN'; tierClass = 'tier-2'; }
-
-                    tag.className = 'finisher-badge ' + tierClass;
-                    tag.innerText = `${label}${countSuffix}`;
-                    badgeContainer.appendChild(tag);
-                    
-                    // One-time celebration if just finished CURRENT season
-                    if (stats.isCurrentFinisher) {
-                        confetti({
-                            particleCount: 150,
-                            spread: 70,
-                            origin: { y: 0.6 },
-                            colors: ['#ffd700', '#ff8b6a', '#584adc']
-                        });
-                    }
-                }
-            }
-
-            // Auto-heal missing bib numbers (especially for new accounts)
-            let activeUser = user;
-            if (!activeUser.bib_number || activeUser.bib_number === null) {
-                try {
-                    activeUser = await AppService.assignBibNumber(activeUser.id);
-                    localStorage.setItem('stride_user', JSON.stringify(activeUser));
-                } catch(e) { console.error("Failed to heal bib", e); }
-            }
-
             // If user has a bib, show the card
-            if (activeUser.bib_number) {
+            if (user.bib_number) {
                 document.getElementById('bibSection').style.display = 'block';
-                document.getElementById('bibNumber').innerText = activeUser.bib_number;
-                document.getElementById('bibName').innerText = activeUser.name;
+                document.getElementById('bibNumber').innerText = user.bib_number;
+                document.getElementById('bibName').innerText = user.name;
                 
-                // Render LIFETIME QR Code based on the user's permanent Bib Number
-                new QRCode(document.getElementById("qrcode"), {
-                    text: String(activeUser.bib_number),
-                    width: 140,
-                    height: 140,
-                    colorDark : "#1a1a1f",
-                    colorLight : "#ffffff",
-                    correctLevel : QRCode.CorrectLevel.H
-                });
+                // Get most recent upcoming registration to use for QR
+                const regs = await dbGet('stride_registrations', `user_id=eq.${user.id}&order=registered_at.desc&limit=1`);
+                if (regs && regs.length > 0) {
+                    new QRCode(document.getElementById("qrcode"), {
+                        text: regs[0].id,
+                        width: 240,
+                        height: 240,
+                        colorDark : "#1a1a1f",
+                        colorLight : "#ffffff",
+                        correctLevel : QRCode.CorrectLevel.H
+                    });
+                } else {
+                    document.getElementById("qrcode").innerHTML = "<p style='font-size:0.7rem; color:#888; width:240px; padding:40px;'>Register for a run to unlock your QR Check-in</p>";
+                }
             }
                 const archiveSec = document.getElementById('tourArchiveSection');
                 const archiveCont = document.getElementById('tourArchiveContainer');
@@ -271,11 +156,12 @@
                             <div style="width: ${stats.completionRate}%; height: 100%; background: ${isComplete ? '#22c55e' : 'var(--peach-accent)'}; border-radius: 10px;"></div>
                         </div>
                         <div style="display: flex; justify-content: space-between; font-size: 0.85rem;">
-                             <span style="color: var(--text-muted);">${stats.tourProgress.filter(s => s.status === 'completed').length} / 8 Districts</span>
+                            <span style="color: var(--text-muted);">${stats.tourProgress.filter(s => s.status === 'unlocked').length} / 8 Districts</span>
                             <span style="font-weight: 700; color: ${isComplete ? '#22c55e' : 'white'};">${isComplete ? 'COMPLETED' : 'IN PROGRESS'}</span>
                         </div>
                     </div>
                 `;
+            }
 
             const container = document.getElementById('historyContainer');
             if (!stats.pastRuns || stats.pastRuns.length === 0) {
