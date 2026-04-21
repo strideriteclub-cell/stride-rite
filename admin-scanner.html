@@ -143,6 +143,14 @@
         async function init() {
             // Load all tour/upcoming runs for selector
             const allRuns = await dbGet('stride_runs', 'order=date_label.desc');
+            
+            // Sort numerically by Stop ID (1-8)
+            allRuns.sort((a, b) => {
+                const idA = a.tour_stop_id || 999;
+                const idB = b.tour_stop_id || 999;
+                return idA - idB;
+            });
+
             const select = document.getElementById('runSelect');
             allRuns.forEach(run => {
                 let displayText = '';
