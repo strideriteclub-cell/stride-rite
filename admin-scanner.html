@@ -145,10 +145,15 @@
             const allRuns = await dbGet('stride_runs', 'order=date_label.desc');
             const select = document.getElementById('runSelect');
             allRuns.forEach(run => {
-                const label = run.date_label.split('||')[0].replace('[EXPORTED] ', '');
+                let displayText = '';
+                if (run.tour_stop_id) {
+                    displayText = `Stop ${String(run.tour_stop_id).padStart(2, '0')} — ${run.tour_stop_name || run.location}`;
+                } else {
+                    displayText = run.location || 'Normal Run';
+                }
                 const opt = document.createElement('option');
                 opt.value = run.id;
-                opt.innerText = label + ' - ' + run.location;
+                opt.innerText = displayText;
                 select.appendChild(opt);
             });
 
