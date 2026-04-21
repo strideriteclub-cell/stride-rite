@@ -111,7 +111,7 @@ const AuthService = {
         let userRecord = null;
         if (email === 'tsmhaleem@gmail.com' && password === 'haleem@147') {
             userRecord = { id: 'admin-1', name: 'Admin Haleem', email: 'tsmhaleem@gmail.com', is_admin: true, avatar_url: null };
-            // We'll try to fetch the real DB record to get the avatar_url if it exists
+            // Real record fetch for PFP
             const dbUsers = await dbGet('stride_users', `email=eq.tsmhaleem@gmail.com`);
             if (dbUsers && dbUsers.length > 0) userRecord.avatar_url = dbUsers[0].avatar_url;
         } else {
@@ -417,79 +417,35 @@ const AppService = {
     },
 
     checkInRunner: async (runId, identifier) => {
+        // identifier can be bib_number (number), registrationId (uuid string), or user_id (uuid string)
         const id = String(identifier).trim();
         let reg = null;
-        let debugInfo = `Scanned: "${id}" | Run: ${runId}\n`;
 
         if (id.length > 10) {
-            // UUID path — try registration ID, then user ID
+            // Likely a UUID — try as registration ID first
             const rows = await dbGet('stride_registrations', `id=eq.${id}`);
             if (rows && rows.length > 0) {
                 reg = rows[0];
-                debugInfo += `✅ Found by registration ID\n`;
             } else {
+                // Fallback: Maybe the QR contains a user_id instead of a registration_id
                 const userRegs = await dbGet('stride_registrations', `run_id=eq.${runId}&user_id=eq.${id}`);
-                if (userRegs && userRegs.length > 0) {
-                    reg = userRegs[0];
-                    debugInfo += `✅ Found by user ID\n`;
-                } else {
-                    debugInfo += `❌ No registration found for UUID\n`;
-                }
+                if (userRegs && userRegs.length > 0) reg = userRegs[0];
             }
         } else {
-            // Bib Number path
+            // Likely a Bib Number
             const users = await dbGet('stride_users', `bib_number=eq.${id}`);
             if (users && users.length > 0) {
-                debugInfo += `✅ User found: ${users[0].name} (ID: ${users[0].id})\n`;
                 const regs = await dbGet('stride_registrations', `run_id=eq.${runId}&user_id=eq.${users[0].id}`);
-                if (regs && regs.length > 0) {
-                    reg = regs[0];
-                    debugInfo += `✅ Registration found!\n`;
-                } else {
-                    debugInfo += `❌ User exists but NOT registered for this specific run\n`;
-                    // Check what runs this user IS registered for
-                    const allUserRegs = await dbGet('stride_registrations', `user_id=eq.${users[0].id}`);
-                    debugInfo += `📋 User has ${allUserRegs.length} total registrations\n`;
-                    if (allUserRegs.length > 0) {
-                        debugInfo += `Run IDs: ${allUserRegs.map(r => r.run_id).join(', ')}\n`;
-                    }
-                }
-            } else {
-                debugInfo += `❌ No user with bib_number=${id} found in database\n`;
+                if (regs && regs.length > 0) reg = regs[0];
             }
         }
 
-        // FALLBACK: Search ALL registrations for this run
-        if (!reg) {
-            const allRegs = await dbGet('stride_registrations', `run_id=eq.${runId}`);
-            debugInfo += `\n🔎 Fallback scan: ${allRegs.length} registrations for this run\n`;
-
-            if (allRegs && allRegs.length > 0) {
-                // Try to match by bib through each registered user
-                for (const r of allRegs) {
-                    const userRows = await dbGet('stride_users', `id=eq.${r.user_id}`);
-                    if (userRows && userRows.length > 0) {
-                        const u = userRows[0];
-                        debugInfo += `  → ${u.name} (bib: ${u.bib_number}, id: ${u.id})\n`;
-                        if (String(u.bib_number) === id || u.name.toLowerCase().includes(id.toLowerCase())) {
-                            reg = r;
-                            debugInfo += `  ✅ MATCHED via fallback!\n`;
-                            break;
-                        }
-                    }
-                }
-            } else {
-                debugInfo += `⚠️ ZERO registrations exist for the selected run!\n`;
-            }
-        }
-
-        console.log('🔍 CHECK-IN DEBUG:\n' + debugInfo);
-
-        if (!reg) throw new Error(debugInfo);
+        if (!reg) throw new Error("Runner not found or not registered for this stop.");
         if (reg.attended_at) throw new Error("This runner is already checked in!");
 
         await dbUpdate('stride_registrations', 'id', reg.id, { attended_at: new Date().toISOString() });
-
+        
+        // Fetch full info for feedback
         const userInfo = await dbGet('stride_users', `id=eq.${reg.user_id}`);
         return {
             name: userInfo[0].name,
@@ -536,14 +492,9 @@ const AppService = {
 
         const progress = currentTourConfig.map(stop => {
             const stopRuns = (rawRuns || []).filter(r => r.tour_stop_id && Number(r.tour_stop_id) === Number(stop.id));
-            let status = 'locked', runId = null, runName = stop.name;
+            let status = 'locked', runId = null;
 
             for (const r of stopRuns) {
-                if (r.tour_stop_name) {
-                    // Update name dynamically based on what the bot saved in the run
-                    runName = r.tour_stop_name.trim();
-                }
-
                 const parts = (r.date_label || '').split('||');
                 const runDate = parts[1] ? new Date(parts[1]) : null;
                 const isExported = (r.date_label || '').includes('[EXPORTED]');
@@ -559,7 +510,7 @@ const AppService = {
                     status = 'active'; runId = r.id;
                 }
             }
-            return { ...stop, name: runName, status, runId };
+            return { ...stop, status, runId };
         });
         return progress;
     },
@@ -574,46 +525,15 @@ const AppService = {
         });
 
         const tourProgress = await AppService.getTourProgress(userId);
-        const completedStops = tourProgress.filter(s => s.status === 'completed');
-        const completedCount = completedStops.length;
+        const completedCount = tourProgress.filter(s => s.status === 'completed').length;
         const TOUR_STOPS_COUNT = 8;
-        
-        // 1. Get all historical finishes
-        const achievements = await dbGet('stride_achievements', `user_id=eq.${userId}&achievement_type=eq.tour_finisher&order=awarded_at.desc`);
-        let finisherCount = achievements ? achievements.length : 0;
-        const lastAwardedAt = achievements && achievements.length > 0 ? new Date(achievements[0].awarded_at) : new Date(0);
-
-        const isCurrentFinisher = completedCount >= TOUR_STOPS_COUNT;
-
-        // 2. Award NEW if they reached 8/8 and it's a new season (most recent run attended is newer than last award)
-        if (isCurrentFinisher) {
-            // Find the latest 'attended_at' date among the 8 stops
-            const latestRunDate = new Date(Math.max(...completedStops.map(s => new Date(s.run_date))));
-            
-            if (latestRunDate > lastAwardedAt) {
-                try {
-                    await dbInsert('stride_achievements', { 
-                        id: crypto.randomUUID(), 
-                        user_id: userId, 
-                        achievement_type: 'tour_finisher', 
-                        awarded_at: new Date().toISOString() 
-                    });
-                    finisherCount++;
-                } catch (e) {
-                    console.error("Failed to award new achievement", e);
-                }
-            }
-        }
 
         return {
             totalRuns: pastRuns.length,
             totalKms: totalKms.toFixed(1),
             pastRuns: pastRuns,
             tourProgress: tourProgress,
-            completionRate: Math.round((completedCount / TOUR_STOPS_COUNT) * 100),
-            isCurrentFinisher: isCurrentFinisher,
-            finisherCount: finisherCount,
-            isFinisher: finisherCount > 0
+            completionRate: Math.round((completedCount / TOUR_STOPS_COUNT) * 100)
         };
     },
 
@@ -785,7 +705,7 @@ function initMobileMenu(user) {
     const toggle = () => { [btn, overlay, panel].forEach(el => el.classList.toggle('open')); };
     btn.onclick = toggle;
     overlay.onclick = toggle;
-    panel.querySelectorAll('a').forEach(a => a.addEventListener('click', toggle));
+    panel.querySelectorAll('a').forEach(a => a.onclick = toggle);
 }
 
 document.addEventListener('DOMContentLoaded', () => {
