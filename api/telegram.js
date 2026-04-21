@@ -277,10 +277,52 @@ async function sendMenu(chatId, msg) {
             [{ text: "🎂 Birthdays", callback_data: "cmd_birthdays" }, { text: "🔍 Runner Lookup", callback_data: "cmd_lookup_start" }],
             [{ text: "📣 Broadcast", callback_data: "cmd_broadcast_start" }, { text: "📈 Growth Graph", callback_data: "cmd_growth" }],
             [{ text: "✏️ Edit a Run", callback_data: "cmd_edit_list" }, { text: "🗺️ Tour Map Editor", callback_data: "cmd_tour_editor" }],
+            [{ text: "👤 Set Profile Pic", callback_data: "cmd_set_pfp_start" }, { text: "↩️ Close Menu", callback_data: "cmd_close" }],
             [{ text: "🆕 Create New Run", callback_data: "create_setup_start" }, { text: "🚫 Cancel a Run", callback_data: "cmd_cancel_list" }],
             [{ text: "🗑️ Delete a Run", callback_data: "cmd_delete_list" }]
         ]
     });
+}
+
+// ─── ADMIN PROFILE PFP ────────────────────────────────────────────────────────
+async function handleSetPfpStart(chatId) {
+    await setSession('waiting_admin_pfp', {});
+    await sendMessage(chatId, "👤 <b>Update Profile Picture</b>\n\n📸 Please send the <b>photo</b> you want to set as your primary profile picture on the website.\n\n<i>Note: This will update the profile for tsmhaleem@gmail.com instantly.</i>", {
+        inline_keyboard: [[{ text: "❌ Cancel", callback_data: "cmd_menu" }]]
+    });
+}
+
+async function handleAdminPfpUpload(chatId, message) {
+    const photos = message.photo;
+    if (!photos || photos.length === 0) {
+        await sendMessage(chatId, "❌ No photo detected. Please send an image.");
+        return;
+    }
+    const fileId = photos[photos.length - 1].file_id;
+    await sendMessage(chatId, "⏳ <b>Processing image...</b>");
+    try {
+        const fileRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getFile?file_id=${fileId}`);
+        const fileData = await fileRes.json();
+        const filePath = fileData.result?.file_path;
+        if (!filePath) throw new Error("Could not get file path.");
+        const imgRes = await fetch(`https://api.telegram.org/file/bot${BOT_TOKEN}/${filePath}`);
+        const imgBuffer = await imgRes.arrayBuffer();
+        const fileName = `admin_av_${Date.now()}.jpg`;
+        const uploadRes = await fetch(`${SUPABASE_URL}/storage/v1/object/gallery/${fileName}`, {
+            method: 'POST',
+            headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'image/jpeg' },
+            body: imgBuffer
+        });
+        if (!uploadRes.ok) throw new Error(await uploadRes.text());
+        const publicUrl = `${SUPABASE_URL}/storage/v1/object/public/gallery/${fileName}`;
+        await dbPatch('stride_users', 'email', 'tsmhaleem@gmail.com', { avatar_url: publicUrl });
+        await clearSession();
+        await sendMessage(chatId, `✅ <b>Profile Picture Updated!</b>\n\nRefresh the website dashboard to see the change.`);
+        await sendMenu(chatId);
+    } catch (e) {
+        console.error("Admin PFP Upload failed:", e);
+        await sendMessage(chatId, `❌ <b>Upload Failed:</b> ${e.message}`);
+    }
 }
 
 // ─── TOUR EDITOR ─────────────────────────────────────────────────────────────
@@ -1518,6 +1560,8 @@ export default async function handler(req, res) {
                     await sendMessage(chatId, "✅ <b>Photo successfully updated!</b>");
                     await clearSession();
                     await handleShopProductEditMenu(chatId, session.data.productId);
+                } else if (session.state === 'waiting_admin_pfp') {
+                    await handleAdminPfpUpload(chatId, body.message);
                 } else if (session.state === 'partner_logo') {
                     const imgUrl = await uploadShopPhoto(chatId, body.message); // reuse upload helper
                     if (!imgUrl) { await sendMessage(chatId, "❌ Failed to upload logo."); res.status(200).send('ok'); return; }
