@@ -183,6 +183,15 @@
         document.getElementById('userInitial').innerText = user.name.charAt(0).toUpperCase();
         document.getElementById('userLevelBadge').innerText = user.level || 'Runner';
 
+        // Display Avatar if it exists
+        if (user.avatar_url) {
+            const avatarEl = document.getElementById('userInitial');
+            avatarEl.style.backgroundImage = `url('${user.avatar_url}')`;
+            avatarEl.style.backgroundSize = 'cover';
+            avatarEl.style.backgroundPosition = 'center';
+            avatarEl.innerText = ''; // Clear initial if we have an image
+        }
+
         async function loadProfile() {
             const stats = await AppService.getUserStats(user.id);
             document.getElementById('totalRuns').innerText = stats.totalRuns;
