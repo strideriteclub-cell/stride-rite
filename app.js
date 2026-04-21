@@ -570,25 +570,34 @@ const AppService = {
         });
 
         const tourProgress = await AppService.getTourProgress(userId);
-        const completedCount = tourProgress.filter(s => s.status === 'completed').length;
+        const completedStops = tourProgress.filter(s => s.status === 'completed');
+        const completedCount = completedStops.length;
         const TOUR_STOPS_COUNT = 8;
         
-        // Check for permanent achievement record
-        const achievements = await dbGet('stride_achievements', `user_id=eq.${userId}`);
-        let isPermanentFinisher = (achievements || []).some(a => a.achievement_type === 'tour_finisher');
+        // 1. Get all historical finishes
+        const achievements = await dbGet('stride_achievements', `user_id=eq.${userId}&achievement_type=eq.tour_finisher&order=awarded_at.desc`);
+        let finisherCount = achievements ? achievements.length : 0;
+        const lastAwardedAt = achievements && achievements.length > 0 ? new Date(achievements[0].awarded_at) : new Date(0);
 
-        // Auto-award if they just finished but don't have the record yet
-        if (!isPermanentFinisher && completedCount >= TOUR_STOPS_COUNT) {
-            try {
-                await dbInsert('stride_achievements', { 
-                    id: crypto.randomUUID(), 
-                    user_id: userId, 
-                    achievement_type: 'tour_finisher', 
-                    awarded_at: new Date().toISOString() 
-                });
-                isPermanentFinisher = true;
-            } catch (e) {
-                console.error("Failed to award achievement", e);
+        const isCurrentFinisher = completedCount >= TOUR_STOPS_COUNT;
+
+        // 2. Award NEW if they reached 8/8 and it's a new season (most recent run attended is newer than last award)
+        if (isCurrentFinisher) {
+            // Find the latest 'attended_at' date among the 8 stops
+            const latestRunDate = new Date(Math.max(...completedStops.map(s => new Date(s.run_date))));
+            
+            if (latestRunDate > lastAwardedAt) {
+                try {
+                    await dbInsert('stride_achievements', { 
+                        id: crypto.randomUUID(), 
+                        user_id: userId, 
+                        achievement_type: 'tour_finisher', 
+                        awarded_at: new Date().toISOString() 
+                    });
+                    finisherCount++;
+                } catch (e) {
+                    console.error("Failed to award new achievement", e);
+                }
             }
         }
 
@@ -598,7 +607,9 @@ const AppService = {
             pastRuns: pastRuns,
             tourProgress: tourProgress,
             completionRate: Math.round((completedCount / TOUR_STOPS_COUNT) * 100),
-            isFinisher: isPermanentFinisher || completedCount >= TOUR_STOPS_COUNT
+            isCurrentFinisher: isCurrentFinisher,
+            finisherCount: finisherCount,
+            isFinisher: finisherCount > 0
         };
     },
 
