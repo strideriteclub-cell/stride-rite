@@ -87,6 +87,9 @@
         @keyframes sparkleAnim { 0%, 100% { transform: scale(0); opacity: 0; } 50% { transform: scale(1); opacity: 0.6; } }
 
         .legendary-glow { box-shadow: 0 0 30px rgba(255, 215, 0, 0.15) !important; border-color: #ffd700 !important; }
+        
+        .nav-avatar { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 1.5px solid var(--neon-accent); margin-right: 8px; vertical-align: middle; display: none; }
+        .header-avatar { width: 60px; height: 60px; border-radius: 50%; object-fit: cover; border: 2px solid var(--neon-accent); margin-bottom: 1rem; box-shadow: 0 5px 15px rgba(88, 74, 220, 0.3); display: none; }
     </style>
 </head>
 <body>
@@ -101,10 +104,30 @@
         <div class="nav-links" id="navLinks">
             <a href="shop.html">🛍 Shop</a>
             <a href="gallery.html">📸 Gallery</a>
-            <a href="profile.html">👤 My Profile</a>
+            <a href="profile.html"><img id="navAvatar" src="" class="nav-avatar">👤 My Profile</a>
             <a href="#" onclick="event.preventDefault(); AuthService.logout()">Logout</a>
         </div>
+        <button class="hamburger-btn" onclick="toggleMobileNav()" style="display: none;">
+            <div class="bar"></div>
+            <div class="bar"></div>
+            <div class="bar"></div>
+        </button>
     </nav>
+
+    <!-- Mobile Nav Panel -->
+    <div class="mobile-nav-overlay" id="navOverlay" onclick="toggleMobileNav()"></div>
+    <div class="mobile-nav-panel" id="navPanel">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2rem;">
+            <div class="custom-logo" style="font-size:1.5rem;">S<span class="dot"></span></div>
+            <button onclick="toggleMobileNav()" style="background:none; border:none; color:white; font-size:1.5rem;">&times;</button>
+        </div>
+        <a href="dashboard.html" onclick="toggleMobileNav()">🏠 Dashboard</a>
+        <a href="shop.html" onclick="toggleMobileNav()">🛍 Store</a>
+        <a href="gallery.html" onclick="toggleMobileNav()">📸 Gallery</a>
+        <a href="profile.html" onclick="toggleMobileNav()">👤 Profile</a>
+        <a href="admin.html" onclick="toggleMobileNav()">🛠 Admin</a>
+        <a href="#" onclick="event.preventDefault(); AuthService.logout()">Logout</a>
+    </div>
 
     <div class="main-container">
         <div id="finisherCelebration" class="finisher-celebration">
@@ -113,6 +136,7 @@
         </div>
 
         <header class="dashboard-header">
+            <img id="headerAvatar" src="" class="header-avatar">
             <h1 id="welcomeUser">Welcome, Runner!</h1>
             <p class="welcome-text">Your central hub for community runs and rewards.</p>
         </header>
@@ -162,6 +186,14 @@
 
             document.getElementById('welcomeUser').innerText = 'Welcome back, ' + user.name.split(' ')[0] + '!';
             
+            // Handle User Avatar
+            if (user.avatar_url) {
+                const navAv = document.getElementById('navAvatar');
+                const headerAv = document.getElementById('headerAvatar');
+                if (navAv) { navAv.src = user.avatar_url; navAv.style.display = 'inline-block'; }
+                if (headerAv) { headerAv.src = user.avatar_url; headerAv.style.display = 'block'; }
+            }
+
             try { await initDashboard(); } catch(e) { console.error("Dash error", e); }
             initTourMap();
         });
@@ -737,7 +769,14 @@
                     L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19 }).addTo(smMap);
                     
                     // Force size recalc for Leaflet in modal
-                    setTimeout(() => smMap.invalidateSize(), 200);
+        function toggleMobileNav() {
+            const panel = document.getElementById('navPanel');
+            const overlay = document.getElementById('navOverlay');
+            panel.classList.toggle('open');
+            overlay.classList.toggle('open');
+        }
+
+        setTimeout(() => smMap.invalidateSize(), 200);
 
                     if (run && run.route_preview_url && run.route_type === 'gpx') {
                         new L.GPX(run.route_preview_url, {
