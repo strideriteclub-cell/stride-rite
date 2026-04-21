@@ -24,6 +24,7 @@
         .registered-badge { background: rgba(34,197,94,0.15); color: #22c55e; padding: 6px 12px; border-radius: 50px; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; display: inline-block; margin-bottom: 1rem; }
 
         /* Tour Map controls */
+        .fix-swal-scroll { overflow: visible !important; }
         #tourMap { height: 480px; border-radius: 20px; overflow: hidden; position: relative; border: 1px solid var(--border-color); background: #0b0b0f; }
         #tourMap .leaflet-control-attribution, #tourMap .leaflet-control-zoom { display: none !important; }
 
@@ -305,6 +306,7 @@
                 background: '#141419',
                 color: '#fff',
                 padding: '1.25rem',
+                customClass: { htmlContainer: 'fix-swal-scroll' },
                 showConfirmButton: !isReg,
                 confirmButtonText: '🚀 Lock In My Spot',
                 confirmButtonColor: 'var(--neon-accent)',
@@ -647,6 +649,7 @@
                 background: '#141419',
                 color: '#fff',
                 padding: '1.25rem',
+                customClass: { htmlContainer: 'fix-swal-scroll' },
                 showConfirmButton: !!showRegBtn,
                 confirmButtonText: '🚀 Lock In My Spot',
                 confirmButtonColor: 'var(--neon-accent)',
