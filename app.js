@@ -286,112 +286,89 @@ const AppService = {
         } catch (e) { console.error("AutoExport failed", e); }
     },
 
-    registerForRun: async (userId, runId, distance) => {
-        const existing = await dbGet('stride_registrations', `run_id=eq.${runId}&user_id=eq.${userId}`);
+    registerForRun: async (runId, distance, level, fullName, phoneNumber) => {
+        const currentUser = AuthService.getCurrentUser();
+        if (!currentUser) return false;
+        const existing = await dbGet('stride_registrations', `run_id=eq.${runId}&user_id=eq.${currentUser.id}`);
         if (existing && existing.length > 0) return false;
-        
-        const user = await dbGet('stride_users', `id=eq.${userId}`);
-        if (!user || user.length === 0) return false;
-
-        const allRegs = await dbGet('stride_registrations', `user_id=eq.${userId}`);
+        const allRegs = await dbGet('stride_registrations', `user_id=eq.${currentUser.id}`);
         const isFirstTimer = !allRegs || allRegs.length === 0;
-
         const newRegistration = {
             id: generateUUID(),
             run_id: runId,
-            user_id: userId,
+            user_id: currentUser.id,
             distance: distance,
-            level: user[0].level
+            level: level,
+            user_full_name: fullName || currentUser.name,
+            phone_number: phoneNumber || null
         };
-
         const result = await dbInsert('stride_registrations', newRegistration);
         if (result !== null) {
             const runDetails = await dbGet('stride_runs', `id=eq.${runId}`);
             if (runDetails && runDetails.length > 0) {
-                AppService.sendTelegramAlert(user[0], distance, user[0].level, runDetails[0], isFirstTimer);
+                AppService.sendTelegramAlert(currentUser, distance, level, runDetails[0], isFirstTimer, phoneNumber);
             }
             return true;
         }
         return false;
     },
 
-    unregisterFromRun: async (userId, runId) => {
+    cancelRunRegistration: async (runId, userId) => {
         try {
             const regs = await dbGet('stride_registrations', `run_id=eq.${runId}&user_id=eq.${userId}`);
             if (regs && regs.length > 0) {
-                await dbDelete('stride_registrations', 'id', regs[0].id);
+                const regId = regs[0].id;
+                await dbDelete('stride_registrations', 'id', regId);
                 return true;
             }
             return false;
-        } catch (e) { console.error("Unregister failed", e); return false; }
+        } catch (e) { console.error("Cancel failed", e); return false; }
     },
 
-    isUserRegistered: async (userId, runId) => {
-        const regs = await dbGet('stride_registrations', `run_id=eq.${runId}&user_id=eq.${userId}`);
-        return regs && regs.length > 0;
-    },
-
-    getUpcomingRuns: async () => {
-        const runs = await dbGet('stride_runs');
-        const now = new Date();
-        return (runs || []).filter(run => {
-            if (run.is_cancelled || (run.date_label || '').includes('[EXPORTED]')) return false;
-            const parts = (run.date_label || '').split('||');
-            const runDate = parts[1] ? new Date(parts[1]) : null;
-            return runDate && runDate >= now;
-        }).map(run => ({
-            ...run,
-            date_display: (run.date_label || '').split('||')[0]
-        })).sort((a,b) => new Date(a.iso_date) - new Date(b.iso_date));
-    },
-
-    getRunDetails: async (runId) => {
-        const runs = await dbGet('stride_runs', `id=eq.${runId}`);
-        if (!runs || runs.length === 0) throw new Error("Run not found");
-        const run = runs[0];
-        return {
-            ...run,
-            date_display: (run.date_label || '').split('||')[0]
-        };
-    },
-
-    sendTelegramAlert: async (user, distance, level, run, isFirstTimer) => {
+    sendTelegramAlert: async (user, distance, level, run, isFirstTimer, phoneNumber) => {
         const botToken = '8682463984:AAHA2PWT7WtQRskETmOanj0k2b45ZgGfYIs';
         const chatId = '1538316434';
         const cleanTimestamp = (run.date_label || '').split('||')[0];
+        const phone = phoneNumber || 'Not provided';
 
         let text, parseMode;
         if (run.tour_stop_id) {
+            // ── TOUR DE CAIRO REGISTRATION (HTML format) ────────────────
             parseMode = 'HTML';
-            const stopNum = String(run.tour_stop_id).padStart(2, '0');
+            const stopNum  = String(run.tour_stop_id).padStart(2, '0');
             const stopName = run.tour_stop_name || run.location || 'Unknown Stop';
-            const host = run.partner_name || 'Stride Rite';
-            text = `🏅 <b>TOUR DE CAIRO — STOP ${stopNum} REGISTRATION!</b>\n\n`
-                 + `📍 <b>Stop ${stopNum}: ${stopName}</b>\n`
-                 + `🤝 <b>Hosted by:</b> ${host} x Stride Rite\n`
-                 + `📅 <b>Date:</b> ${cleanTimestamp}\n`
-                 + `─────────────────\n`
-                 + `👤 <b>Name:</b> ${user.name}\n`
-                 + `📧 <b>Email:</b> ${user.email || 'N/A'}\n`
-                 + `🏃 <b>Distance:</b> ${distance}\n`
-                 + `🎽 <b>Level:</b> ${level || user.level || 'N/A'}`
+            const host     = run.partner_name || 'Stride Rite';
+            text = '🏅 <b>TOUR DE CAIRO — STOP ' + stopNum + ' REGISTRATION!</b>\n\n'
+                 + '📍 <b>Stop ' + stopNum + ': ' + stopName + '</b>\n'
+                 + '🤝 <b>Hosted by:</b> ' + host + ' x Stride Rite\n'
+                 + '📅 <b>Date:</b> ' + cleanTimestamp + '\n'
+                 + '─────────────────\n'
+                 + '👤 <b>Name:</b> ' + user.name + '\n'
+                 + '📞 <b>Phone:</b> ' + phone + '\n'
+                 + '📧 <b>Email:</b> ' + (user.email || 'N/A') + '\n'
+                 + '🏃 <b>Distance:</b> ' + distance + '\n'
+                 + '🎽 <b>Level:</b> ' + (level || user.level || 'N/A')
                  + (isFirstTimer ? '\n\n🎉 <b>First timer on Tour de Cairo!</b>' : '');
         } else {
+            // ── REGULAR RUN REGISTRATION (Markdown format) ───────────────
             parseMode = 'Markdown';
             const age = user.birthdate ? calculateAge(user.birthdate) : (user.age || '?');
             const firstTimerBadge = isFirstTimer ? '\n\n🎉 *FIRST TIMER! Welcome them warmly!*' : '';
-            text = `${isFirstTimer ? '🌟' : '🚨'} *${isFirstTimer ? 'First-Time' : 'New'} Runner Alert!*\n\n`
-                 + `*${user.name}* (${age}${user.gender === 'Male' ? 'M' : 'F'}) just registered for the *${distance}*!\n`
-                 + `📧 *Email:* ${user.email}\n`
-                 + `🏃 *Level:* ${level || user.level}\n`
-                 + `📅 *Run:* ${cleanTimestamp}${firstTimerBadge}`;
+            const phoneLine = phoneNumber ? ('\n📞 *Phone:* ' + phoneNumber) : '';
+            text = (isFirstTimer ? '🌟' : '🚨') + ' *' + (isFirstTimer ? 'First-Time' : 'New') + ' Runner Alert!*\n\n'
+                 + '*' + user.name + '* (' + age + (user.gender === 'Male' ? 'M' : 'F') + ') just registered for the *' + distance + '*!' + phoneLine + '\n'
+                 + '📧 *Email:* ' + user.email + '\n'
+                 + '🏃 *Level:* ' + (level || user.level) + '\n'
+                 + '📅 *Run:* ' + cleanTimestamp + firstTimerBadge;
         }
         try {
-            await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+            const tgRes = await fetch('https://api.telegram.org/bot' + botToken + '/sendMessage', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ chat_id: chatId, text, parse_mode: parseMode })
+                body: JSON.stringify({ chat_id: chatId, text: text, parse_mode: parseMode })
             });
+            const tgJson = await tgRes.json();
+            if (!tgJson.ok) console.error('Telegram error:', JSON.stringify(tgJson));
         } catch (e) { console.error('Telegram alert failed', e); }
     },
 
@@ -441,6 +418,7 @@ const AppService = {
         let debugInfo = `Scanned: "${id}" | Run: ${runId}\n`;
 
         if (id.length > 10) {
+            // UUID path — try registration ID, then user ID
             const rows = await dbGet('stride_registrations', `id=eq.${id}`);
             if (rows && rows.length > 0) {
                 reg = rows[0];
@@ -455,6 +433,7 @@ const AppService = {
                 }
             }
         } else {
+            // Bib Number path
             const users = await dbGet('stride_users', `bib_number=eq.${id}`);
             if (users && users.length > 0) {
                 debugInfo += `✅ User found: ${users[0].name} (ID: ${users[0].id})\n`;
@@ -464,11 +443,43 @@ const AppService = {
                     debugInfo += `✅ Registration found!\n`;
                 } else {
                     debugInfo += `❌ User exists but NOT registered for this specific run\n`;
+                    // Check what runs this user IS registered for
+                    const allUserRegs = await dbGet('stride_registrations', `user_id=eq.${users[0].id}`);
+                    debugInfo += `📋 User has ${allUserRegs.length} total registrations\n`;
+                    if (allUserRegs.length > 0) {
+                        debugInfo += `Run IDs: ${allUserRegs.map(r => r.run_id).join(', ')}\n`;
+                    }
                 }
             } else {
                 debugInfo += `❌ No user with bib_number=${id} found in database\n`;
             }
         }
+
+        // FALLBACK: Search ALL registrations for this run
+        if (!reg) {
+            const allRegs = await dbGet('stride_registrations', `run_id=eq.${runId}`);
+            debugInfo += `\n🔎 Fallback scan: ${allRegs.length} registrations for this run\n`;
+
+            if (allRegs && allRegs.length > 0) {
+                // Try to match by bib through each registered user
+                for (const r of allRegs) {
+                    const userRows = await dbGet('stride_users', `id=eq.${r.user_id}`);
+                    if (userRows && userRows.length > 0) {
+                        const u = userRows[0];
+                        debugInfo += `  → ${u.name} (bib: ${u.bib_number}, id: ${u.id})\n`;
+                        if (String(u.bib_number) === id || u.name.toLowerCase().includes(id.toLowerCase())) {
+                            reg = r;
+                            debugInfo += `  ✅ MATCHED via fallback!\n`;
+                            break;
+                        }
+                    }
+                }
+            } else {
+                debugInfo += `⚠️ ZERO registrations exist for the selected run!\n`;
+            }
+        }
+
+        console.log('🔍 CHECK-IN DEBUG:\n' + debugInfo);
 
         if (!reg) throw new Error(debugInfo);
         if (reg.attended_at) throw new Error("This runner is already checked in!");
@@ -493,7 +504,7 @@ const AppService = {
                 bib: u ? u.bib_number : '—',
                 time: new Date(r.attended_at).toLocaleTimeString()
             };
-        }).sort((a,b) => b.time.localeCompare(a.time));
+        }).sort((a,b) => b.time.localeCompare(a.time)); // Latest first
     },
 
     getTourProgress: async (userId) => {
@@ -524,10 +535,14 @@ const AppService = {
             let status = 'locked', runId = null, runName = stop.name;
 
             for (const r of stopRuns) {
-                if (r.tour_stop_name) runName = r.tour_stop_name.trim();
+                if (r.tour_stop_name) {
+                    // Update name dynamically based on what the bot saved in the run
+                    runName = r.tour_stop_name.trim();
+                }
 
                 const parts = (r.date_label || '').split('||');
                 const runDate = parts[1] ? new Date(parts[1]) : null;
+                const isExported = (r.date_label || '').includes('[EXPORTED]');
                 const userRegistered = userRegs.find(reg => reg.run_id === r.id);
 
                 if (userRegistered && userRegistered.attended_at) {
@@ -596,6 +611,11 @@ const AppService = {
 
         let result = await dbInsert('shop_orders', newOrder);
 
+        if (result === null && window.lastDbError && window.lastDbError.includes('receipt_ref')) {
+            const fallbackOrder = { ...newOrder, receipt_ref: refNumber };
+            result = await dbInsert('shop_orders', fallbackOrder);
+        }
+
         if (result !== null) {
             const items = await dbGet('shop_items', `id=eq.${itemId}`);
             const item = (items && items.length > 0) ? items[0] : { name: 'Unknown Item', price: '?' };
@@ -628,7 +648,9 @@ const AppService = {
                         body: JSON.stringify({ chat_id: chatId, text: caption, parse_mode: 'Markdown', reply_markup: JSON.parse(replyMarkup) })
                     });
                 }
-            } catch (e) { console.error("Telegram alert failed", e); }
+            } catch (e) {
+                console.error("Telegram alert failed", e);
+            }
             return true;
         }
         return false;
@@ -658,23 +680,31 @@ const AppService = {
     getSurveys: async () => {
         const surveys = await dbGet('stride_surveys', 'order=created_at.desc');
         const allRuns = await dbGet('stride_runs');
+        
         if (!surveys) return [];
+        
         const activeRunLabels = allRuns.map(r => r.date_label.includes('||') ? r.date_label.split('||')[0] : r.date_label);
         return surveys.filter(s => activeRunLabels.includes(s.run_label));
     },
 
     cancelRunnerRegistration: async (runId, bib) => {
         try {
+            // 1. Find user by bib
             const users = await dbGet('stride_users', `bib_number=eq.${bib}`);
             if (!users || users.length === 0) return false;
             const userId = users[0].id;
+
+            // 2. Find registration by user_id and runId
             const existing = await dbGet('stride_registrations', `run_id=eq.${runId}&user_id=eq.${userId}`);
             if (existing && existing.length > 0) {
                 await dbDelete('stride_registrations', 'id', existing[0].id);
                 return true;
             }
             return false;
-        } catch (e) { console.error("Failed to cancel registration", e); return false; }
+        } catch (e) {
+            console.error("Failed to cancel registration", e);
+            return false;
+        }
     }
 };
 
