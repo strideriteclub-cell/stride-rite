@@ -493,7 +493,7 @@ async function handleTourSeasonExecute(chatId) {
                 id: crypto.randomUUID(),
                 date_label: `${fd} - ${formatTime(startTime)}||${d.toISOString()}`,
                 location: stopName,
-                location_link: null,
+                location_link: '',
                 description: 'Every pace is welcome!',
                 created_by: 'admin-1',
                 route_preview_url: null,
