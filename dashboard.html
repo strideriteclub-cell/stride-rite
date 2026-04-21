@@ -120,8 +120,10 @@
         let runSelections = {};
 
         window.addEventListener('load', async () => {
-            user = AuthService.getCurrentUser();
-            if (!user) { window.location.href = 'index.html'; return; }
+            const user = AuthService.getCurrentUser();
+            if (!user) window.location.href = 'index.html';
+
+            const updatedUser = await AuthService.reFetchUser();
             
             // Inject Admin Scan Link if Admin
             if (user.email === 'tsmhaleem@gmail.com') {
@@ -132,11 +134,12 @@
             document.getElementById('welcomeUser').innerText = 'Welcome back, ' + user.name.split(' ')[0] + '!';
             
             // Set Avatars if they exist
-            if (user.avatar_url) {
+            const activeUser = updatedUser || user;
+            if (activeUser.avatar_url) {
                 const navPfp = document.getElementById('navPfp');
                 const headPfp = document.getElementById('headerPfp');
-                if (navPfp) { navPfp.src = user.avatar_url; navPfp.style.display = 'block'; }
-                if (headPfp) { headPfp.src = user.avatar_url; headPfp.style.display = 'block'; }
+                if (navPfp) { navPfp.src = activeUser.avatar_url; navPfp.style.display = 'block'; }
+                if (headPfp) { headPfp.src = activeUser.avatar_url; headPfp.style.display = 'block'; }
             }
             
             try { await initDashboard(); } catch(e) { console.error("Dash error", e); }
