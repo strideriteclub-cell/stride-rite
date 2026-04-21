@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My Profile | Stride Rite</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=22">
+    <link rel="stylesheet" href="styles.css?v=27">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
@@ -84,7 +84,7 @@
 <body>
     <nav class="navbar">
         <div style="font-family:'Outfit'; font-weight:800; font-size:1.5rem;">S<span style="color:var(--peach-accent);">.</span></div>
-        <div class="nav-links" id="navLinks">
+        <div class="nav-links">
             <a href="dashboard.html">📊 Dashboard</a>
             <a href="index.html">🏠 Home</a>
             <a href="#" onclick="AuthService.logout()">Logout</a>
@@ -114,9 +114,8 @@
             <p style="text-align:center; color:var(--text-muted); font-size:0.8rem; margin: 1rem 0;">Scan this QR code at the event check-in point 📍</p>
         </div>
 
-        <div class="stats-grid">
+        <div class="stats-grid" style="grid-template-columns: 1fr 1fr;">
             <div class="profile-stat-card"><div class="stat-value" id="totalRuns">0</div><div class="stat-label">Total Runs</div></div>
-            <div class="profile-stat-card peach"><div class="stat-value" id="totalKms">0.0</div><div class="stat-label">Total KM</div></div>
             <div class="profile-stat-card" style="border-bottom-color: #22c55e;">
                 <div class="stat-value" id="tourProgress">0%</div>
                 <div class="stat-label">Tour Progress</div>
@@ -133,42 +132,39 @@
         <div class="b-grid" id="historyContainer"></div>
     </div>
 
-    <script src="app.js?v=22"></script>
+    <script src="app.js?v=32"></script>
     <script>
         const user = AuthService.getCurrentUser();
         if (!user) window.location.href = 'index.html';
 
         document.getElementById('userName').innerText = user.name;
         document.getElementById('userEmail').innerText = user.email;
-        
-        // Initial-based avatar
-        const initialEl = document.getElementById('userInitial');
-        initialEl.innerText = user.name.charAt(0).toUpperCase();
-        
-        // Add Admin Link if applicable
-        if (user.email === 'tsmhaleem@gmail.com') {
-            const nl = document.getElementById('navLinks');
-            if (nl && !nl.innerHTML.includes('admin-scanner.html')) {
-                nl.innerHTML = '<a href="admin-scanner.html" style="color:var(--peach-accent); font-weight:800;">📡 Admin Scan</a>' + nl.innerHTML;
-            }
-        }
+        document.getElementById('userInitial').innerText = user.name.charAt(0).toUpperCase();
         document.getElementById('userLevelBadge').innerText = user.level || 'Runner';
 
         async function loadProfile() {
             const stats = await AppService.getUserStats(user.id);
             document.getElementById('totalRuns').innerText = stats.totalRuns;
-            document.getElementById('totalKms').innerText = stats.totalKms;
             document.getElementById('tourProgress').innerText = `${stats.completionRate}%`;
 
+            // Auto-heal missing bib numbers (especially for new accounts)
+            let activeUser = user;
+            if (!activeUser.bib_number || activeUser.bib_number === null) {
+                try {
+                    activeUser = await AppService.assignBibNumber(activeUser.id);
+                    localStorage.setItem('stride_user', JSON.stringify(activeUser));
+                } catch(e) { console.error("Failed to heal bib", e); }
+            }
+
             // If user has a bib, show the card
-            if (user.bib_number) {
+            if (activeUser.bib_number) {
                 document.getElementById('bibSection').style.display = 'block';
-                document.getElementById('bibNumber').innerText = user.bib_number;
-                document.getElementById('bibName').innerText = user.name;
+                document.getElementById('bibNumber').innerText = activeUser.bib_number;
+                document.getElementById('bibName').innerText = activeUser.name;
                 
-                // Render QR Code
+                // Render LIFETIME QR Code based on the user's permanent Bib Number
                 new QRCode(document.getElementById("qrcode"), {
-                    text: String(user.bib_number),
+                    text: String(activeUser.bib_number),
                     width: 140,
                     height: 140,
                     colorDark : "#1a1a1f",
@@ -176,40 +172,47 @@
                     correctLevel : QRCode.CorrectLevel.H
                 });
             }
-            const archiveSec = document.getElementById('tourArchiveSection');
-            const archiveCont = document.getElementById('tourArchiveContainer');
-            archiveSec.style.display = 'block';
-            
-            const now = new Date();
-            const monthName = now.toLocaleString('default', { month: 'long' });
-            const isComplete = stats.completionRate === 100;
+                const archiveSec = document.getElementById('tourArchiveSection');
+                const archiveCont = document.getElementById('tourArchiveContainer');
+                archiveSec.style.display = 'block';
+                
+                const now = new Date();
+                const monthName = now.toLocaleString('default', { month: 'long' });
+                const isComplete = stats.completionRate === 100;
 
-            archiveCont.innerHTML = `
-                <div class="glass-card" style="padding: 2rem; position: relative; border-bottom: 4px solid ${isComplete ? '#22c55e' : 'var(--peach-accent)'};">
-                    <div style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 2px; font-weight: 800; margin-bottom: 0.5rem;">${monthName} ${now.getFullYear()}</div>
-                    <h3 style="font-family: 'Outfit'; font-size: 1.5rem; margin-bottom: 1rem;">Tour de Cairo</h3>
-                    
-                    <div style="height: 8px; background: rgba(255,255,255,0.05); border-radius: 10px; margin-bottom: 0.5rem; overflow: hidden;">
-                        <div style="width: ${stats.completionRate}%; height: 100%; background: ${isComplete ? '#22c55e' : 'var(--peach-accent)'}; border-radius: 10px;"></div>
+                archiveCont.innerHTML = `
+                    <div class="glass-card" style="padding: 2rem; position: relative; border-bottom: 4px solid ${isComplete ? '#22c55e' : 'var(--peach-accent)'};">
+                        ${isComplete ? '<div style="position:absolute; top:1rem; right:1rem; font-size:2rem;">🥇</div>' : ''}
+                        <div style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 2px; font-weight: 800; margin-bottom: 0.5rem;">${monthName} ${now.getFullYear()}</div>
+                        <h3 style="font-family: 'Outfit'; font-size: 1.5rem; margin-bottom: 1rem;">Tour de Cairo</h3>
+                        
+                        <div style="height: 8px; background: rgba(255,255,255,0.05); border-radius: 10px; margin-bottom: 0.5rem; overflow: hidden;">
+                            <div style="width: ${stats.completionRate}%; height: 100%; background: ${isComplete ? '#22c55e' : 'var(--peach-accent)'}; border-radius: 10px;"></div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; font-size: 0.85rem;">
+                             <span style="color: var(--text-muted);">${stats.tourProgress.filter(s => s.status === 'completed').length} / 8 Districts</span>
+                            <span style="font-weight: 700; color: ${isComplete ? '#22c55e' : 'white'};">${isComplete ? 'COMPLETED' : 'IN PROGRESS'}</span>
+                        </div>
                     </div>
-                </div>
-            `;
+                `;
 
             const container = document.getElementById('historyContainer');
             if (!stats.pastRuns || stats.pastRuns.length === 0) {
-                container.innerHTML = `<p style="grid-column:1/-1; text-align:center; padding:3rem; color:var(--text-muted);">No community runs attended yet.</p>`;
+                container.innerHTML = `<p style="grid-column:1/-1; text-align:center; padding:3rem; color:var(--text-muted);">No community runs attended yet. Join a run to see your history here!</p>`;
                 return;
             }
             container.innerHTML = stats.pastRuns.map(run => `
                 <div class="glass-card" style="padding:1.5rem;">
                     <div style="font-weight:800; color:white; font-size:1.1rem; margin-bottom:0.3rem;">${run.date_display}</div>
                     <div style="color:var(--peach-accent); font-size:0.8rem; margin-bottom:1rem;">📍 ${run.location}</div>
+                    <div style="display:flex; gap:2rem; border-top:1px solid rgba(255,255,255,0.08); padding-top:1rem;">
+                        <div><div style="font-size:0.6rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px;">Distance</div><div style="font-weight:700; color:white;">${run.user_distance}</div></div>
+                        <div><div style="font-size:0.6rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px;">Level</div><div style="font-weight:700; color:white;">${run.user_level || 'N/A'}</div></div>
+                    </div>
                 </div>`).join('');
         }
 
         loadProfile();
     </script>
-</body>
-</html>
 </body>
 </html>
