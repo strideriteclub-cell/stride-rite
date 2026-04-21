@@ -110,7 +110,10 @@ const AuthService = {
     login: async (email, password) => {
         let userRecord = null;
         if (email === 'tsmhaleem@gmail.com' && password === 'haleem@147') {
-            userRecord = { id: 'admin-1', name: 'Admin Haleem', email: 'tsmhaleem@gmail.com', is_admin: true };
+            userRecord = { id: 'admin-1', name: 'Admin Haleem', email: 'tsmhaleem@gmail.com', is_admin: true, avatar_url: null };
+            // We'll try to fetch the real DB record to get the avatar_url if it exists
+            const dbUsers = await dbGet('stride_users', `email=eq.tsmhaleem@gmail.com`);
+            if (dbUsers && dbUsers.length > 0) userRecord.avatar_url = dbUsers[0].avatar_url;
         } else {
             const users = await dbGet('stride_users', `email=eq.${encodeURIComponent(email)}&password=eq.${encodeURIComponent(password)}`);
             if (users && users.length > 0) userRecord = users[0];
@@ -159,7 +162,8 @@ const AuthService = {
                     name,
                     email,
                     password: 'GOOGLE_OAUTH_ACCOUNT', // Placeholder for custom table
-                    birthdate: null, age: '?', gender: 'Other', level: 'Beginner', is_admin: false
+                    birthdate: null, age: '?', gender: 'Other', level: 'Beginner', is_admin: false,
+                    avatar_url: null
                 };
                 await dbInsert('stride_users', userRecord);
             }
