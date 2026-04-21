@@ -2036,6 +2036,10 @@ export default async function handler(req, res) {
             await handleLookup(chatId, text);
         } else if (session.state === 'waiting_broadcast_msg') {
             await handleBroadcast(chatId, text);
+        } else if (session.state === 'waiting_test_name') {
+            await handleAddTestLinkRequest(chatId, text);
+        } else if (session.state === 'waiting_test_link') {
+            await handleAddTestExecute(chatId, text, session.data.name);
         } else if (session.state === 'waiting_cancel_reason') {
             await handleCancelExecute(chatId, session.data.runId, text);
         } else if (session.state === 'edit_waiting_location') {
