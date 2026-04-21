@@ -745,7 +745,7 @@ function initMobileMenu(user) {
     const toggle = () => { [btn, overlay, panel].forEach(el => el.classList.toggle('open')); };
     btn.onclick = toggle;
     overlay.onclick = toggle;
-    panel.querySelectorAll('a').forEach(a => a.onclick = toggle);
+    panel.querySelectorAll('a').forEach(a => a.addEventListener('click', toggle));
 }
 
 document.addEventListener('DOMContentLoaded', () => {
