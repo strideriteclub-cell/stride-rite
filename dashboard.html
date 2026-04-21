@@ -178,8 +178,8 @@
                     AppService.getUserStats(user.id)
                 ]);
 
-                // Finisher UI
-                if (stats.isFinisher) {
+                // Finisher UI (Only for CURRENT season)
+                if (stats.isCurrentFinisher) {
                     const celebration = document.getElementById('finisherCelebration');
                     if (celebration) {
                         celebration.style.display = 'block';
