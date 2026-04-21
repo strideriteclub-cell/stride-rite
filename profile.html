@@ -25,40 +25,41 @@
         .finisher-badge { 
             display: inline-block; 
             padding: 6px 16px; 
-            background: linear-gradient(135deg, #ffd700 0%, #ff8b6a 100%); 
-            color: #000 !important; 
+            background: rgba(0, 0, 0, 0.6); 
+            backdrop-filter: blur(10px);
+            color: #ffffff !important; 
             border-radius: 50px; 
-            font-size: 0.85rem; 
+            font-size: 0.8rem; 
             font-weight: 800; 
             text-transform: uppercase; 
             letter-spacing: 2px; 
-            border: none; 
-            box-shadow: 0 4px 15px rgba(255, 139, 106, 0.4);
+            border: 1.5px solid rgba(255, 255, 255, 0.6); 
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.1);
             margin-left: 8px;
-            animation: finisherPulse 2s infinite ease-in-out;
+            animation: luminousBreath 3s infinite ease-in-out;
             vertical-align: middle;
         }
 
-        .finisher-badge.tier-2 { background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%); box-shadow: 0 4px 15px rgba(79, 172, 254, 0.4); }
-        .finisher-badge.tier-3 { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); box-shadow: 0 4px 15px rgba(245, 87, 108, 0.4); }
-        .finisher-badge.tier-4 { background: linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%); box-shadow: 0 4px 15px rgba(161, 140, 209, 0.4); }
+        .finisher-badge.tier-2 { border-color: #00f2fe; color: #00f2fe !important; box-shadow: 0 0 15px rgba(0, 242, 254, 0.2); }
+        .finisher-badge.tier-3 { border-color: #f5576c; color: #f5576c !important; box-shadow: 0 0 15px rgba(245, 87, 108, 0.2); }
+        .finisher-badge.tier-4 { border-color: #ffd700; color: #ffd700 !important; box-shadow: 0 0 15px rgba(255, 215, 0, 0.2); }
         .finisher-badge.tier-5 { 
-            background: linear-gradient(135deg, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #4b0082, #9400d3);
-            background-size: 200% 200%;
-            animation: rainbow-flow 3s linear infinite;
+            border-width: 1.5px;
+            border-style: solid;
+            border-image: linear-gradient(135deg, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #4b0082, #9400d3) 1;
+            animation: rainbow-border 3s linear infinite, luminousBreath 3s infinite ease-in-out;
             color: #fff !important;
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
         }
 
-        @keyframes rainbow-flow {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
+        @keyframes rainbow-border {
+            0% { border-image-source: linear-gradient(0deg, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #4b0082, #9400d3); }
+            100% { border-image-source: linear-gradient(360deg, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #4b0082, #9400d3); }
         }
 
-        @keyframes finisherPulse {
-            0% { transform: scale(1); filter: brightness(1); }
-            50% { transform: scale(1.05); filter: brightness(1.2); }
-            100% { transform: scale(1); filter: brightness(1); }
+        @keyframes luminousBreath {
+            0%, 100% { opacity: 0.9; box-shadow: 0 0 10px rgba(255, 255, 255, 0.1); }
+            50% { opacity: 1; box-shadow: 0 0 20px rgba(255, 255, 255, 0.2); }
         }
 
         /* Bib Card Styles */
